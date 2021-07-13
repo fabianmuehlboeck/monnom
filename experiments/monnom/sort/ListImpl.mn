@@ -1,0 +1,91 @@
+class List<T> implements IList<T>
+{
+	private ListNode first;	
+	private Int Size;
+	public constructor(T val)
+	{
+		Size=1;
+		first = new ListNode(val);
+	}
+	
+	public fun Add(T val) : Void
+	{
+		ListNode newNode = new ListNode(val);
+		newNode.prev = first.prev;
+		newNode.next = first;
+		first.prev = newNode;
+		newNode.prev.next = newNode;
+		Size=Size+1;
+	}
+	
+	public fun GetIterator() : IIterator<T>
+	{
+		IIterator<T> iter = this.MakeIterator(first);
+		return iter;
+	}
+	public fun GetSize() : Int
+	{
+		return Size;
+	}
+
+	private class ListNode
+	{
+		public constructor(T v)
+		{
+			value=v;
+			next=this;
+			prev=this;
+		}
+		public T value;
+		public ListNode next;
+		public ListNode prev;
+	}
+
+	public fun MakeIterator(ListNode n) : IIterator<T>
+	{
+		List<T> self = this;
+		return new IteratorImpl(self, n);
+	}
+
+	private class IteratorImpl implements IIterator<T>
+	{
+		ListNode currentNode;
+		List<T> parent;
+		public constructor(List<T> l, ListNode node)
+		{
+			currentNode = node;
+			parent = l;
+		}
+	
+		public virtual fun MovePrev() : Bool
+		{
+			if(currentNode==parent.first)
+			{
+				return false;
+			}
+			currentNode = currentNode.prev;
+			return true;
+		}
+		public fun MoveNext() : Bool
+		{
+			if(currentNode.next==parent.first)
+			{
+				return false;
+			}
+			currentNode=currentNode.next;
+			return true;
+		}
+		public fun Current() : T
+		{
+			return currentNode.value;
+		}
+		public fun SetValue(T x) : Void
+		{
+			currentNode.value = x;
+		}
+		public fun Clone() : IIterator<T>
+		{
+			return parent.MakeIterator(currentNode);
+		}
+	}
+}

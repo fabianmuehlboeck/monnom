@@ -1,0 +1,26 @@
+;; Simple streams library.
+;; For building and using infinite lists.
+
+(define (stream-first [st : Dyn]) : Dyn (tuple-proj st 0))
+
+(define (stream-rest [st : Dyn]) : Dyn ((tuple-proj st 1)))
+
+;;--------------------------------------------------------------------------------------------------
+
+(define (make-stream [hd : Dyn] [thunk : Dyn]) : Dyn
+  (tuple hd thunk))
+
+;; Destruct a stream into its first value and the new stream produced
+;; by de-thunking the tail
+(define (stream-unfold [st : Dyn]) : Dyn
+  (tuple (stream-first st) (stream-rest st)))
+
+;; [stream-get st i] Get the [i]-th element from the stream [st]
+(define (stream-get [st : Dyn] [i : Dyn]) : Dyn
+  ;; changed recursive loop to iterative one
+  ;; because we are not performing tail call optimization.
+  ;; 5x performance increase.
+;;  (stream-first
+  ;; (repeat (i 0 i) (st : Dyn st) (stream-rest st))))
+  (cond [(= i 0) (stream-first st)]
+        [else (stream-get (stream-rest st) (- i 1))]))

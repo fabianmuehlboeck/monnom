@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "NomC": {
+      "commandName": "Project",
+      "commandLineArgs": "-p \"C:\\MonNomBenchmarks\\Sort2\\.BM_IICCSCC\" --project Sort"
+    }
+  }
+}

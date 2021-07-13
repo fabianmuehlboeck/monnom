@@ -1,0 +1,90 @@
+
+class CountFromThunk implements IStreamThunk
+{
+	private readonly Int n;
+	
+	public constructor(Int start)
+	{
+		n=start;
+	}
+	
+	public fun Unfold() : Stream
+	{
+		return Main.CountFrom(n+1);
+	}
+}
+
+class SiftThunk implements IStreamThunk
+{
+	private readonly Int n;
+	private readonly Stream stream;
+	
+	public constructor(Int siftFor, Stream rest)
+	{
+		n=siftFor;
+		stream=rest;
+	}
+	
+	public fun Unfold() : Stream
+	{
+		return Main.Sift(n, stream.Rest.Unfold());
+	}
+}
+
+class SieveThunk implements IStreamThunk
+{
+	private readonly Int n;
+	private readonly Stream stream;
+	
+	public constructor(Int siftFor, Stream rest)
+	{
+		n=siftFor;
+		stream=rest;
+	}
+	
+	public fun Unfold() : Stream
+	{
+		return Main.Sieve(Main.Sift(n, stream.Rest.Unfold()));
+	}
+}
+
+class Main
+{
+	public static fun CountFrom(Int n) : Stream
+	{
+		return new Stream(n, new CountFromThunk(n));
+	}
+	
+	public static fun Sift(Int n, Stream s) : Stream
+	{
+		Int first = s.Head;
+		if(first % n == 0)
+		{
+			return Sift(n, s.Rest.Unfold()); 
+		}
+		else
+		{
+			return new Stream(first, new SiftThunk(n, s));
+		}
+	}
+	
+	public static fun Sieve(Stream s) : Stream
+	{
+		Int f = s.Head;
+		return new Stream(f, new SieveThunk(f, s));
+	}
+	
+	public static fun GetPrimes() : Stream
+	{
+		return Sieve(CountFrom(2));
+	}
+	
+	public static Int Nminus1 = 9999;
+	
+	public static fun Main() : Void
+	{
+		Time t=new Time();
+		("The "++(Nminus1+1).ToString()++"th prime number is "++Stream.Get(GetPrimes(),Nminus1).ToString()).Print();
+		t.PrintDifference();
+	}
+}

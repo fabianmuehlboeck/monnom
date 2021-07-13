@@ -1,0 +1,39 @@
+class Main
+{
+	public static fun Main() : Void
+	{
+		IList<Int> intlist = MakeIntList();
+		Main.Test<Int>(intlist);
+		IIterator<Int> ilistIter = intlist.GetIterator();
+		ilistIter.MoveNext();
+		Int last = ilistIter.Current();
+		while(ilistIter.MoveNext())
+		{
+			if(ilistIter.Current()<last)
+			{
+				ERROR("sorting failed!");
+			}
+			last = ilistIter.Current();
+		}
+	}
+
+	public static fun Test<T extends IComparable<T>>(IList<T> list) : Void
+	{
+		Timer t = new Timer();
+		Sort.Quicksort<T>(list);
+		t.PrintDifference();
+	}
+	
+	public static fun MakeIntList() : IList<Int>
+	{
+		IList<Int> list = new List<Int>(5);
+		Int i =0;
+		while(i<100000)
+		{
+			Int num = (i * 163841 + 176081) % 122251;
+			list.Add(num);
+			i=i+1;
+		}
+		return list;
+	}
+}

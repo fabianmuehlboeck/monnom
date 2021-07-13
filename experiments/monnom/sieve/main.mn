@@ -1,0 +1,87 @@
+class CountFromFun implements Fun<Stream>
+{
+	private readonly Int N;
+	public constructor(Int n)
+	{
+		N=n;
+	}
+	public fun this() : Stream
+	{
+		Int p1 = N+1;
+		return Main.CountFrom(p1);
+	}
+}
+
+class SiftFun implements Fun<Stream>
+{
+	private readonly Int N;
+	private readonly Stream S;
+	public constructor(Int n, Stream s)
+	{
+		N=n;
+		S=s;
+	}
+	public fun this() : Stream
+	{
+		return Main.Sift(N, let Fun<Stream> fn = S.Rest in fn());
+	}
+}
+
+class SieveFun implements Fun<Stream>
+{
+	private readonly Int N;
+	private readonly Stream S;
+	public constructor(Int n, Stream s)
+	{
+		N=n;
+		S=s;
+	}
+	public fun this() : Stream
+	{
+		return Main.Sieve(Main.Sift(N, let Fun<Stream> fn = S.Rest in fn()));
+	}
+}
+
+class Main
+{
+
+	public static fun CountFrom(Int n) : Stream
+	{
+		return new Stream(n, new CountFromFun(n));
+	}
+	
+	public static fun Sift(Int n, Stream s) : Stream
+	{
+		Int f = s.First;
+		if(f % n == 0)
+		{
+			return Main.Sift(n, let Fun<Stream> fn = s.Rest in fn()); 
+		}
+		else
+		{
+			return new Stream(f, new SiftFun(n, s));
+		}
+	}
+	
+	public static fun Sieve(Stream s) : Stream
+	{
+		Int f = s.First;
+		return new Stream(f, new SieveFun(f, s));
+	}
+	
+	public static fun GetPrimes() : Stream
+	{
+		return Main.Sieve(Main.CountFrom(2));
+	}
+
+	
+	public static fun Main() : Void
+	{
+		Timer t=new Timer();
+		Int p = Stream.Get(Main.GetPrimes(),9999);
+		t.PrintDifference();
+		"\n".Print();
+		p.ToString().Print();
+		"\n".Print();
+	}
+}

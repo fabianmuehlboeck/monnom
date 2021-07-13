@@ -1,0 +1,16 @@
+interface IIterator<T>
+{
+	fun Current() : T;
+	fun Clone() : IIterator<T>;
+	fun MoveNext() : Bool;
+	fun MovePrev() : Bool;
+	fun SetValue(T x) : Void;
+}
+
+interface IList<T>
+{
+	fun GetIterator() : IIterator<T>;
+	fun GetSize() : Int;
+	fun Add(T val) : Void;
+}
+

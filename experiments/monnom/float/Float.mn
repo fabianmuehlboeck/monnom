@@ -1,0 +1,112 @@
+interface IPoint
+{
+	public fun GetX() : Float;
+	public fun GetY() : Float;
+	public fun GetZ() : Float;
+	public fun Normalize() : Void;
+	public fun Maximize(IPoint other) : IPoint;
+	public fun Print() : Void;
+}
+
+class Point implements IPoint
+{
+	private Float x;
+	private Float y;
+	private Float z;
+	public constructor(Float i)
+	{
+		x = Math.Sin(i);
+		y = Math.Cos(i) * 3;
+		z = (x * x) / 2;
+	}
+	
+	public fun GetX() : Float
+	{
+		return x;
+	}
+	public fun GetY() : Float
+	{
+		return y;
+	}
+	public fun GetZ() : Float
+	{
+		return z;
+	}
+	
+	public fun Normalize() : Void
+	{
+		Float norm = Math.Sqrt(x * x + y * y + z * z);
+		x = x / norm;
+		y = y / norm;
+		z = z / norm;
+	}
+	
+	public fun Maximize(IPoint other) : IPoint
+	{
+		if(x < other.GetX())
+		{
+			x = other.GetX();
+		}
+		if(y < other.GetY())
+		{
+			y = other.GetY();
+		}
+		if(z < other.GetZ())
+		{
+			z = other.GetZ();
+		}
+		return this;
+	}
+	
+	public fun Print() : Void
+	{
+		"<".Print();
+		x.ToString().Print();
+		", ".Print();
+		y.ToString().Print();
+		", ".Print();
+		z.ToString().Print();
+		"> ".Print();
+	}
+}
+
+class PointMapFun implements Fun<Int, IPoint>
+{
+	public constructor()
+	{
+	}
+	public fun this(Int i) : IPoint
+	{
+		return new Point(i + 0.0);
+	}
+}
+
+class Main
+{
+	public static fun Maximize(ArrayList<IPoint> points) : IPoint
+	{
+		IPoint next = points.Get(0);
+		foreach(IPoint p in Enumerable.From<IPoint>(points,1))
+		{
+			next = next.Maximize(p);
+		}
+		return next;
+	}
+	public static fun Benchmark(Int n) : IPoint
+	{
+		ArrayList<IPoint> points = Enumerable.ToList<IPoint>(Enumerable.Map<Int, IPoint>([0..n], new PointMapFun()));
+		foreach(IPoint p in points)
+		{
+			p.Normalize();
+		}
+		return Maximize(points);
+	}
+	public static fun Main() : Void
+	{
+		Timer t = new Timer();
+		IPoint result = Benchmark(100000);
+		t.PrintDifference();
+		"\n".Print();
+		result.Print();
+	}
+}

@@ -1,0 +1,63 @@
+#include "ReturnInstruction.h"
+#include "llvm/IR/IRBuilder.h"
+#include "../TypeOperations.h"
+#include <iostream>
+
+using namespace Nom::Runtime;
+using namespace std;
+
+void Nom::Runtime::ReturnInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+{
+	auto rtype = env->Function->getReturnType();
+	auto rval = *((*env)[this->reg]);
+	if (rtype == INTTYPE && rval->getType() != INTTYPE)
+	{
+		rval = UnpackInt(builder, rval);
+	}
+	else if (rtype == FLOATTYPE && rval->getType() != FLOATTYPE)
+	{
+		rval = UnpackFloat(builder, rval);
+	}
+	else if (rtype == BOOLTYPE && rval->getType() != BOOLTYPE)
+	{
+		rval = UnpackBool(builder, rval);
+	}
+	else if (rtype != INTTYPE && rval->getType() == INTTYPE)
+	{
+		rval = PackInt(builder, rval);
+	}
+	else if (rtype != FLOATTYPE && rval->getType() == FLOATTYPE)
+	{
+		rval = PackFloat(builder, rval);
+	}
+	else if (rtype != BOOLTYPE && rval->getType() == BOOLTYPE)
+	{
+		rval = PackBool(builder, rval);
+	}
+	else
+	{
+		if ((*env)[this->reg].IsFunctionCall())
+		{
+			if (((llvm::CallInst*)(*(*env)[this->reg]))->getCallingConv() == llvm::CallingConv::Fast)
+			{
+				((llvm::CallInst*)(*(*env)[this->reg]))->setTailCallKind(llvm::CallInst::TailCallKind::TCK_Tail);
+			}
+		}
+	}
+	builder->CreateRet(rval);
+	env->basicBlockTerminated = true;
+}
+
+ReturnInstruction::~ReturnInstruction()
+{
+}
+
+void Nom::Runtime::ReturnInstruction::Print(bool resolve)
+{
+	cout << "Return #" << std::dec << reg;
+	cout << "\n";
+}
+
+void Nom::Runtime::ReturnInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+{
+}

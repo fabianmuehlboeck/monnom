@@ -1,0 +1,26 @@
+interface IStreamThunk
+{
+	fun Unfold();
+}
+
+class Stream
+{
+	public readonly Head;
+	public readonly Rest;
+	
+	public constructor(first, rest)
+	{
+		Head=first;
+		Rest=rest;
+	}
+	
+	public static fun Get(s, n)
+	{
+		while(n > 0)
+		{
+			s=s.Rest.Unfold();
+			n-=1;
+		}
+		return s.Head;
+	}
+}

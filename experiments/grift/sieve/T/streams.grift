@@ -1,0 +1,34 @@
+;; Simple streams library.
+;; For building and using infinite lists.
+
+;; A stream is a cons of a value and a thunk that computes the next
+;; value when applied
+;; (define-type stream (Rec s (Tuple Int (-> s))))
+
+  (define (stream-first [st : (Rec s (Tuple Int (-> s)))])
+    : Int
+    (tuple-proj st 0))
+
+  (define (stream-rest [st : (Rec s (Tuple Int (-> s)))])
+    : (Rec s (Tuple Int (-> s)))
+    ((tuple-proj st 1)))
+
+  (define (make-stream [hd : Int] [thunk : (-> (Rec s (Tuple Int (-> s))))])
+    : (Rec s (Tuple Int (-> s)))
+    (tuple hd thunk))
+
+  ;; Destruct a stream into its first value and the new stream produced
+  ;; by de-thunking the tail
+  (define (stream-unfold [st : (Rec s (Tuple Int (-> s)))])
+    : (Tuple Int (Rec s (Tuple Int (-> s))))
+    (tuple (stream-first st) (stream-rest st)))
+
+  ;; [stream-get st i] Get the [i]-th element from the stream [st]
+  (define (stream-get [st : (Rec s (Tuple Int (-> s)))] [i : Int]) : Int
+    ;; changed recursive loop to iterative one
+    ;; because we are not performing tail call optimization.
+    ;; 5x performance increase.
+;;    (stream-first
+;;     (repeat (i 0 i) (st : (Rec s (Tuple Int (-> s))) st) (stream-rest st))))
+    (cond [(= i 0) (stream-first st)]
+          [else (stream-get (stream-rest st) (- i 1))]))

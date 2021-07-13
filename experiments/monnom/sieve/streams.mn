@@ -1,0 +1,22 @@
+
+class Stream
+{
+	public readonly Int First;
+	public readonly Fun<Stream> Rest;
+	
+	public constructor(Int first, Fun<Stream> rest)
+	{
+		First=first;
+		Rest=rest;
+	}
+	
+	public static fun Get(Stream s, Int n) : Int
+	{
+		while(n > 0)
+		{
+			n=(n-1);
+			s = s.Rest();
+		}
+		return s.First;
+	}
+}

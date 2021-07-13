@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{56cea22f-10dc-45ea-a529-e1a67e1733c6}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MonNomCore\Interface.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MonNomCore\Class.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MonNomCore\RuntimeData.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MonNomCore\VTable.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MonNomCore\Interface.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MonNomCore\Class.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MonNomCore\RuntimeData.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MonNomCore\VTable.cpp" />
+  </ItemGroup>
+</Project>

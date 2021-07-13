@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BenchmarkGenerator": {
+      "commandName": "Project",
+      "commandLineArgs": "-p \"c:\\MonNomBenchmarks\\SieveCorrect\\LambdaOpt\" -r 1 --project Sieve"
+    }
+  }
+}

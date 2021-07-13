@@ -1,0 +1,5 @@
+;; `count-from n` Build a stream of integers starting from `n` and
+;; iteratively adding 1
+
+(define (count-from [n : Dyn]) : Dyn
+  (make-stream n (lambda () : Dyn (count-from (+ 1 n)))))

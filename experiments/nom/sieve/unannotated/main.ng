@@ -1,0 +1,90 @@
+
+class CountFromThunk implements IStreamThunk
+{
+	private readonly n;
+	
+	public constructor(start)
+	{
+		n=start;
+	}
+	
+	public fun Unfold()
+	{
+		return Main.CountFrom((dyn)n+(dyn)1);
+	}
+}
+
+class SiftThunk implements IStreamThunk
+{
+	private readonly n;
+	private readonly stream;
+	
+	public constructor(siftFor, rest)
+	{
+		n=siftFor;
+		stream=rest;
+	}
+	
+	public fun Unfold()
+	{
+		return Main.Sift(n, stream.Rest.Unfold());
+	}
+}
+
+class SieveThunk implements IStreamThunk
+{
+	private readonly n;
+	private readonly stream;
+	
+	public constructor(siftFor, rest)
+	{
+		n=siftFor;
+		stream=rest;
+	}
+	
+	public fun Unfold()
+	{
+		return Main.Sieve(Main.Sift(n, stream.Rest.Unfold()));
+	}
+}
+
+class Main
+{
+	public static fun CountFrom(n)
+	{
+		return new Stream(n, (dyn)new CountFromThunk(n));
+	}
+	
+	public static fun Sift(n, s)
+	{
+		dyn f = s.Head;
+		if(f % n == 0)
+		{
+			return Sift(n, s.Rest.Unfold()); 
+		}
+		else
+		{
+			return new Stream(f, (dyn)new SiftThunk(n, s));
+		}
+	}
+	
+	public static fun Sieve(s)
+	{
+		dyn f=s.Head;
+		return new Stream(f, (dyn)new SieveThunk(f, s));
+	}
+	
+	public static fun GetPrimes()
+	{
+		return Sieve(CountFrom((dyn)2));
+	}
+	
+	public static Int Nminus1 = 9999;
+	
+	public static fun Main()
+	{
+		dyn t=new Time();
+		("The "++(Nminus1+1).ToString()++"th prime number is "++Stream.Get(GetPrimes(),Nminus1).ToString()).Print();
+		t.PrintDifference();
+	}
+}

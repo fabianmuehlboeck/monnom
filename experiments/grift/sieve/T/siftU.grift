@@ -1,0 +1,10 @@
+  ;; `sift n st` Filter all elements in `st` that are equal to `n`.
+  ;; Return a new stream.
+  (define (sift [n : Int] [st : (Rec s (Tuple Int (-> s)))])
+    : (Rec s (Tuple Int (-> s)))
+    (let ([hd : Int (stream-first st)])
+      (cond
+        [(= 0 (%% hd n))
+         (sift n (stream-rest st))]
+        [else
+         (make-stream hd (lambda () : Dyn (sift n (stream-rest st))))])))

@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "NomProject": {
+      "commandName": "Project",
+      "commandLineArgs": "create Float *.gn",
+      "workingDirectory": "c:\\MonNomBenchmarks\\Float"
+    }
+  }
+}

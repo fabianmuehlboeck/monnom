@@ -1,0 +1,560 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-MSVC|Win32">
+      <Configuration>Release-MSVC</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-MSVC|x64">
+      <Configuration>Release-MSVC</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4f140013-eabd-4cea-929d-e9394ee5cafa}</ProjectGuid>
+    <Keyword>Clang</Keyword>
+    <RootNamespace>Runtime</RootNamespace>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141_clang_c2</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141_clang_c2</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>ClangCL</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>ClangCL</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>ClangCL</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(NOMBUILDPATH)\Runtime\Intermediates\$(Platform)\$(Configuration)\</IntDir>
+    <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(NOMBUILDPATH)\Runtime\Intermediates\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
+    <PreLinkEventUseInBuild>true</PreLinkEventUseInBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">
+    <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(NOMBUILDPATH)\Runtime\Intermediates\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
+    <PreLinkEventUseInBuild>true</PreLinkEventUseInBuild>
+    <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(INTELVTUNESDKPATH)/include;$(LLVMDIRRELEASE)/include;$(BOEHMGCRELEASE)\include;$(JEMALLOCINC);$(JEMALLOCINC)\msvc_compat;$(SolutionDir)..\dependencies\pugixml\src;$(TBBDIR)\include</ExternalIncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;UNICODE;_UNICODE;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|Win32'">WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NOMINMAX;_DEBUG;_LIB;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NOMINMAX;NDEBUG;_LIB;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">NOMINMAX;NDEBUG;_LIB;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(LLVMDIR)\include;$(BOEHMGCPATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdcpp14</LanguageStandard>
+      <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(TBBDIR)\include;$(LLVMDIRDEBUG)\include;$(BOEHMGCDEBUG)\include;$(JEMALLOCINC);$(JEMALLOCINC)\msvc_compat;$(SolutionDir)..\dependencies\pugixml\src;$(INTELVTUNESDKPATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CppLanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/std:c++14</CppLanguageStandard>
+      <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ConformanceMode>
+      <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </DisableLanguageExtensions>
+      <SupportJustMyCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</SupportJustMyCode>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MultiProcessorCompilation>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdcpp17</LanguageStandard>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">stdcpp17</LanguageStandard>
+      <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ConformanceMode>
+      <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">true</ConformanceMode>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(INTELVTUNESDKPATH)/include;$(LLVMDIRRELEASE)\include;$(BOEHMGCRELEASE)\include;$(JEMALLOCINC);$(JEMALLOCINC)\msvc_compat;$(SolutionDir)..\dependencies\pugixml\src;$(TBBDIR)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">$(INTELVTUNESDKPATH)/include;$(LLVMDIRRELEASE)\include;$(BOEHMGCRELEASE)\include;$(JEMALLOCINC);$(JEMALLOCINC)\msvc_compat;$(SolutionDir)..\dependencies\pugixml\src;$(TBBDIR)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">false</MultiProcessorCompilation>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6255</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6255</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">6255</DisableSpecificWarnings>
+      <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IntrinsicFunctions>
+      <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">true</IntrinsicFunctions>
+      <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">Speed</FavorSizeOrSpeed>
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</RuntimeTypeInfo>
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</RuntimeTypeInfo>
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">true</RuntimeTypeInfo>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">EnableAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">EnableAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level1</WarningLevel>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Wno-unused-variable -Wno-c++98-compat -Wno-c++98-compat-pedantic -ferror-limit=0</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Wno-unused-variable -Wno-c++98-compat -Wno-c++98-compat-pedantic -ferror-limit=0</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">-ferror-limit=0</AdditionalOptions>
+      <ExternalWarningLevel Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">Level3</ExternalWarningLevel>
+    </ClCompile>
+    <Lib>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(LLVMDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(BOEHMGCPATH)/gc64_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <TargetMachine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MachineX64</TargetMachine>
+    </Lib>
+    <PreBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy /Y $(BOEHMGCPATH)\gc64.dll $(OutputPath)gc64.dll</Command>
+    </PreBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(LLVMDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(BOEHMGCPATH)\gc64_dll.lib;LLVMAArch64AsmParser.lib;LLVMAArch64AsmPrinter.lib;LLVMAArch64CodeGen.lib;LLVMAArch64Desc.lib;LLVMAArch64Disassembler.lib;LLVMAArch64Info.lib;LLVMAArch64Utils.lib;LLVMAMDGPUAsmParser.lib;LLVMAMDGPUAsmPrinter.lib;LLVMAMDGPUCodeGen.lib;LLVMAMDGPUDesc.lib;LLVMAMDGPUDisassembler.lib;LLVMAMDGPUInfo.lib;LLVMAMDGPUUtils.lib;LLVMAnalysis.lib;LLVMARMAsmParser.lib;LLVMARMAsmPrinter.lib;LLVMARMCodeGen.lib;LLVMARMDesc.lib;LLVMARMDisassembler.lib;LLVMARMInfo.lib;LLVMAsmParser.lib;LLVMAsmPrinter.lib;LLVMBinaryFormat.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMBPFAsmPrinter.lib;LLVMBPFCodeGen.lib;LLVMBPFDesc.lib;LLVMBPFDisassembler.lib;LLVMBPFInfo.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMCoroutines.lib;LLVMCoverage.lib;LLVMDebugInfoCodeView.lib;LLVMDebugInfoDWARF.lib;LLVMDebugInfoMSF.lib;LLVMDebugInfoPDB.lib;LLVMDemangle.lib;LLVMDlltoolDriver.lib;LLVMExecutionEngine.lib;LLVMGlobalISel.lib;LLVMHexagonAsmParser.lib;LLVMHexagonCodeGen.lib;LLVMHexagonDesc.lib;LLVMHexagonDisassembler.lib;LLVMHexagonInfo.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMInterpreter.lib;LLVMipo.lib;LLVMIRReader.lib;LLVMLanaiAsmParser.lib;LLVMLanaiAsmPrinter.lib;LLVMLanaiCodeGen.lib;LLVMLanaiDesc.lib;LLVMLanaiDisassembler.lib;LLVMLanaiInfo.lib;LLVMLibDriver.lib;LLVMLineEditor.lib;LLVMLinker.lib;LLVMLTO.lib;LLVMMC.lib;LLVMMCDisassembler.lib;LLVMMCJIT.lib;LLVMMCParser.lib;LLVMMipsAsmParser.lib;LLVMMipsAsmPrinter.lib;LLVMMipsCodeGen.lib;LLVMMipsDesc.lib;LLVMMipsDisassembler.lib;LLVMMipsInfo.lib;LLVMMIRParser.lib;LLVMMSP430AsmPrinter.lib;LLVMMSP430CodeGen.lib;LLVMMSP430Desc.lib;LLVMMSP430Info.lib;LLVMNVPTXAsmPrinter.lib;LLVMNVPTXCodeGen.lib;LLVMNVPTXDesc.lib;LLVMNVPTXInfo.lib;LLVMObjCARCOpts.lib;LLVMObject.lib;LLVMObjectYAML.lib;LLVMOption.lib;LLVMOrcJIT.lib;LLVMPasses.lib;LLVMPowerPCAsmParser.lib;LLVMPowerPCAsmPrinter.lib;LLVMPowerPCCodeGen.lib;LLVMPowerPCDesc.lib;LLVMPowerPCDisassembler.lib;LLVMPowerPCInfo.lib;LLVMProfileData.lib;LLVMRuntimeDyld.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSparcAsmParser.lib;LLVMSparcAsmPrinter.lib;LLVMSparcCodeGen.lib;LLVMSparcDesc.lib;LLVMSparcDisassembler.lib;LLVMSparcInfo.lib;LLVMSupport.lib;LLVMSymbolize.lib;LLVMSystemZAsmParser.lib;LLVMSystemZAsmPrinter.lib;LLVMSystemZCodeGen.lib;LLVMSystemZDesc.lib;LLVMSystemZDisassembler.lib;LLVMSystemZInfo.lib;LLVMTableGen.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMVectorize.lib;LLVMX86AsmParser.lib;LLVMX86AsmPrinter.lib;LLVMX86CodeGen.lib;LLVMX86Desc.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;LLVMX86Utils.lib;LLVMXCoreAsmPrinter.lib;LLVMXCoreCodeGen.lib;LLVMXCoreDesc.lib;LLVMXCoreDisassembler.lib;LLVMXCoreInfo.lib;LLVMXRay.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(TBBDIR)\lib\intel64\vc14\tbb_debug.lib;$(BOEHMGCDEBUG)\gc64_dll.lib;$(INTELVTUNESDKPATH)/lib64/jitprofiling.lib;$(LLVMDIRDEBUG)\lib\LLVMAnalysis.lib;$(LLVMDIRDEBUG)\lib\LLVMCore.lib;$(LLVMDIRDEBUG)\lib\LLVMExecutionEngine.lib;$(LLVMDIRDEBUG)\lib\LLVMAggressiveInstCombine.lib;$(LLVMDIRDEBUG)\lib\LLVMInstCombine.lib;$(LLVMDIRDEBUG)\lib\LLVMObject.lib;$(LLVMDIRDEBUG)\lib\LLVMRuntimeDyld.lib;$(LLVMDIRDEBUG)\lib\LLVMScalarOpts.lib;$(LLVMDIRDEBUG)\lib\LLVMSupport.lib;$(LLVMDIRDEBUG)\lib\LLVMX86CodeGen.lib;$(LLVMDIRDEBUG)\lib\LLVMX86AsmParser.lib;$(LLVMDIRDEBUG)\lib\LLVMX86Desc.lib;$(LLVMDIRDEBUG)\lib\LLVMX86Info.lib;$(LLVMDIRDEBUG)\lib\LLVMX86Disassembler.lib;$(LLVMDIRDEBUG)\lib\LLVMAsmPrinter.lib;$(LLVMDIRDEBUG)\lib\LLVMDebugInfoCodeView.lib;$(LLVMDIRDEBUG)\lib\LLVMDebugInfoMSF.lib;$(LLVMDIRDEBUG)\lib\LLVMGlobalISel.lib;$(LLVMDIRDEBUG)\lib\LLVMSelectionDAG.lib;$(LLVMDIRDEBUG)\lib\LLVMCodeGen.lib;$(LLVMDIRDEBUG)\lib\LLVMTarget.lib;$(LLVMDIRDEBUG)\lib\LLVMTransformUtils.lib;$(LLVMDIRDEBUG)\lib\LLVMBitWriter.lib;$(LLVMDIRDEBUG)\lib\LLVMProfileData.lib;$(LLVMDIRDEBUG)\lib\LLVMBitReader.lib;$(LLVMDIRDEBUG)\lib\LLVMBinaryFormat.lib;$(LLVMDIRDEBUG)\lib\LLVMMCParser.lib;$(LLVMDIRDEBUG)\lib\LLVMMCDisassembler.lib;$(LLVMDIRDEBUG)\lib\LLVMMC.lib;$(LLVMDIRDEBUG)\lib\LLVMDemangle.lib;$(LLVMDIRDEBUG)\lib\LLVMMCJIT.lib;$(LLVMDIRDEBUG)\lib\LLVMOrcJIT.lib;$(LLVMDIRDEBUG)\lib\LLVMipo.lib;$(LLVMDIRDEBUG)\lib\LLVMVectorize.lib;$(LLVMDIRDEBUG)\lib\LLVMInstrumentation.lib;$(LLVMDIRDEBUG)\lib\LLVMObjCARCOpts.lib;$(LLVMDIRDEBUG)\lib\LLVMCoroutines.lib;$(LLVMDIRDEBUG)\lib\LLVMLinker.lib;$(LLVMDIRDEBUG)\lib\LLVMIRReader.lib;$(LLVMDIRDEBUG)\lib\LLVMAsmParser.lib;$(LLVMDIRDEBUG)\lib\LLVMBitstreamReader.lib;$(LLVMDIRDEBUG)\lib\LLVMRemarks.lib;$(LLVMDIRDEBUG)\lib\LLVMCFGuard.lib;$(LLVMDIRDEBUG)\lib\LLVMTextAPI.lib;$(LLVMDIRDEBUG)\lib\LLVMDebugInfoDWARF.lib;$(LLVMDIRDEBUG)\lib\LLVMPasses.lib;$(LLVMDIRDEBUG)\lib\LLVMJITLink.lib;$(LLVMDIRDEBUG)\lib\LLVMFrontendOpenMP.lib;$(LLVMDIRDEBUG)\lib\LLVMIntelJITEvents.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcShared.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcTargetProcess.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">10485760</StackReserveSize>
+      <StackCommitSize Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </StackCommitSize>
+    </Link>
+    <PreBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy /Y "$(BOEHMGCDEBUG)\gc64.dll" "$(OutputPath)gc64.dll"</Command>
+    </PreBuildEvent>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(TBBDIR)\lib\intel64\vc14\tbb.lib;$(BOEHMGCRELEASE)\gc64_dll.lib;$(INTELVTUNESDKPATH)/lib64/jitprofiling.lib;$(LLVMDIRRELEASE)\lib\LLVMAnalysis.lib;$(LLVMDIRRELEASE)\lib\LLVMCore.lib;$(LLVMDIRRELEASE)\lib\LLVMExecutionEngine.lib;$(LLVMDIRRELEASE)\lib\LLVMAggressiveInstCombine.lib;$(LLVMDIRRELEASE)\lib\LLVMInstCombine.lib;$(LLVMDIRRELEASE)\lib\LLVMObject.lib;$(LLVMDIRRELEASE)\lib\LLVMRuntimeDyld.lib;$(LLVMDIRRELEASE)\lib\LLVMScalarOpts.lib;$(LLVMDIRRELEASE)\lib\LLVMSupport.lib;$(LLVMDIRRELEASE)\lib\LLVMX86CodeGen.lib;$(LLVMDIRRELEASE)\lib\LLVMX86AsmParser.lib;$(LLVMDIRRELEASE)\lib\LLVMX86Desc.lib;$(LLVMDIRRELEASE)\lib\LLVMX86Info.lib;$(LLVMDIRRELEASE)\lib\LLVMX86Disassembler.lib;$(LLVMDIRRELEASE)\lib\LLVMAsmPrinter.lib;$(LLVMDIRRELEASE)\lib\LLVMDebugInfoCodeView.lib;$(LLVMDIRRELEASE)\lib\LLVMDebugInfoMSF.lib;$(LLVMDIRRELEASE)\lib\LLVMGlobalISel.lib;$(LLVMDIRRELEASE)\lib\LLVMSelectionDAG.lib;$(LLVMDIRRELEASE)\lib\LLVMCodeGen.lib;$(LLVMDIRRELEASE)\lib\LLVMTarget.lib;$(LLVMDIRRELEASE)\lib\LLVMTransformUtils.lib;$(LLVMDIRRELEASE)\lib\LLVMBitWriter.lib;$(LLVMDIRRELEASE)\lib\LLVMProfileData.lib;$(LLVMDIRRELEASE)\lib\LLVMBitReader.lib;$(LLVMDIRRELEASE)\lib\LLVMBinaryFormat.lib;$(LLVMDIRRELEASE)\lib\LLVMMCParser.lib;$(LLVMDIRRELEASE)\lib\LLVMMCDisassembler.lib;$(LLVMDIRRELEASE)\lib\LLVMMC.lib;$(LLVMDIRRELEASE)\lib\LLVMDemangle.lib;$(LLVMDIRRELEASE)\lib\LLVMMCJIT.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcJIT.lib;$(LLVMDIRRELEASE)\lib\LLVMipo.lib;$(LLVMDIRRELEASE)\lib\LLVMVectorize.lib;$(LLVMDIRRELEASE)\lib\LLVMInstrumentation.lib;$(LLVMDIRRELEASE)\lib\LLVMObjCARCOpts.lib;$(LLVMDIRRELEASE)\lib\LLVMCoroutines.lib;$(LLVMDIRRELEASE)\lib\LLVMLinker.lib;$(LLVMDIRRELEASE)\lib\LLVMIRReader.lib;$(LLVMDIRRELEASE)\lib\LLVMAsmParser.lib;$(LLVMDIRRELEASE)\lib\LLVMBitstreamReader.lib;$(LLVMDIRRELEASE)\lib\LLVMRemarks.lib;$(LLVMDIRRELEASE)\lib\LLVMCFGuard.lib;$(LLVMDIRRELEASE)\lib\LLVMTextAPI.lib;$(LLVMDIRRELEASE)\lib\LLVMDebugInfoDWARF.lib;$(LLVMDIRRELEASE)\lib\LLVMPasses.lib;$(LLVMDIRRELEASE)\lib\LLVMJITLink.lib;$(LLVMDIRRELEASE)\lib\LLVMFrontendOpenMP.lib;$(LLVMDIRRELEASE)\lib\LLVMIntelJITEvents.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcShared.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcTargetProcess.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">$(TBBDIR)\lib\intel64\vc14\tbb.lib;$(BOEHMGCRELEASE)\gc64_dll.lib;$(INTELVTUNESDKPATH)/lib64/jitprofiling.lib;$(LLVMDIRRELEASE)\lib\LLVMAnalysis.lib;$(LLVMDIRRELEASE)\lib\LLVMCore.lib;$(LLVMDIRRELEASE)\lib\LLVMExecutionEngine.lib;$(LLVMDIRRELEASE)\lib\LLVMAggressiveInstCombine.lib;$(LLVMDIRRELEASE)\lib\LLVMInstCombine.lib;$(LLVMDIRRELEASE)\lib\LLVMObject.lib;$(LLVMDIRRELEASE)\lib\LLVMRuntimeDyld.lib;$(LLVMDIRRELEASE)\lib\LLVMScalarOpts.lib;$(LLVMDIRRELEASE)\lib\LLVMSupport.lib;$(LLVMDIRRELEASE)\lib\LLVMX86CodeGen.lib;$(LLVMDIRRELEASE)\lib\LLVMX86AsmParser.lib;$(LLVMDIRRELEASE)\lib\LLVMX86Desc.lib;$(LLVMDIRRELEASE)\lib\LLVMX86Info.lib;$(LLVMDIRRELEASE)\lib\LLVMX86Disassembler.lib;$(LLVMDIRRELEASE)\lib\LLVMAsmPrinter.lib;$(LLVMDIRRELEASE)\lib\LLVMDebugInfoCodeView.lib;$(LLVMDIRRELEASE)\lib\LLVMDebugInfoMSF.lib;$(LLVMDIRRELEASE)\lib\LLVMGlobalISel.lib;$(LLVMDIRRELEASE)\lib\LLVMSelectionDAG.lib;$(LLVMDIRRELEASE)\lib\LLVMCodeGen.lib;$(LLVMDIRRELEASE)\lib\LLVMTarget.lib;$(LLVMDIRRELEASE)\lib\LLVMTransformUtils.lib;$(LLVMDIRRELEASE)\lib\LLVMBitWriter.lib;$(LLVMDIRRELEASE)\lib\LLVMProfileData.lib;$(LLVMDIRRELEASE)\lib\LLVMBitReader.lib;$(LLVMDIRRELEASE)\lib\LLVMBinaryFormat.lib;$(LLVMDIRRELEASE)\lib\LLVMMCParser.lib;$(LLVMDIRRELEASE)\lib\LLVMMCDisassembler.lib;$(LLVMDIRRELEASE)\lib\LLVMMC.lib;$(LLVMDIRRELEASE)\lib\LLVMDemangle.lib;$(LLVMDIRRELEASE)\lib\LLVMMCJIT.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcJIT.lib;$(LLVMDIRRELEASE)\lib\LLVMipo.lib;$(LLVMDIRRELEASE)\lib\LLVMVectorize.lib;$(LLVMDIRRELEASE)\lib\LLVMInstrumentation.lib;$(LLVMDIRRELEASE)\lib\LLVMObjCARCOpts.lib;$(LLVMDIRRELEASE)\lib\LLVMCoroutines.lib;$(LLVMDIRRELEASE)\lib\LLVMLinker.lib;$(LLVMDIRRELEASE)\lib\LLVMIRReader.lib;$(LLVMDIRRELEASE)\lib\LLVMAsmParser.lib;$(LLVMDIRRELEASE)\lib\LLVMBitstreamReader.lib;$(LLVMDIRRELEASE)\lib\LLVMRemarks.lib;$(LLVMDIRRELEASE)\lib\LLVMCFGuard.lib;$(LLVMDIRRELEASE)\lib\LLVMTextAPI.lib;$(LLVMDIRRELEASE)\lib\LLVMDebugInfoDWARF.lib;$(LLVMDIRRELEASE)\lib\LLVMPasses.lib;$(LLVMDIRRELEASE)\lib\LLVMJITLink.lib;$(LLVMDIRRELEASE)\lib\LLVMFrontendOpenMP.lib;$(LLVMDIRRELEASE)\lib\LLVMIntelJITEvents.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcShared.lib;$(LLVMDIRRELEASE)\lib\LLVMOrcTargetProcess.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize Condition="'$(Configuration)|$(Platform)'=='Release|x64'">10485760</StackReserveSize>
+      <StackReserveSize Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">10485760</StackReserveSize>
+    </Link>
+    <PreBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy /Y "$(BOEHMGCRELEASE)\gc64.dll" "$(OutputPath)gc64.dll"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">copy /Y "$(BOEHMGCRELEASE)\gc64.dll" "$(OutputPath)gc64.dll"</Command>
+    </PreBuildEvent>
+    <PreLinkEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy /Y "$(TBBDIR)\bin\intel64\vc14\tbb.dll" "$(OutputPath)tbb.dll"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">copy /Y "$(TBBDIR)\bin\intel64\vc14\tbb.dll" "$(OutputPath)tbb.dll"</Command>
+    </PreLinkEvent>
+    <PreLinkEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy /Y "$(TBBDIR)\bin\intel64\vc14\tbb_debug.dll" "$(OutputPath)tbb_debug.dll"</Command>
+    </PreLinkEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="ArrayListClass.cpp" />
+    <ClCompile Include="ARTRep.cpp" />
+    <ClCompile Include="AssemblyUnit.cpp" />
+    <ClCompile Include="AvailableExternally.cpp" />
+    <ClCompile Include="BoehmContainers.cpp" />
+    <ClCompile Include="boehmgcinterface.cpp" />
+    <ClCompile Include="BoolClass.cpp" />
+    <ClCompile Include="BytecodeReader.cpp" />
+    <ClCompile Include="BytecodeTopReadHandler.cpp" />
+    <ClCompile Include="CastStats.cpp" />
+    <ClCompile Include="CharStream.cpp" />
+    <ClCompile Include="ClassTypeList.cpp" />
+    <ClCompile Include="CompileEnv.cpp" />
+    <ClCompile Include="CompileHelpers.cpp" />
+    <ClCompile Include="ComponentSource.cpp" />
+    <ClCompile Include="Context.cpp" />
+    <ClCompile Include="Defs.cpp" />
+    <ClCompile Include="Directory.cpp" />
+    <ClCompile Include="DispatchDictionaryEntry.cpp" />
+    <ClCompile Include="ExpandoObjectClass.cpp" />
+    <ClCompile Include="File.cpp" />
+    <ClCompile Include="FloatClass.cpp" />
+    <ClCompile Include="FunctionTimings.cpp" />
+    <ClCompile Include="FunInterface.cpp" />
+    <ClCompile Include="GloballyNamed.cpp" />
+    <ClCompile Include="IComparableInterface.cpp" />
+    <ClCompile Include="IEnumeratorInterface.cpp" />
+    <ClCompile Include="IMT.cpp" />
+    <ClCompile Include="instructions\ArgumentInstruction.cpp" />
+    <ClCompile Include="instructions\BinOpInstruction.cpp" />
+    <ClCompile Include="instructions\BranchInstruction.cpp" />
+    <ClCompile Include="instructions\CallConstructor.cpp" />
+    <ClCompile Include="instructions\CallCheckedInstanceMethod.cpp" />
+    <ClCompile Include="instructions\CallCheckedStaticMethod.cpp" />
+    <ClCompile Include="instructions\CallDispatchBestMethod.cpp" />
+    <ClCompile Include="instructions\CastInstruction.cpp" />
+    <ClCompile Include="instructions\CondBranchInstruction.cpp" />
+    <ClCompile Include="instructions\ConstructStruct.cpp" />
+    <ClCompile Include="instructions\CreateClosure.cpp" />
+    <ClCompile Include="instructions\DebugInstruction.cpp" />
+    <ClCompile Include="instructions\ErrorInstruction.cpp" />
+    <ClCompile Include="instructions\LoadBoolConstantInstruction.cpp" />
+    <ClCompile Include="instructions\LoadIntConstantInstruction.cpp" />
+    <ClCompile Include="instructions\LoadStringConstantInstruction.cpp" />
+    <ClCompile Include="instructions\NoopInstruction.cpp" />
+    <ClCompile Include="instructions\PhiEntry.cpp" />
+    <ClCompile Include="instructions\PhiNode.cpp" />
+    <ClCompile Include="instructions\ReadFieldInstruction.cpp" />
+    <ClCompile Include="instructions\ReturnInstruction.cpp" />
+    <ClCompile Include="instructions\ReturnVoidInstruction.cpp" />
+    <ClCompile Include="instructions\RTCmdInstruction.cpp" />
+    <ClCompile Include="instructions\TypeArgumentInstruction.cpp" />
+    <ClCompile Include="instructions\WriteFieldInstruction.cpp" />
+    <ClCompile Include="IntClass.cpp" />
+    <ClCompile Include="IPairInterface.cpp" />
+    <ClCompile Include="Iter.cpp" />
+    <ClCompile Include="LambdaHeader.cpp" />
+    <ClCompile Include="Library.cpp" />
+    <ClCompile Include="LibraryDependency.cpp" />
+    <ClCompile Include="LibrarySource.cpp" />
+    <ClCompile Include="LibraryVersion.cpp" />
+    <ClCompile Include="Loader.cpp" />
+    <ClCompile Include="LoadFloatConstantInstruction.cpp" />
+    <ClCompile Include="LoadNullConstantInstruction.cpp" />
+    <ClCompile Include="Managed.cpp" />
+    <ClCompile Include="Manifest.cpp" />
+    <ClCompile Include="ManifestReader.cpp" />
+    <ClCompile Include="MathClass.cpp" />
+    <ClCompile Include="Maybe.cpp" />
+    <ClCompile Include="NomAlloc.cpp" />
+    <ClCompile Include="NomBottomType.cpp" />
+    <ClCompile Include="NomCallable.cpp" />
+    <ClCompile Include="NomCallableVersion.cpp" />
+    <ClCompile Include="NomClass.cpp" />
+    <ClCompile Include="NomClassType.cpp" />
+    <ClCompile Include="NomConstants.cpp" />
+    <ClCompile Include="NomConstructor.cpp" />
+    <ClCompile Include="NomDescriptor.cpp" />
+    <ClCompile Include="NomDynamicType.cpp" />
+    <ClCompile Include="NomField.cpp" />
+    <ClCompile Include="NomInstruction.cpp" />
+    <ClCompile Include="NomInterface.cpp" />
+    <ClCompile Include="NomIsectType.cpp" />
+    <ClCompile Include="NomJIT.cpp" />
+    <ClCompile Include="NomLambda.cpp" />
+    <ClCompile Include="NomMaybeType.cpp" />
+    <ClCompile Include="NomMemberContext.cpp" />
+    <ClCompile Include="NomMethod.cpp" />
+    <ClCompile Include="NomMethodTableEntry.cpp" />
+    <ClCompile Include="NomModule.cpp" />
+    <ClCompile Include="NomNamed.cpp" />
+    <ClCompile Include="NomNameRepository.cpp" />
+    <ClCompile Include="NomPartialAppType.cpp" />
+    <ClCompile Include="NomPartialApplication.cpp" />
+    <ClCompile Include="NomProgram.cpp" />
+    <ClCompile Include="NomRuntime.cpp" />
+    <ClCompile Include="NomSignature.cpp" />
+    <ClCompile Include="NomStaticMethod.cpp" />
+    <ClCompile Include="NomString.cpp" />
+    <ClCompile Include="NomStruct.cpp" />
+    <ClCompile Include="NomStructMethod.cpp" />
+    <ClCompile Include="NomStructType.cpp" />
+    <ClCompile Include="NomSubstitutionContext.cpp" />
+    <ClCompile Include="NomSubstitutionStack.cpp" />
+    <ClCompile Include="NomType.cpp" />
+    <ClCompile Include="NomTypeParameter.cpp" />
+    <ClCompile Include="NomTypeVar.cpp" />
+    <ClCompile Include="NomTypeVarValue.cpp" />
+    <ClCompile Include="NomUnionType.cpp" />
+    <ClCompile Include="NomValue.cpp" />
+    <ClCompile Include="NomValueInstruction.cpp" />
+    <ClCompile Include="NomValuePrimitiveCases.cpp" />
+    <ClCompile Include="NomVMInterface.cpp" />
+    <ClCompile Include="ObjectClass.cpp" />
+    <ClCompile Include="ObjectHeader.cpp" />
+    <ClCompile Include="PartialAppHeader.cpp" />
+    <ClCompile Include="Path.cpp" />
+    <ClCompile Include="PreparedDictionary.cpp" />
+    <ClCompile Include="pugixml\pugixml.cpp" />
+    <ClCompile Include="RangeClass.cpp" />
+    <ClCompile Include="RecursionBuffer.cpp" />
+    <ClCompile Include="RefValueHeader.cpp" />
+    <ClCompile Include="RTCast.cpp" />
+    <ClCompile Include="RTClass.cpp" />
+    <ClCompile Include="RTClassType.cpp" />
+    <ClCompile Include="RTConcreteType.cpp" />
+    <ClCompile Include="RTDescriptor.cpp" />
+    <ClCompile Include="RTDictionary.cpp" />
+    <ClCompile Include="RTDisjointness.cpp" />
+    <ClCompile Include="RTDisjointnessIntersection.cpp" />
+    <ClCompile Include="RTDynamicType.cpp" />
+    <ClCompile Include="RTFilterInstantiations.cpp" />
+    <ClCompile Include="RTFunctionalInterface.cpp" />
+    <ClCompile Include="RTGeneralInterface.cpp" />
+    <ClCompile Include="RTInstanceType.cpp" />
+    <ClCompile Include="RTInterface.cpp" />
+    <ClCompile Include="RTLambdaInterface.cpp" />
+    <ClCompile Include="RTMaybeType.cpp" />
+    <ClCompile Include="RTMonotonicCast.cpp" />
+    <ClCompile Include="RTMulticastedInterface.cpp" />
+    <ClCompile Include="RTSignature.cpp" />
+    <ClCompile Include="RTStructInterface.cpp" />
+    <ClCompile Include="RTConfig.cpp" />
+    <ClCompile Include="RTTypeEq.cpp" />
+    <ClCompile Include="RTVTable.cpp" />
+    <ClCompile Include="RTInterfaceTableEntry.cpp" />
+    <ClCompile Include="RTIsectType.cpp" />
+    <ClCompile Include="RTLambda.cpp" />
+    <ClCompile Include="RTModule.cpp" />
+    <ClCompile Include="RTOutput.cpp" />
+    <ClCompile Include="RTPartialApp.cpp" />
+    <ClCompile Include="RTPartialAppType.cpp" />
+    <ClCompile Include="RTStruct.cpp" />
+    <ClCompile Include="RTStructType.cpp" />
+    <ClCompile Include="RTSubtyping.cpp" />
+    <ClCompile Include="RTTypeHead.cpp" />
+    <ClCompile Include="RTValueSubtyping.cpp" />
+    <ClCompile Include="SizedRTType.cpp" />
+    <ClCompile Include="RTTypeVar.cpp" />
+    <ClCompile Include="RTUnionType.cpp" />
+    <ClCompile Include="Runtime.cpp" />
+    <ClCompile Include="SmallMap.cpp" />
+    <ClCompile Include="StringClass.cpp" />
+    <ClCompile Include="StructHeader.cpp" />
+    <ClCompile Include="TimerClass.cpp" />
+    <ClCompile Include="TypeList.cpp" />
+    <ClCompile Include="NullClass.cpp" />
+    <ClCompile Include="NomTypeRegistry.cpp" />
+    <ClCompile Include="TypeOperations.cpp" />
+    <ClCompile Include="UnaryOpInstruction.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="VoidClass.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ArrayListClass.h" />
+    <ClInclude Include="ARTRep.h" />
+    <ClInclude Include="AssemblyUnit.h" />
+    <ClInclude Include="AvailableExternally.h" />
+    <ClInclude Include="BoehmAllocator.h" />
+    <ClInclude Include="BoehmAtomicAllocator.h" />
+    <ClInclude Include="BoehmContainers.h" />
+    <ClInclude Include="boehmgcinterface.h" />
+    <ClInclude Include="BoehmUncollectableAllocator.h" />
+    <ClInclude Include="BoolClass.h" />
+    <ClInclude Include="BytecodeReader.h" />
+    <ClInclude Include="BytecodeTopReadHandler.h" />
+    <ClInclude Include="CallingConvConf.h" />
+    <ClInclude Include="CastStats.h" />
+    <ClInclude Include="CharStream.h" />
+    <ClInclude Include="ClassTypeList.h" />
+    <ClInclude Include="CompileHelpers.h" />
+    <ClInclude Include="ComponentSource.h" />
+    <ClInclude Include="ConfigurationConstants.h" />
+    <ClInclude Include="Defs.h" />
+    <ClInclude Include="Directory.h" />
+    <ClInclude Include="DispatchDictionaryEntry.h" />
+    <ClInclude Include="DLLExport.h" />
+    <ClInclude Include="ExpandoObjectClass.h" />
+    <ClInclude Include="File.h" />
+    <ClInclude Include="FileSysDefs.h" />
+    <ClInclude Include="FloatClass.h" />
+    <ClInclude Include="FunctionTimings.h" />
+    <ClInclude Include="FunInterface.h" />
+    <ClInclude Include="gcinclude_config.h" />
+    <ClInclude Include="GloballyNamed.h" />
+    <ClInclude Include="GlobalNameAddressLookupList.h" />
+    <ClInclude Include="RawInvoke.h" />
+    <ClInclude Include="IComparableInterface.h" />
+    <ClCompile Include="IEnumerableInterface.cpp" />
+    <ClInclude Include="IEnumerableInterface.h" />
+    <ClInclude Include="IEnumeratorInterface.h" />
+    <ClInclude Include="IMT.h" />
+    <ClInclude Include="InstructionMessages.h" />
+    <ClInclude Include="instructions\BinOpInstruction.h" />
+    <ClInclude Include="instructions\BranchInstruction.h" />
+    <ClInclude Include="instructions\CallConstructor.h" />
+    <ClInclude Include="instructions\CastInstruction.h" />
+    <ClInclude Include="instructions\CondBranchInstruction.h" />
+    <ClInclude Include="instructions\ConstructStruct.h" />
+    <ClInclude Include="instructions\CreateClosure.h" />
+    <ClInclude Include="instructions\DebugInstruction.h" />
+    <ClInclude Include="instructions\ErrorInstruction.h" />
+    <ClInclude Include="instructions\LoadBoolConstantInstruction.h" />
+    <ClInclude Include="instructions\LoadIntConstantInstruction.h" />
+    <ClInclude Include="instructions\ReadFieldInstruction.h" />
+    <ClInclude Include="instructions\ReturnVoidInstruction.h" />
+    <ClInclude Include="instructions\RTCmdInstruction.h" />
+    <ClInclude Include="instructions\WriteFieldInstruction.h" />
+    <ClInclude Include="IntClass.h" />
+    <ClInclude Include="IPairInterface.h" />
+    <ClInclude Include="LambdaHeader.h" />
+    <ClInclude Include="LoadFloatConstantInstruction.h" />
+    <ClInclude Include="LoadNullConstantInstruction.h" />
+    <ClInclude Include="Managed.h" />
+    <ClInclude Include="Manifest.h" />
+    <ClInclude Include="MathClass.h" />
+    <ClInclude Include="NomBottomType.h" />
+    <ClInclude Include="NomCallableVersion.h" />
+    <ClInclude Include="NomConstructor.h" />
+    <ClInclude Include="NomDescriptor.h" />
+    <ClInclude Include="NomDynamicType.h" />
+    <ClInclude Include="NomField.h" />
+    <ClInclude Include="NomJITLight.h" />
+    <ClInclude Include="NomLambda.h" />
+    <ClInclude Include="NomMaybeType.h" />
+    <ClInclude Include="NomMemberContext.h" />
+    <ClInclude Include="NomMethodTableEntry.h" />
+    <ClInclude Include="NomNameRepository.h" />
+    <ClInclude Include="NomPartialAppType.h" />
+    <ClInclude Include="NomPartialApplication.h" />
+    <ClInclude Include="NomSignature.h" />
+    <ClInclude Include="NomStruct.h" />
+    <ClInclude Include="NomStructMethod.h" />
+    <ClInclude Include="NomStructType.h" />
+    <ClInclude Include="NomSubstitutionContext.h" />
+    <ClInclude Include="NomSubstitutionStack.h" />
+    <ClInclude Include="NomTypeDecls.h" />
+    <ClInclude Include="NomTypeParameter.h" />
+    <ClInclude Include="NomTypeVarValue.h" />
+    <ClInclude Include="NomValue.h" />
+    <ClInclude Include="NomValuePrimitiveCases.h" />
+    <ClInclude Include="ObjectHeader.h" />
+    <ClInclude Include="PartialAppHeader.h" />
+    <ClInclude Include="Path.h" />
+    <ClInclude Include="PreparedDictionary.h" />
+    <ClInclude Include="pugixml\pugiconfig.hpp" />
+    <ClInclude Include="pugixml\pugixml.hpp" />
+    <ClInclude Include="RangeClass.h" />
+    <ClInclude Include="RefValueHeader.h" />
+    <ClInclude Include="RTCast.h" />
+    <ClInclude Include="RTClass.h" />
+    <ClInclude Include="RTClassType.h" />
+    <ClInclude Include="RTCompileConfig.h" />
+    <ClInclude Include="RTConcreteType.h" />
+    <ClInclude Include="RTDescriptor.h" />
+    <ClInclude Include="RTDictionary.h" />
+    <ClInclude Include="RTDisjointness.h" />
+    <ClInclude Include="RTDisjointnessIntersection.h" />
+    <ClInclude Include="RTDynamicType.h" />
+    <ClInclude Include="RTFilterInstantiations.h" />
+    <ClInclude Include="RTFunctionalInterface.h" />
+    <ClInclude Include="RTGeneralInterface.h" />
+    <ClInclude Include="RTInstanceType.h" />
+    <ClInclude Include="RTInterface.h" />
+    <ClInclude Include="RTLambdaInterface.h" />
+    <ClInclude Include="RTMaybeType.h" />
+    <ClInclude Include="RTMonotonicCast.h" />
+    <ClInclude Include="RTMulticastedInterface.h" />
+    <ClInclude Include="RTSignature.h" />
+    <ClInclude Include="RTStructInterface.h" />
+    <ClInclude Include="RTConfig.h" />
+    <ClInclude Include="RTTypeEq.h" />
+    <ClInclude Include="RTVTable.h" />
+    <ClInclude Include="RTInterfaceTableEntry.h" />
+    <ClInclude Include="RTIsectType.h" />
+    <ClInclude Include="RTLambda.h" />
+    <ClInclude Include="RTModule.h" />
+    <ClInclude Include="RTOutput.h" />
+    <ClInclude Include="RTPartialApp.h" />
+    <ClInclude Include="RTPartialAppType.h" />
+    <ClInclude Include="RTStruct.h" />
+    <ClInclude Include="RTStructType.h" />
+    <ClInclude Include="RTSubtyping.h" />
+    <ClInclude Include="RTTypeHead.h" />
+    <ClInclude Include="RTValueSubtyping.h" />
+    <ClInclude Include="Singleton.h" />
+    <ClInclude Include="SizedRTType.h" />
+    <ClInclude Include="RTTypes.h" />
+    <ClInclude Include="RTTypeVar.h" />
+    <ClInclude Include="RTUnionType.h" />
+    <ClInclude Include="StringDict.h" />
+    <ClInclude Include="instructions\ArgumentInstruction.h" />
+    <ClInclude Include="instructions\CallCheckedInstanceMethod.h" />
+    <ClInclude Include="instructions\CallCheckedStaticMethod.h" />
+    <ClInclude Include="instructions\CallDispatchBestMethod.h" />
+    <ClInclude Include="instructions\LoadStringConstantInstruction.h" />
+    <ClInclude Include="instructions\PhiEntry.h" />
+    <ClInclude Include="instructions\TypeArgumentInstruction.h" />
+    <ClInclude Include="Iter.h" />
+    <ClInclude Include="Library.h" />
+    <ClInclude Include="LibraryDependency.h" />
+    <ClInclude Include="LibrarySource.h" />
+    <ClInclude Include="LibraryVersion.h" />
+    <ClInclude Include="Loader.h" />
+    <ClInclude Include="ManifestReader.h" />
+    <ClInclude Include="Maybe.h" />
+    <ClInclude Include="NomAlloc.h" />
+    <ClInclude Include="NomCallable.h" />
+    <ClInclude Include="NomClassType.h" />
+    <ClInclude Include="NomConstants.h" />
+    <ClInclude Include="NomInstantiationRef.h" />
+    <ClInclude Include="NomInterface.h" />
+    <ClInclude Include="NomIsectType.h" />
+    <ClInclude Include="NomModule.h" />
+    <ClInclude Include="NomNamed.h" />
+    <ClInclude Include="NomProgram.h" />
+    <ClInclude Include="NomRuntime.h" />
+    <ClInclude Include="NomTypeVar.h" />
+    <ClInclude Include="NomUnionType.h" />
+    <ClInclude Include="NomValueInstruction.h" />
+    <ClInclude Include="NomVMInterface.h" />
+    <ClInclude Include="ObjectClass.h" />
+    <ClInclude Include="RecursionBuffer.h" />
+    <ClInclude Include="CompileEnv.h" />
+    <ClInclude Include="NomString.h" />
+    <ClInclude Include="Context.h" />
+    <ClInclude Include="Instructions.h" />
+    <ClInclude Include="instructions\NoopInstruction.h" />
+    <ClInclude Include="instructions\PhiNode.h" />
+    <ClInclude Include="instructions\ReturnInstruction.h" />
+    <ClInclude Include="NomClass.h" />
+    <ClInclude Include="NomInstruction.h" />
+    <ClInclude Include="NomJIT.h" />
+    <ClInclude Include="NomMethod.h" />
+    <ClInclude Include="NomStaticMethod.h" />
+    <ClInclude Include="NomType.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Runtime.h" />
+    <ClInclude Include="SmallMap.h" />
+    <ClInclude Include="StringClass.h" />
+    <ClInclude Include="StructHeader.h" />
+    <ClInclude Include="TimerClass.h" />
+    <ClInclude Include="TypeList.h" />
+    <ClInclude Include="NomTypeRegistry.h" />
+    <ClInclude Include="TypeOperations.h" />
+    <ClInclude Include="UnaryOpInstruction.h" />
+    <ClInclude Include="Util.h" />
+    <ClInclude Include="variant.h" />
+    <ClInclude Include="NullClass.h" />
+    <ClInclude Include="VersionNumber.h" />
+    <ClInclude Include="VoidClass.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Runtime.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>

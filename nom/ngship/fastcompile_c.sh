@@ -1,0 +1,1 @@
+gcc *.c -std=gnu99 -DSFMT_MEXP=19937 -lm libgc.a libcord.a -pthread -O2

@@ -1,0 +1,87 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Antlr4UseCSharpGenerator>True</Antlr4UseCSharpGenerator>
+    <RootNamespace>Nom.Parser</RootNamespace>
+    <Configurations>Debug;Release;Release-MSVC</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>$(NOMBUILDPATH)\Parser\bin\Debug\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>$(NOMBUILDPATH)\Parser\bin\Release\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|AnyCPU'">
+    <OutputPath>$(NOMBUILDPATH)\Parser\bin\Release\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Antlr4 Include="**/*.g4">
+      <Visitor>false</Visitor>
+    </Antlr4>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Antlr4" Version="4.6.6">
+      <!--<PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\Language\Language.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Antlr4 Update="Special\NominalGradual.g4">
+      <Listener>false</Listener>
+      <Visitor>false</Visitor>
+      <CustomToolNamespace>Nom.Parser</CustomToolNamespace>
+    </Antlr4>
+    <Antlr4 Update="Special\NominalGradualLexer.g4">
+      <Listener>false</Listener>
+      <Visitor>false</Visitor>
+      <CustomToolNamespace>Nom.Parser</CustomToolNamespace>
+    </Antlr4>
+  </ItemGroup>
+
+</Project>
+  <!--<ItemGroup>
+    <Antlr4 Include="**/*.g4">
+      <Visitor>false</Visitor>
+    </Antlr4>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Antlr4 Remove="Special\NominalGradualLexer.g4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Antlr4Tokens Include="Special\NominalGradualLexer.g4">
+      <Listener>false</Listener>
+      <Visitor>false</Visitor>
+      <CustomToolNamespace>Nom.Parser</CustomToolNamespace>
+      --><!--<Generator>MSBuild:Compile</Generator>--><!--
+    </Antlr4Tokens>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Antlr4" Version="4.6.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Antlr4 Update="Special\NominalGradual.g4">
+      <Listener>false</Listener>
+      <Visitor>false</Visitor>
+      <CustomToolNamespace>Nom.Parser</CustomToolNamespace>
+      <Generator>MSBuild:Compile</Generator>
+    </Antlr4>
+  </ItemGroup>
+
+</Project>-->

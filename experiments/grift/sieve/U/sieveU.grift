@@ -1,0 +1,4 @@
+;; `sieve st` Sieve of Eratosthenes
+(define (sieve [st : Dyn]) : Dyn
+  (let ([hd : Dyn (stream-first st)])
+    (make-stream hd (lambda () : Dyn (sieve (sift hd (stream-rest st)))))))

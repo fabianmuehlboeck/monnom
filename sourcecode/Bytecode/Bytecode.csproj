@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>Nom.Bytecode</RootNamespace>
+    <Configurations>Debug;Release;Release-MSVC</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>$(NOMBUILDPATH)\Bytecode\bin\Debug\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>$(NOMBUILDPATH)\Bytecode\bin\Release\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|AnyCPU'">
+    <OutputPath>$(NOMBUILDPATH)\Bytecode\bin\Release\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\Language\Language.csproj" />
+    <ProjectReference Include="..\NomProject\NomProject.csproj" />
+    <ProjectReference Include="..\Parser\Parser.csproj" />
+    <ProjectReference Include="..\TypeChecker\TypeChecker.csproj" />
+  </ItemGroup>
+
+</Project>

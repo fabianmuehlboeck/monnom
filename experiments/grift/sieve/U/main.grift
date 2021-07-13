@@ -1,0 +1,9 @@
+;; stream of prime numbers
+(define primes : Dyn (sieve (count-from 2)))
+
+(define (main) : Dyn
+  (let ([N-1 : Dyn (read-int)])
+    (print-int (stream-get primes N-1))
+    (display-char #\newline)))
+
+(time (main))

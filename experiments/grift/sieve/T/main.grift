@@ -1,0 +1,9 @@
+  ;; stream of prime numbers
+  (define primes : (Rec s (Tuple Int (-> s))) (sieve (count-from 2)))
+
+  (define (main) : Unit
+    (let ([N-1 : Int (read-int)])
+      (print-int (stream-get primes N-1))
+      (display-char #\newline)))
+
+  (time (main))

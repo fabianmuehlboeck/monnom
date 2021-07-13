@@ -1,0 +1,144 @@
+class Enumerable
+{
+	private class FilterEnumerable<T> implements IEnumerable<T>
+	{
+		private class FilterEnumerator implements IEnumerator<T>
+		{
+			private IEnumerator<T> Base;
+			private Fun<T,Bool> Filterfun;
+			private T! cur;
+			public constructor(IEnumerator<T> base, Fun<T,Bool> filter)
+			{
+				cur=null;
+				Base=base;
+				Filterfun=filter;
+			}
+			public fun Current() : T
+			{
+				return cur;
+			}
+			public fun MoveNext() : Bool
+			{
+				Bool found=false;
+				while(!found)
+				{
+					if(!Base.MoveNext())
+					{
+						break;
+					}
+					found=Filterfun(Base.Current());
+					
+				}
+				if(found)
+				{
+					cur=Base.Current();
+				}
+				else
+				{
+					cur=null;
+				}
+				return found;
+			}
+		}
+		private IEnumerable<T> Base;
+		private Fun<T,Bool> Filter;
+		public constructor(IEnumerable<T> base, Fun<T,Bool> filter)
+		{
+			Base=base;
+			Filter=filter;
+		}
+		public fun GetEnumerator() : IEnumerator<T>
+		{
+			return new FilterEnumerator(Base.GetEnumerator(), Filter);
+		}
+	}
+	public static fun Where<T>(IEnumerable<T> e, Fun<T,Bool> filter) : IEnumerable<T>
+	{
+		return new FilterEnumerable<T>(e, filter);
+	}
+	private class MapEnumerable<T,S> implements IEnumerable<S>
+	{
+		private class MapEnumerator implements IEnumerator<S>
+		{
+			private IEnumerator<T> Base;
+			private Fun<T,S> Mapper;
+			public constructor(IEnumerator<T> base, Fun<T,S> mapper)
+			{
+				Base=base;
+				Mapper=mapper;
+			}
+			public fun MoveNext() : Bool
+			{
+				return Base.MoveNext();
+			}
+			public fun Current() : S
+			{
+				return Mapper(Base.Current());
+			}
+		}
+	
+		private IEnumerable<T> Base;
+		private Fun<T,S> Mapper;
+		public constructor(IEnumerable<T> base, Fun<T,S> mapper)
+		{
+			Base=base;
+			Mapper=mapper;
+		}
+		
+		public fun GetEnumerator() : IEnumerator<S>
+		{
+			return new MapEnumerator(Base.GetEnumerator(), Mapper);
+		}
+	}
+	public static fun Map<T, S>(IEnumerable<T> e, Fun<T,S> f) : IEnumerable<S>
+	{
+		return new MapEnumerable<T,S>(e, f);
+	}
+	public static fun Fold<T, S>(IEnumerable<T> e, S base, Fun<T, S, S> folder) : S
+	{
+		S ret = base;
+		foreach(T t in e)
+		{
+			ret = folder(t, ret);
+		}
+		return ret;
+	}
+	public static fun ToList<T>(IEnumerable<T> e) : ArrayList<T>
+	{
+		ArrayList<T> ret = new ArrayList<T>();
+		foreach(T t in e)
+		{
+			ret.Add(t);
+		}
+		return ret;
+	}
+	private class FromEnumerable<T> implements IEnumerable<T>
+	{
+		private IEnumerable<T> Base;
+		private Int StartIndex;
+		public constructor(IEnumerable<T> base, Int startIndex)
+		{
+			Base=base;
+			StartIndex=startIndex;
+		}
+		
+		public fun GetEnumerator(): IEnumerator<T>
+		{
+			IEnumerator<T> e = Base.GetEnumerator();
+			Int index=0;
+			while(index<StartIndex)
+			{
+				index=index+1;
+				if(!e.MoveNext())
+				{
+					break;
+				}
+			}
+			return e;
+		}
+	}
+	public static fun From<T>(IEnumerable<T> e, Int index) : IEnumerable<T>
+	{
+		return new FromEnumerable<T>(e, index);
+	}
+}

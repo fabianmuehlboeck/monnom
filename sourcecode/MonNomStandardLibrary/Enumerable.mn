@@ -1,0 +1,77 @@
+class Enumerable
+{
+	private class FilterEnumerable<T> implements IEnumerable<T>
+	{
+		private class FilterEnumerator implements IEnumerator<T>
+		{
+			private IEnumerator<T> Base;
+			private Fun<T,Bool> Filterfun;
+			private T! cur;
+			public constructor(IEnumerator<T> base, Fun<T,Bool> filter)
+			{
+				cur=null;
+				Base=base;
+				Filterfun=filter;
+			}
+			public fun Current() : T
+			{
+				return cur;
+			}
+			public fun MoveNext() : Bool
+			{
+				Bool found=false;
+				while(!found)
+				{
+					if(!Base.MoveNext())
+					{
+						break;
+					}
+					found=Filterfun(Base.Current());
+					
+				}
+				if(found)
+				{
+					cur=Base.Current();
+				}
+				else
+				{
+					cur=null;
+				}
+				return found;
+			}
+		}
+		private IEnumerable<T> Base;
+		private Fun<T,Bool> Filter;
+		public constructor(IEnumerable<T> base, Fun<T,Bool> filter)
+		{
+			Base=base;
+			Filter=filter;
+		}
+		public fun GetEnumerator() : IEnumerator<T>
+		{
+			return new FilterEnumerator(Base.GetEnumerator(), Filter);
+		}
+	}
+	public static fun Where<T>(IEnumerable<T> e, Fun<T,Bool> filter) : IEnumerable<T>
+	{
+		return new FilterEnumerable<T>(e, filter);
+	}
+
+	public static fun Main() : Void
+	{
+		"Hello\n".Print();
+		ArrayList<Int> lst = new ArrayList<Int>();
+		foreach(Int i in [1..50])
+		{
+			i.ToString().Print();
+			lst.Add(i);
+		}
+		"World\n".Print();
+		foreach(Int i in Enumerable.Where<Int>(lst, x => { return ((x%2)==0);}))
+		{
+			i.ToString().Print();
+			"\n".Print();
+		}
+		"!\n".Print();
+	}
+}

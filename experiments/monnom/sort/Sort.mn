@@ -1,0 +1,63 @@
+class Sort
+{
+	public static fun Quicksort<T extends IComparable<T>>(IList<T> l)
+	{
+		IIterator<T> loIter = l.GetIterator();
+		IIterator<T> hiIter = l.GetIterator();
+		if(loIter.MoveNext())
+		{
+			hiIter.MoveNext();
+			Int lo=0;
+			Int hi=0;
+			while(hiIter.MoveNext())
+			{
+				hi=hi+1;
+			}
+			QuicksortRec<T>(loIter, hiIter, lo, hi);
+		}
+	}
+	
+    private static fun QuicksortRec<T extends IComparable<T>>(IIterator<T> loIter, IIterator<T> hiIter, Int lo, Int hi) : Void
+	{
+		if(lo < hi)
+		{
+			IIterator<T> upper = hiIter.Clone();
+			IIterator<T> lower= loIter.Clone();
+			Int losize = Partition<T>(lower, upper, hi-lo);
+			QuicksortRec<T>(loIter, upper, lo, lo + losize-1);
+			QuicksortRec<T>(lower, hiIter, lo + losize, hi);
+		}
+	}
+	
+	private static fun Partition<T extends IComparable<T>>(IIterator<T> loIter, IIterator<T> hiIter, Int distance) : Int
+	{
+		T pivot = loIter.Current();
+		Int losize=0;
+		while(true)
+		{
+			while(loIter.Current().Compare(pivot)<0)
+			{
+				loIter.MoveNext();
+				distance=distance-1;
+				losize=losize+1;
+			}
+			while(hiIter.Current().Compare(pivot)>0)
+			{
+				hiIter.MovePrev();
+				distance=distance-1;
+			}
+			if(distance<0)
+			{
+				break;
+			}
+			T buffer=loIter.Current();
+			loIter.SetValue(hiIter.Current());
+			hiIter.SetValue(buffer);
+			loIter.MoveNext();
+			losize=losize+1;
+			hiIter.MovePrev();
+			distance=distance-2;
+		}
+		return losize;
+	}
+}
