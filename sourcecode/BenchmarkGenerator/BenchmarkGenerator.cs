@@ -194,7 +194,6 @@ namespace Nom
                     }
                 }
                 Console.WriteLine("Done!");
-                Console.ReadLine();
             }
 
             static Nom.Parser.Program ParseProgram(IEnumerable<FileInfo> files)
