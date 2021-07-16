@@ -23,6 +23,7 @@ namespace Nom
                 int runcount = 0;
                 int optlevel = 2;
                 bool byFile = false;
+                bool highPriority = false;
                 for (int i = 0; i < args.Length; i++)
                 {
                     string argkey = "";
@@ -49,6 +50,9 @@ namespace Nom
                                 break;
                             case "nolambdaopt":
                                 argkey = "nolambdaopt";
+                                break;
+                            case "priority":
+                                argkey = "priority";
                                 break;
                         }
                     }
@@ -134,6 +138,9 @@ namespace Nom
                                 i++;
                             }
                             break;
+                        case "priority":
+                            highPriority = true;
+                            break;
                         case "nolambdaopt":
                             lambdaoptarg = " --nolambdaopt ";
                             break;
@@ -180,21 +187,31 @@ namespace Nom
                     {
                         dirid++;
                         Console.WriteLine("Run " + (i + 1).ToString() + (runcount > 0 ? "/" + runcount.ToString() : "") + ": " + dir.Name + "(" + dirid.ToString() + "/" + dircount.ToString() + ")");
-                        ProcessStartInfo psi = new ProcessStartInfo("nom");
-                        psi.Arguments = "-p \"" + dir.FullName + "\" -o" + (optlevel.ToString()) + lambdaoptarg + " " + proj.Name + " >out" + (i + 1).ToString() + ".txt";
+                        Process p = new Process();
+                        ProcessStartInfo psi = p.StartInfo;
+                        psi.FileName = "nom";
+                        psi.Arguments = "-p \"" + dir.FullName + "\" -o" + (optlevel.ToString()) + lambdaoptarg + " " + proj.Name;
                         psi.WorkingDirectory = dir.FullName;
-                        psi.UseShellExecute = true;
+                        psi.UseShellExecute = false;
                         psi.CreateNoWindow = true;
-
-                        using (var proc = Process.Start(psi))
+                        psi.RedirectStandardOutput = true;
+                        if (highPriority)
                         {
-                            proc.PriorityClass = ProcessPriorityClass.RealTime;
-                            proc.WaitForExit();
+                            p.PriorityClass = ProcessPriorityClass.RealTime;
+                        }
+                        using (StreamWriter sw = new StreamWriter(new FileStream(dir.FullName +"/out" + (i + 1).ToString() + ".txt", FileMode.Create, FileAccess.Write)))
+                        {
+                            p.Start();
+                            p.WaitForExit();
+
+                            sw.Write(p.StandardOutput.ReadToEnd());
+                            p.Dispose();
                         }
                     }
                 }
                 Console.WriteLine("Done!");
             }
+
 
             static Nom.Parser.Program ParseProgram(IEnumerable<FileInfo> files)
             {

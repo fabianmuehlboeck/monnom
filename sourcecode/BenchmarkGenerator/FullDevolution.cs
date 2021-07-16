@@ -481,7 +481,7 @@ namespace Nom.BenchmarkGenerator
                     {
                         dv.ProcessReplacements();
                     }
-                    catch (UnreplacedReplacementExprException e)
+                    catch (UnreplacedReplacementExprException)
                     {
                         vpq.Enqueue(dv);
                     }

@@ -30,7 +30,7 @@ namespace Nom.Bytecode
                 instr.WriteByteCode(ws);
             }
         }
-        new public static MethodDefRep Read(Language.IClassSpec container, Stream s, IReadConstantSource rcs)
+        public static MethodDefRep Read(Language.IClassSpec container, Stream s, IReadConstantSource rcs)
         {
             byte tag = s.ReadActualByte();
             if(tag!= (byte)BytecodeInternalElementType.Method)
