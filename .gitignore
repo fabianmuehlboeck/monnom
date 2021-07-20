@@ -289,3 +289,9 @@ Runtime/*.lib
 /Runtime/llvmir-fm359.lli
 Runtime/instructions/*.o
 Runtime/instructions/*.d
+
+.BM_*
+*.csv
+*compiled*
+benchmark
+*.png
