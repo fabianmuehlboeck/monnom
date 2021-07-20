@@ -191,7 +191,6 @@ if(len(sys.argv)>2):
     fig = make_subplots(rows=figrows, cols=2)
     for f in folders:
         langhandlers[f['kind']](fig, f['path'],multilang)
-    print(fig.layout)
     fig.layout.xaxis.autorange="reversed"
     fig.layout.yaxis.rangemode="tozero"
     fig.layout.yaxis.title="Running Time in Seconds"

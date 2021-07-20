@@ -291,7 +291,7 @@ Runtime/instructions/*.o
 Runtime/instructions/*.d
 
 .BM_*
-*.csv
+*results*.csv
 *compiled*
 benchmark
 *.png
