@@ -2,6 +2,8 @@
 SOURCE="$( realpath "${BASH_SOURCE[0]}" )"
 DIRNAME="$( dirname "$SOURCE" )"
 
+sudo raco pkg install grift
+
 sudo apt-get install -y mono-runtime
 
 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang++-12 60 #alternatively, ensure some modern version of clang is installed
