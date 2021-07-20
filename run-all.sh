@@ -4,4 +4,4 @@ export RUNS=10
 ./run-racket.sh
 ./run-monnom.sh
 ./run-grift.sh
-
+./make_charts.sh
