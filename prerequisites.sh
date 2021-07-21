@@ -27,7 +27,7 @@ sudo apt-get update
 
 sudo apt-get install -y racket
 
-sudo raco pkg install grift
+raco pkg install grift
 
 sudo apt-get install -y mono-runtime
 

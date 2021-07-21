@@ -2,7 +2,7 @@
 SOURCE="$( realpath "${BASH_SOURCE[0]}" )"
 DIRNAME="$( dirname "$SOURCE" )"
 
-sudo raco pkg install grift
+raco pkg install grift
 
 sudo apt-get install -y mono-runtime
 
