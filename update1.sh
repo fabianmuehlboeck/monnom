@@ -15,3 +15,6 @@ sudo apt-get install -y python3 python3-pip
 pip3 install -U plotly
 pip3 install -U pandas
 pip3 install -U kaleido
+
+$DIRNAME/build.sh
+
