@@ -43,6 +43,7 @@ namespace Nom
 			FunctionType * funtype = invokeMethod->GetRawInvokeLLVMFunctionType();
 
 			Function* fun = Function::Create(funtype, linkage, name, mod);
+			fun->setCallingConv(NOMCC);
 
 			NomBuilder builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "start", fun);

@@ -328,6 +328,7 @@ namespace Nom
 			if (fun == nullptr)
 			{
 				fun = Function::Create(GetExpandoReaderType(), linkage, ername, &mod);
+				fun->setCallingConv(NOMCC);
 
 				llvm::Argument* thisArg = fun->arg_begin();
 				llvm::Value* nameIndex = thisArg + 1;
@@ -400,6 +401,7 @@ namespace Nom
 			std::string name = "RT_NOM_RAWINVOKE_" + this->GetName()->ToStdString();
 			FunctionType* mainFunType = method->GetRawInvokeLLVMFunctionType(nullptr);
 			llvm::Function* fun = Function::Create(mainFunType, linkage, name, mod);
+			fun->setCallingConv(NOMCC);
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "start", fun);
 
 			NomBuilder builder;

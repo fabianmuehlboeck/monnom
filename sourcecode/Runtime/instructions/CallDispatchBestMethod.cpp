@@ -377,6 +377,7 @@ namespace Nom
 						auto structDesc = StructHeader::GenerateReadStructDescriptor(builder, receiver);
 						auto structDispatcherLookupPtr = RTStruct::GenerateReadDispatcherLookup(builder, structDesc);
 						auto structDispatcher = builder->CreateCall(NomStruct::GetDynamicDispatcherLookupType(), structDispatcherLookupPtr, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName)), MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(argcount) });
+						structDispatcher->setCallingConv(NOMCC);
 						if (mergePHI3 != nullptr)
 						{
 							mergePHI3->addIncoming(structDispatcher, builder->GetInsertBlock());
@@ -420,6 +421,7 @@ namespace Nom
 					auto structDesc = StructHeader::GenerateReadStructDescriptor(builder, receiver);
 					auto structDispatcherLookupPtr = RTStruct::GenerateReadDispatcherLookup(builder, structDesc);
 					auto structDispatcher = builder->CreateCall(NomStruct::GetDynamicDispatcherLookupType(), structDispatcherLookupPtr, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName)), MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(argcount) });
+					structDispatcher->setCallingConv(NOMCC);
 					if (mergePHI2 != nullptr)
 					{
 						mergePHI2->addIncoming(structDispatcher, builder->GetInsertBlock());

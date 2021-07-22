@@ -1210,6 +1210,7 @@ namespace Nom
 				BasicBlock* adjustBlock = BasicBlock::Create(LLVMCONTEXT, "callAdjustFunction", fun);
 				instanceType = builder->CreateGEP(instanceType, { MakeInt32(0), MakeInt32(RTInstanceTypeFields::Head) });
 				auto subtypingResult = builder->CreateCall(RTSubtyping::Instance().GetLLVMElement(*fun->getParent()), { instanceType, type, ConstantPointerNull::get(RTSubtyping::TypeArgumentListStackType()->getPointerTo()), envSubstitutions });
+				subtypingResult->setCallingConv(NOMCC);
 				builder->CreateCondBr(builder->CreateICmpEQ(subtypingResult, MakeUInt(2, 0)), adjustBlock, outTrueBlock);
 
 				builder->SetInsertPoint(adjustBlock);
@@ -1348,6 +1349,7 @@ namespace Nom
 				return fun;
 			}
 			fun = Function::Create(RTCast::GetAdjustFunctionType(), linkage, "RT_NOM_CASTADJUST_FAILING", mod);
+			fun->setCallingConv(NOMCC);
 			NomBuilder builder;
 
 			BasicBlock* start = BasicBlock::Create(LLVMCONTEXT, "", fun);

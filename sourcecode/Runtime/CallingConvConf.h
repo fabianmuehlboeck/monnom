@@ -1,3 +1,3 @@
 #pragma once
 
-#define NOMCC llvm::CallingConv::C
+#define NOMCC llvm::CallingConv::Fast

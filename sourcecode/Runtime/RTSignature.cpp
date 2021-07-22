@@ -10,6 +10,7 @@
 #include "NomTypeParameter.h"
 #include "RTCast.h"
 #include "RTSubtyping.h"
+#include "CallingConvConf.h"
 
 using namespace llvm;
 using namespace std;
@@ -112,6 +113,7 @@ namespace Nom
 		{
 			FunctionType* funtype = GetLLVMFunctionType();
 			Function* fun = Function::Create(funtype, linkage, "RT_NOM_SignatureSubtyping", &mod);
+			fun->setCallingConv(NOMCC);
 
 			NomBuilder builder;
 
