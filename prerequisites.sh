@@ -1,6 +1,7 @@
 #!/bin/bash
 SOURCE="$( realpath "${BASH_SOURCE[0]}" )"
 DIRNAME="$( dirname "$SOURCE" )"
+sudo apt-get update
 sudo apt-get install -y build-essential git libgc-dev libpugixml-dev
 wget https://apt.llvm.org/llvm.sh
 chmod +x llvm.sh
