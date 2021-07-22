@@ -295,3 +295,4 @@ Runtime/instructions/*.d
 *compiled*
 benchmark
 *.png
+!monnombuild/nombench
