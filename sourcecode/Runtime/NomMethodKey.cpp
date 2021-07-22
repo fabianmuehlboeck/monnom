@@ -139,13 +139,13 @@ namespace Nom
 				retval = builder->CreatePointerCast(retval, POINTERTYPE);
 				break;
 			case TypeReferenceType::UnpackedInteger:
-				retval = builder->CreateIntToPtr(UnpackInt(builder, retval, true), POINTERTYPE);
+				retval = builder->CreateIntToPtr(UnpackInt(builder, retval), POINTERTYPE);
 				break;
 			case TypeReferenceType::UnpackedFloat:
-				retval = builder->CreateIntToPtr(builder->CreateBitCast(UnpackFloat(builder, retval, true), numtype(intptr_t)), POINTERTYPE);
+				retval = builder->CreateIntToPtr(builder->CreateBitCast(UnpackFloat(builder, retval), numtype(intptr_t)), POINTERTYPE);
 				break;
 			case TypeReferenceType::UnpackedBool:
-				retval = builder->CreateIntToPtr(UnpackBool(builder, retval, true), POINTERTYPE);
+				retval = builder->CreateIntToPtr(UnpackBool(builder, retval), POINTERTYPE);
 				break;
 			}
 

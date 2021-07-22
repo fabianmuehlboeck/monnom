@@ -4,6 +4,7 @@
 #include "../CompileHelpers.h"
 #include "CastInstruction.h"
 #include <iostream>
+#include "../CastStats.h"
 
 using namespace std;
 namespace Nom
@@ -21,6 +22,10 @@ namespace Nom
 		}
 		void CallCheckedStaticMethod::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
 		{
+			if (NomCastStats)
+			{
+				builder->CreateCall(GetIncStaticMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
+			}
 			env->basicBlockTerminated = false;
 			NomSubstitutionContextMemberContext nscmc(env->Context);
 			auto typeArgs = NomConstants::GetTypeList(this->TypeArgs)->GetTypeList(&nscmc);

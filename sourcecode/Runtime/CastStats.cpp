@@ -13,23 +13,36 @@
 
 using namespace std;
 
-size_t castCount = 0;
-size_t monoCastCount = 0;
-size_t subtypingChecksCount = 0;
-size_t typeArgumentRecursionsCount = 0;
-size_t vtableAllocationsCount = 0;
-size_t enoughSpaceCastsCount = 0;
-size_t castingMonoCastsCount = 0;
-size_t checkedMonoCastsCount = 0;
-size_t intPacksCount = 0;
-size_t intUnpacksCount = 0;
-size_t intBoxesCount = 0;
-size_t intUnboxesCount = 0;
-size_t floatPacksCount = 0;
-size_t floatUnpacksCount = 0;
-size_t floatBoxesCount = 0;
-size_t floatUnboxesCount = 0;
-size_t timeUnitsInCasts = 0;
+static size_t castCount = 0;
+static size_t monoCastCount = 0;
+static size_t subtypingChecksCount = 0;
+static size_t typeArgumentRecursionsCount = 0;
+static size_t vtableAllocationsCount = 0;
+static size_t enoughSpaceCastsCount = 0;
+static size_t castingMonoCastsCount = 0;
+static size_t checkedMonoCastsCount = 0;
+static size_t intPacksCount = 0;
+static size_t intUnpacksCount = 0;
+static size_t intBoxesCount = 0;
+static size_t intUnboxesCount = 0;
+static size_t floatPacksCount = 0;
+static size_t floatUnpacksCount = 0;
+static size_t floatBoxesCount = 0;
+static size_t floatUnboxesCount = 0;
+static size_t timeUnitsInCasts = 0;
+
+static size_t directClassMethodCalls = 0;
+static size_t interfaceMethodCalls = 0;
+static size_t extendedInterfaceMethodCalls = 0;
+static size_t typedRawInvokes = 0;
+static size_t finalInstanceMethodCalls = 0;
+
+static size_t staticMethodCalls = 0;
+
+static size_t dynamicInvokes = 0;
+static size_t dynamicMethodCalls = 0;
+
+static size_t dynamicFieldLookups = 0;
 
 const std::string** debugFunNames;
 size_t* profileCounterArray;
@@ -210,7 +223,7 @@ DLLEXPORT void RT_NOM_STATS_IncCastTime(TIMERTYPE origTimerVal)
 	struct timespec current;
 	if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &current) == 0)
 	{
-		timeUnitsInCasts += ((current.tv_sec - origTimerVal.tv_sec) * 10000) + ((current.tv_nsec - origTimerVal.tv_nsec) / 100000);
+		timeUnitsInCasts += ((current.tv_sec - origTimerVal.tv_sec) * 10000000) + ((current.tv_nsec - origTimerVal.tv_nsec) / 100);
 		//double floatdiff = ((double)differenceMS) / 10000.0;
 		//printf("%f Seconds\n", floatdiff);
 		//return (void*)((intptr_t)(Nom::Runtime::NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
@@ -226,6 +239,44 @@ DLLEXPORT void RT_NOM_STATS_IncCastTime(TIMERTYPE origTimerVal)
 #endif
 #endif
 }
+
+DLLEXPORT void RT_NOM_STATS_IncDirectClassMethodCalls()
+{
+	directClassMethodCalls++;
+}
+DLLEXPORT void RT_NOM_STATS_IncInterfaceMethodCalls()
+{
+	interfaceMethodCalls++;
+}
+DLLEXPORT void RT_NOM_STATS_IncExtendedInterfaceMethodCalls()
+{
+	extendedInterfaceMethodCalls++;
+}
+DLLEXPORT void RT_NOM_STATS_IncTypedRawInvokes()
+{
+	typedRawInvokes++;
+}
+DLLEXPORT void RT_NOM_STATS_IncFinalInstanceMethodCalls()
+{
+	finalInstanceMethodCalls++;
+}
+DLLEXPORT void RT_NOM_STATS_IncStaticMethodCalls()
+{
+	staticMethodCalls++;
+}
+DLLEXPORT void RT_NOM_STATS_IncDynamicInvokes()
+{
+	dynamicInvokes++;
+}
+DLLEXPORT void RT_NOM_STATS_IncDynamicMethodCalls()
+{
+	dynamicMethodCalls++;
+}
+DLLEXPORT void RT_NOM_STATS_IncDynamicFieldLookups()
+{
+	dynamicFieldLookups++;
+}
+
 
 static size_t debugPrint_lastIndices[4][RBUFSIZE];
 static size_t debugPrint_lastStrs[4][RBUFSIZE];
@@ -281,7 +332,7 @@ DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebug
 							break;
 						}
 
-						if (pp.Seconds < seconds && ! found)
+						if (pp.Seconds < seconds && !found)
 						{
 							auto npp = ProgramPos(funnameid, linenum, seconds);
 							slowPositions.insert(iter, std::move(npp));
@@ -290,7 +341,7 @@ DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebug
 							break;
 						}
 					}
-					if (!found&&slowPositions.size()<100)
+					if (!found && slowPositions.size() < 100)
 					{
 						auto npp = ProgramPos(funnameid, linenum, seconds);
 						slowPositions.insert(iter, std::move(npp));
@@ -446,7 +497,7 @@ namespace Nom
 		{
 			llvm::sys::DynamicLibrary::AddSymbol("RT_NOM_STATS_DebugLine", (void*)&RT_NOM_STATS_DebugLine);
 			auto maxid = NomNameRepository::ProfilingInstance().GetMaxID();
-			debugFunNames = (const std::string**) nmalloc(sizeof(std::string*) * (maxid + 1));
+			debugFunNames = (const std::string**)nmalloc(sizeof(std::string*) * (maxid + 1));
 			profileCounterArray = (size_t*)nmalloc(sizeof(size_t) * (maxid + 1));
 			if (NomStatsLevel >= 3)
 			{
@@ -485,12 +536,22 @@ namespace Nom
 			cout << "\n#Record Allocations: " << std::dec << record_allocations;
 			cout << "\n#Class Type Allocations: " << std::dec << classtype_allocations;
 			cout << "\n#Total Allocations: " << std::dec << (general_allocations + object_allocations + closure_allocations + record_allocations + classtype_allocations);
+			cout << "\n\nCall/Lookup Stats:\n----------------------";
+			cout << "\n#Direct Class Method Calls: " << std::dec << directClassMethodCalls;
+			cout << "\n#Interface Method Calls: " << std::dec << (interfaceMethodCalls + extendedInterfaceMethodCalls);
+			cout << "\n  #Interface Method Calls with Extended Argument Arrays: " << std::dec << extendedInterfaceMethodCalls;
+			cout << "\n#Typed Raw Invocations: " << std::dec << typedRawInvokes;
+			cout << "\n#Final Instance Method Calls: " << std::dec << finalInstanceMethodCalls;
+			cout << "\n#Static Method Calls: " << std::dec << staticMethodCalls;
+			cout << "\n#Dynamic Invokes: " << std::dec << dynamicInvokes;
+			cout << "\n#Dynamic Method Calls: " << std::dec << dynamicMethodCalls;
+			cout << "\n#Dynamic Field Lookups: " << std::dec << dynamicFieldLookups;
 
 #ifdef _WIN32
 			double castSeconds = timeUnitsInCasts / find_timer_frequency();
 #else
 #ifdef CLOCK_THREAD_CPUTIME_ID
-			double castSeconds = ((double)timeUnitsInCasts) / 10000.0;
+			double castSeconds = ((double)timeUnitsInCasts) / 10000000.0;
 #else
 			double castSeconds = ((double)timeUnitsInCasts) / CLOCKS_PER_SEC;
 #endif
@@ -716,6 +777,88 @@ namespace Nom
 			if (fun == nullptr)
 			{
 				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), { inttype(bitsin(AllocationType)) }, false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncAllocations", &mod);
+			}
+			return fun;
+		}
+
+		llvm::Function* GetIncDirectClassMethodCalls(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncDirectClassMethodCalls");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncDirectClassMethodCalls", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncInterfaceMethodCalls(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncInterfaceMethodCalls");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncInterfaceMethodCalls", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncExtendedInterfaceMethodCalls(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncExtendedInterfaceMethodCalls");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncExtendedInterfaceMethodCalls", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncTypedRawInvokes(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncTypedRawInvokes");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncTypedRawInvokes", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncFinalInstanceMethodCalls(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncFinalInstanceMethodCalls");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncFinalInstanceMethodCalls", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncStaticMethodCalls(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncStaticMethodCalls");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncStaticMethodCalls", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncDynamicInvokes(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncDynamicInvokes");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncDynamicInvokes", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncDynamicMethodCalls(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncDynamicMethodCalls");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncDynamicMethodCalls", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncDynamicFieldLookups(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncDynamicFieldLookups");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncDynamicFieldLookups", &mod);
 			}
 			return fun;
 		}

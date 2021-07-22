@@ -18,6 +18,8 @@
 #include "../RTCompileConfig.h"
 #include "../RefValueHeader.h"
 #include "../NomMethodKey.h"
+#include "../RTConfig.h"
+#include "../CastStats.h"
 
 using namespace llvm;
 using namespace std;
@@ -135,6 +137,10 @@ namespace Nom
 
 			if (method.Elem->IsFinal())
 			{
+				if (NomCastStats)
+				{
+					builder->CreateCall(GetIncFinalInstanceMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
+				}
 				Function * fun = method.Elem->GetLLVMFunction(env->Module);
 				auto call = builder->CreateCall(fun, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() + 1));
 				call->setCallingConv(NOMCC);
@@ -149,6 +155,10 @@ namespace Nom
 
 			if (rawInvoke)
 			{
+				if (NomCastStats)
+				{
+					builder->CreateCall(GetIncTypedRawInvokes(*builder->GetInsertBlock()->getParent()->getParent()), {});
+				}
 				auto recNV = (*env)[Receiver];
 				llvm::Value* methodptr = builder->CreatePointerCast( RefValueHeader::GenerateReadRawInvoke(builder, recNV), method.Elem->GetRawInvokeLLVMFunctionType()->getPointerTo());
 				argarr -= 1;
@@ -161,12 +171,23 @@ namespace Nom
 			{
 				if (method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() > 3)
 				{
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncExtendedInterfaceMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
+					}
 					llvm::Value* argsasarr = builder->CreateAlloca(POINTERTYPE, MakeInt32(method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() -2), "argarray");
 					for (int j = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() -1; j >= 2; j--)
 					{
 						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr, MakeInt32(j), "arginarray"));
 					}
 					argarr[3] = builder->CreatePointerCast(argsasarr, POINTERTYPE);
+				}
+				else
+				{
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncInterfaceMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
+					}
 				}
 				for (int j = 0; j < 4; j++)
 				{
@@ -195,6 +216,10 @@ namespace Nom
 			}
 			else
 			{
+				if (NomCastStats)
+				{
+					builder->CreateCall(GetIncDirectClassMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
+				}
 				Value* methodptr = ObjectHeader::GetDispatchMethodPointer(builder, env, Receiver, lineno, method);
 				auto call = builder->CreateCall(method.Elem->GetLLVMFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + 1));
 				call->setName("calling " + method.Elem->GetName());

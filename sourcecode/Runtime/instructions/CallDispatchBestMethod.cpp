@@ -19,6 +19,7 @@
 #include "../StructHeader.h"
 #include "../CallingConvConf.h"
 #include "../BoolClass.h"
+#include "../CastStats.h"
 
 using namespace llvm;
 using namespace std;
@@ -234,6 +235,10 @@ namespace Nom
 
 		llvm::Value* CallDispatchBestMethod::GenerateBestInvoke(NomBuilder& builder, llvm::Value* receiver, uint32_t typeargcount, uint32_t argcount, llvm::ArrayRef<llvm::Value*> args)
 		{
+			if (NomCastStats)
+			{
+				builder->CreateCall(GetIncDynamicInvokes(*builder->GetInsertBlock()->getParent()->getParent()), {});
+			}
 			auto dispatcherPHI = GenerateGetBestInvokeDispatcherDyn(builder, receiver, MakeInt32(typeargcount), MakeInt32(argcount));
 			auto dispatcherPtr = builder->CreatePointerCast(builder->CreateExtractValue(dispatcherPHI, { 0 }), NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount)->getPointerTo());
 			auto callinst = builder->CreateCall(NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount), dispatcherPtr, args, "[INVOKE]");
@@ -278,6 +283,11 @@ namespace Nom
 				RegisterValue(env, NVGenerateBestInvoke(builder, env, receiver, typeargs));
 				env->ClearArguments();
 				return;
+			}
+
+			if (NomCastStats)
+			{
+				builder->CreateCall(GetIncDynamicMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
 
 			int typeargcount = typeargs.size();

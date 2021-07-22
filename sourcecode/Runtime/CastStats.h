@@ -36,6 +36,17 @@ extern "C" DLLEXPORT void RT_NOM_STATS_IncProfileCounter(size_t funnameid);
 extern "C" DLLEXPORT TIMERTYPE RT_NOM_STATS_GetTimestamp();
 extern "C" DLLEXPORT void RT_NOM_STATS_IncCastTime(TIMERTYPE origTimerVal);
 
+extern "C" DLLEXPORT void RT_NOM_STATS_IncDirectClassMethodCalls();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncInterfaceMethodCalls();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncExtendedInterfaceMethodCalls();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncTypedRawInvokes();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncFinalInstanceMethodCalls();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncStaticMethodCalls();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncDynamicInvokes();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncDynamicMethodCalls();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncDynamicFieldLookups();
+
+
 enum class NomDebugPrintValueType : unsigned char { Nothing = 0, Pointer = 1, Int = 2, Float = 3, Bool = 4 };
 extern "C" DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebugPrintValueType valueType, int64_t value, decltype(NomDebugPrintLevel) level);
 
@@ -65,6 +76,17 @@ namespace Nom
 		llvm::Function* GetIncCastTimeFunction(llvm::Module& mod);
 		llvm::Function* GetDebugFunction(llvm::Module& mod);
 		llvm::Function* GetIncAllocationsFunction(llvm::Module& mod);
+
+		llvm::Function* GetIncDirectClassMethodCalls(llvm::Module& mod);
+		llvm::Function* GetIncInterfaceMethodCalls(llvm::Module& mod);
+		llvm::Function* GetIncExtendedInterfaceMethodCalls(llvm::Module& mod);
+		llvm::Function* GetIncTypedRawInvokes(llvm::Module& mod);
+		llvm::Function* GetIncFinalInstanceMethodCalls(llvm::Module& mod);
+		llvm::Function* GetIncStaticMethodCalls(llvm::Module& mod);
+		llvm::Function* GetIncDynamicInvokes(llvm::Module& mod);
+		llvm::Function* GetIncDynamicMethodCalls(llvm::Module& mod);
+		llvm::Function* GetIncDynamicFieldLookups(llvm::Module& mod);
+
 		void InitializeProfileCounter();
 		void PrintCastStats();
 	}

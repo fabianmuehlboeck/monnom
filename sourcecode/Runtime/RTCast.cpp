@@ -136,6 +136,10 @@ namespace Nom
 					builder->CreateCondBr(enoughFreeSlots, enoughFreeSlotsBlock, *checkFreeSlotsFailBlock);
 
 					builder->SetInsertPoint(enoughFreeSlotsBlock);
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncEnoughSpaceCastsFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
+					}
 					auto firstIndex = MakeInt32(-1);
 					auto firstTarg = MakeLoad(builder, builder->CreateGEP(typeArgsPtr, firstIndex));
 					auto firstUniquedTarg = builder->CreateCall(typeUniqueFun, { firstTarg, outerStack });
@@ -208,6 +212,10 @@ namespace Nom
 						builder->CreateBr(doCopyVTableBlock);
 
 						builder->SetInsertPoint(optimisticSignatureMatchBlock);
+						if (NomCastStats)
+						{
+							builder->CreateCall(GetIncCastingMonoCastsFunction(*fun->getParent()), {});
+						}
 						vtablePHI->addIncoming(RTFunctionalInterface::GenerateReadCastingVTable(builder, rtfunctionalInterface), builder->GetInsertBlock());
 						builder->CreateBr(doCopyVTableBlock);
 
@@ -343,6 +351,10 @@ namespace Nom
 				builder->CreateBr(writeRawInvokeBlock);
 
 				builder->SetInsertPoint(optimisticSignatureMatchBlock);
+				if (NomCastStats)
+				{
+					builder->CreateCall(GetIncCastingMonoCastsFunction(*fun->getParent()), {});
+				}
 				vtablePHI->addIncoming(RTFunctionalInterface::GenerateReadCastingVTableOpt(builder, rtfunctionalInterface), builder->GetInsertBlock());
 				builder->CreateBr(writeRawInvokeBlock);
 
@@ -452,6 +464,10 @@ namespace Nom
 					builder->CreateCondBr(enoughFreeSlots, enoughFreeSlotsBlock, *checkFreeSlotsFailBlock);
 
 					builder->SetInsertPoint(enoughFreeSlotsBlock);
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncEnoughSpaceCastsFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
+					}
 					auto firstIndex = MakeInt32(-1);
 					auto firstTarg = MakeLoad(builder, builder->CreateGEP(typeArgsPtr, firstIndex));
 					auto firstUniquedTarg = builder->CreateCall(typeUniqueFun, { firstTarg, castTypeSubsts });
@@ -629,6 +645,12 @@ namespace Nom
 			BasicBlock* refValueBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
 			builder->SetInsertPoint(origBlock);
+
+			if (NomCastStats)
+			{
+				builder->CreateCall(GetIncMonotonicCastsFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
+			}
+
 			auto stackPtr = builder->CreateIntrinsic(Intrinsic::stacksave, {}, {});
 
 			int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
@@ -914,6 +936,10 @@ namespace Nom
 			BasicBlock* refValueBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
 			builder->SetInsertPoint(origBlock);
+			if (NomCastStats)
+			{
+				builder->CreateCall(GetIncMonotonicCastsFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
+			}
 			auto stackPtr = builder->CreateIntrinsic(Intrinsic::stacksave, {}, {});
 
 			int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
@@ -1223,8 +1249,18 @@ namespace Nom
 			case TypeKind::TKMaybe:
 				if (NomNullClass::GetInstance()->GetType()->IsSubtype(type))
 				{
+					Value* castTimeStamp = nullptr;
+					if (NomCastStats)
+					{
+						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
+					}
 					auto nullobjptr = builder->CreatePtrToInt(NomNullObject::GetInstance()->GetLLVMElement(*env->Module), INTTYPE);
-					return builder->CreateICmpEQ(nullobjptr, builder->CreatePtrToInt(value, INTTYPE));
+					auto tpeq = builder->CreateICmpEQ(nullobjptr, builder->CreatePtrToInt(value, INTTYPE));
+					if (NomCastStats)
+					{
+						 builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
+					}
+					return tpeq;
 				}
 				//else, fall through (note, if class types don't fall through anymore, their case needs to be moved)
 			case TypeKind::TKClass:
@@ -1239,6 +1275,11 @@ namespace Nom
 					throw new std::exception(); //the subtyping check at the beginning should have caught that; something's wrong if this execption is thrown
 				case TypeKind::TKMaybe:
 				{
+					Value* castTimeStamp = nullptr;
+					if (NomCastStats)
+					{
+						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
+					}
 					BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "outBlock", fun);
 					BasicBlock* IsNotNullBlock = BasicBlock::Create(LLVMCONTEXT, "isNotNull", fun);
 					auto nullobjptr = builder->CreatePtrToInt(NomNullObject::GetInstance()->GetLLVMElement(*env->Module), INTTYPE);
@@ -1254,16 +1295,40 @@ namespace Nom
 					auto resultPHI = builder->CreatePHI(BOOLTYPE, 2, "subtypingResult");
 					resultPHI->addIncoming(MakeInt(1, (uint64_t)1), origBlock);
 					resultPHI->addIncoming(castresult, notNullBlock);
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
+					}
 					return resultPHI;
 				}
 				case TypeKind::TKClass:
 				{
+					Value* castTimeStamp = nullptr;
+					if (NomCastStats)
+					{
+						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
+					}
 					auto itype = (NomClassTypeRef)type;
-					return GenerateMonotonicCast(builder, env, value, itype);
+					auto monoCastResult = GenerateMonotonicCast(builder, env, value, itype);
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
+					}
+					return monoCastResult;
 				}
 				case TypeKind::TKVariable:
 				{
-					return GenerateMonotonicCast(builder, env, value, env->GetTypeArgument(builder, ((NomTypeVarRef)type)->GetIndex()));
+					Value* castTimeStamp = nullptr;
+					if (NomCastStats)
+					{
+						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
+					}
+					auto monoCastResult = GenerateMonotonicCast(builder, env, value, env->GetTypeArgument(builder, ((NomTypeVarRef)type)->GetIndex()));
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
+					}
+					return monoCastResult;
 				}
 				default:
 					throw new std::exception();

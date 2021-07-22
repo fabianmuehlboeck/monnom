@@ -87,15 +87,15 @@ namespace Nom
 			{
 				if (fun->getReturnType()->isIntegerTy(1))
 				{
-					builder->CreateRet(UnpackBool(builder, callinst, true));
+					builder->CreateRet(UnpackBool(builder, callinst));
 				}
 				else if (fun->getReturnType()->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
 				{
-					builder->CreateRet(UnpackInt(builder, callinst, true));
+					builder->CreateRet(UnpackInt(builder, callinst));
 				}
 				else if (fun->getReturnType()->isFloatingPointTy())
 				{
-					builder->CreateRet(UnpackFloat(builder, callinst, true));
+					builder->CreateRet(UnpackFloat(builder, callinst));
 				}
 				else
 				{

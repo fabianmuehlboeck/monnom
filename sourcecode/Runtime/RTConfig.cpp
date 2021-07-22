@@ -244,6 +244,10 @@ namespace Nom
 						{
 							NomRuntimeStopAtEnd = true;
 						}
+						else if (strncmp(args[argpos], "--version", 12) == 0)
+						{
+							std::cout << "MonNom Runtime Version 0.2\n";
+						}
 						break;
 					default:
 						std::cout << "\nERROR: Invalid runtime flag!\n";

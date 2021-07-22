@@ -32,6 +32,7 @@
 #include "RTStruct.h"
 #include "CallingConvConf.h"
 #include "RTCompileConfig.h"
+#include "CastStats.h"
 
 using namespace llvm;
 
@@ -147,6 +148,11 @@ namespace Nom
 		}
 		llvm::Value* ObjectHeader::CreateDictionaryLoad(NomBuilder& builder, CompileEnv* env, NomValue& receiver, llvm::ConstantInt* key, const llvm::Twine keyName)
 		{
+
+			if (NomCastStats)
+			{
+				builder->CreateCall(GetIncDynamicFieldLookups(*builder->GetInsertBlock()->getParent()->getParent()), {});
+			}
 			auto recType = receiver->getType();
 			if (recType->isIntegerTy(1))
 			{
