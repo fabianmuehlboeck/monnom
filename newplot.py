@@ -208,8 +208,16 @@ if(len(sys.argv)>2):
       fig.layout.yaxis4.title="Configurations Below"
     else:
       fig.layout.xaxis2.tickformat=",.0%"
+    figtitle=sys.argv[1]
+    renderimg=False
+    if(sys.argv[1][-4:]==".png"):
+       renderimg=True
+       figtitle=figtitle[0:-4]
     fig.layout.title.text=sys.argv[1]
     fig.layout.title.font.size=30
-    fig.show()
+    if(renderimg):
+       fig.write_image(sys.argv[1])
+    else:
+       fig.show()
 
 

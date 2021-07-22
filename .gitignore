@@ -267,6 +267,7 @@ paket-files/
 *.bc
 *.ll
 *.d
+*.d.*
 
 *.mnil
 *.lli
@@ -282,6 +283,7 @@ __pycache__/
 # Things made with GCC in Runtime
 Runtime/*.o
 Runtime/*.d
+Runtime/*.d.*
 Runtime/*.so
 Runtime/*.dll
 Runtime/*.exe
