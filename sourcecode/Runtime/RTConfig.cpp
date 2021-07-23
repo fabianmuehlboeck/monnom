@@ -14,6 +14,7 @@ int NomFunctionTimingLevel = 0;
 int NomLambdaOptimizationLevel = 1;
 int IMTsize = 13;
 bool PreferTypeArgumentsInVTables = false;
+int NomWarmupRuns = 0;
 std::string NomMainClassName = "";
 std::string NomPath = ".";
 std::vector<std::string> NomDebugFunctions = std::vector<std::string>();
@@ -212,6 +213,14 @@ namespace Nom
 						{
 							std::cout << "\nERROR: Invalid function timing level!\n";
 							throw new std::exception();
+						}
+						break;
+					case 'w':
+						NomWarmupRuns = 1;
+						if (strlen(args[argpos]) > 2)
+						{
+							char* curarg = args[argpos] + 2;
+							NomWarmupRuns=atoi(curarg);
 						}
 						break;
 					case '-':

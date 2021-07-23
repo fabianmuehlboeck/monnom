@@ -82,6 +82,7 @@
 
 // This is an example of an exported variable
 int nRuntime = 0;
+static int _isInWarmup = 0;
 
 using namespace Nom::Runtime;
 using namespace std::literals;
@@ -151,6 +152,16 @@ int run(const std::vector<std::string> args)
 	const NomStaticMethod* mainMethod = mainCls->GetStaticMethod(lib->GetMainMethodName(), TypeList(), TypeList()).Elem;
 	auto MainSymbol = NomJIT::Instance().lookup(*mainMethod->GetSymbolName());
 	void* (*mainmeth)() = (void* (*)())(intptr_t)MainSymbol->getAddress();
+
+	_isInWarmup = 1;
+	for (int i = 0; i < NomWarmupRuns; i++)
+	{
+		GC_gcollect();
+		mainmeth();
+		RTModule::ClearCaches();
+	}
+	_isInWarmup = 0;
+	GC_gcollect();
 	mainmeth();
 	if (NomTimings)
 	{
@@ -247,5 +258,10 @@ int main(int argc, char** args)
 		//}
 		return run(NomApplicationArgs);
 	}
+}
+
+int isInWarmup()
+{
+	return _isInWarmup;
 }
 

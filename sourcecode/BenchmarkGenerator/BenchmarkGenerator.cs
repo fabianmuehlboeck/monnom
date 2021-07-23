@@ -21,7 +21,8 @@ namespace Nom
                 string projectname = "";
                 string lambdaoptarg = " ";
                 int runcount = 0;
-                int optlevel = 2;
+                int optlevel = 3;
+                int warmups = 0;
                 bool byFile = false;
                 bool highPriority = false;
                 for (int i = 0; i < args.Length; i++)
@@ -54,6 +55,9 @@ namespace Nom
                             case "priority":
                                 argkey = "priority";
                                 break;
+                            case "warmups":
+                                argkey = "warmups";
+                                break;
                         }
                     }
                     else if (args[i].StartsWith("-"))
@@ -74,6 +78,9 @@ namespace Nom
                                 break;
                             case "o":
                                 argkey = "opt";
+                                break;
+                            case "w":
+                                argkey = "warmups";
                                 break;
                         }
                     }
@@ -138,6 +145,14 @@ namespace Nom
                                 i++;
                             }
                             break;
+                        case "warmups":
+                            warmups = 1;
+                            if(i+1<args.Length)
+                            {
+                                warmups = int.Parse(args[i + 1]);
+                                i++;
+                            }
+                            break;
                         case "priority":
                             highPriority = true;
                             break;
@@ -190,7 +205,7 @@ namespace Nom
                         Process p = new Process();
                         ProcessStartInfo psi = p.StartInfo;
                         psi.FileName = "nom";
-                        psi.Arguments = "-p \"" + dir.FullName + "\" -o" + (optlevel.ToString()) + lambdaoptarg + " " + proj.Name;
+                        psi.Arguments = "-p \"" + dir.FullName + "\" "+(warmups>0?"-w"+warmups.ToString()+" ":"")+"-o" + (optlevel.ToString()) + lambdaoptarg + " " + proj.Name;
                         psi.WorkingDirectory = dir.FullName;
                         psi.UseShellExecute = false;
                         psi.CreateNoWindow = true;

@@ -34,21 +34,12 @@ namespace Nom
 				}
 			}
 
-			//std::string name = "RT_NOM_RAWINVOKE_" + this->GetName()->ToStdString();
 			llvm::FunctionType* mainFunType = baseMethod->GetRawInvokeLLVMFunctionType(nullptr);
-			//llvm::Function* fun = Function::Create(mainFunType, linkage, name, mod);
-			//BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "start", fun);
 			llvm::BasicBlock* baseCase = nullptr;
 			llvm::SwitchInst* caseSwitch = nullptr;
 
-			//IRBuilder<> builder;
-			//builder->SetInsertPoint(startBlock);
-
 			auto iidArg = argarr[0];
 			auto argcount = mainFunType->getNumParams() - 1;
-			//Value** argarr = makealloca(Value*, argcount);
-			//auto args = fun->arg_begin();
-			//Argument* iidArg = args;
 
 			if (callableVersions.size() != 1)
 			{
@@ -59,13 +50,6 @@ namespace Nom
 			}
 			argarr = llvm::ArrayRef<llvm::Value*>(argarr.data() + 1, argarr.size() - 1);
 			{ // this is the code for the baseCase block, emitted always
-				//for (decltype(argcount) i = 0; i < argcount; i++)
-				//{
-				//	args++;
-				//	argarr[i] = args;
-				//}
-				//auto call = builder->CreateCall(method->GetLLVMElement(mod), ArrayRef<Value*>(argarr, argcount));
-				//call->setCallingConv(NOMCC);
 				builder->CreateRet(generateCallFun(builder, baseMethod, argarr));
 			}
 
@@ -122,9 +106,6 @@ namespace Nom
 						}
 
 						llvm::Value* retval = generateCallFun(builder, baseMethod, argarr);
-						//auto call = builder->CreateCall(method->GetLLVMElement(mod), ArrayRef<Value*>(cvargarr, argcount));
-						//call->setCallingConv(NOMCC);
-						//Value* retval = call;
 
 						auto cvret = cv.first->getReturnType();
 						auto mfret = mainFunType->getReturnType();

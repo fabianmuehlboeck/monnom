@@ -22,6 +22,36 @@ namespace Nom
 {
 	namespace Runtime
 	{
+		static size_t structClearAreaSize;
+		static size_t lambdaClearAreaSize;
+		std::forward_list<void*>& RTModule::structRecords()
+		{
+			static std::forward_list<void*> lst; return lst;
+		}
+		std::forward_list<void*>& RTModule::lambdaRecords()
+		{
+			static std::forward_list<void*> lst; return lst;
+		}
+		std::forward_list<RuntimeInstantiationDictionary*>& RTModule::instantiationDictionaries()
+		{
+			static std::forward_list<RuntimeInstantiationDictionary*> lst; return lst;
+		}
+
+		void RTModule::ClearCaches()
+		{
+			for (auto ptr : structRecords())
+			{
+				memset(ptr, 0, structClearAreaSize);
+			}
+			for (auto ptr : lambdaRecords())
+			{
+				memset(ptr, 0, lambdaClearAreaSize);
+			}
+			for (auto dict : instantiationDictionaries())
+			{
+				dict->clear();
+			}
+		}
 		RTModule::RTModule(NomModule* mod) : theModule(std::make_unique<llvm::Module>("module", LLVMCONTEXT))
 		{
 			theModule->setDataLayout(NomJIT::Instance().getDataLayout());
@@ -31,48 +61,16 @@ namespace Nom
 			NomMaybeType::GetInitializerFunction(*(theModule.get()));
 			RTClassType::Instance().GetLLVMElement(*(theModule.get()));
 			auto& ifaces = mod->GetInterfaces();
-			//for (auto& iface : ifaces)
-			//{
-			//	classes.emplace_front(iface->GetTypeArgCount(), 0);
-			//	iface->SetRTClass(&classes.front());
-			//}
 			auto& clses = mod->GetClasses();
-			//for (auto& cls : clses)
-			//{
-			//	classes.emplace_front(cls->GetTypeArgCount(), cls->GetFieldCount());
-			//	cls->SetRTClass(&classes.front());
-			//}
-			//for (auto& iface : ifaces)
-			//{
-			//	llvm::TinyPtrVector<const RTClassType *> stypes;
-			//	ClassTypeList ctl = iface->GetSuperInterfaces();
-			//	for (auto& stype : *ctl)
-			//	{
-			//		stypes.push_back(stype->GetRTClassType());
-			//	}
-			//	((RTClass*)(iface->GetRTClass()))->SuperTypes() = stypes;
-			//}
-			//for (auto& cls : clses)
-			//{
-			//	llvm::TinyPtrVector<const RTClassType *> stypes;
-			//	if (cls->GetSuperClass() != nullptr)
-			//	{
-			//		stypes.push_back(cls->GetSuperClass()->GetRTClassType());
-			//	}
-			//	ClassTypeList ctl = cls->GetSuperInterfaces();
-			//	for (auto& stype : *ctl)
-			//	{
-			//		stypes.push_back(stype->GetRTClassType());
-			//	}
-			//	((RTClass*)(cls->GetRTClass()))->SuperTypes() = stypes;
-			//}
 			for (auto& iface : ifaces)
 			{
 				iface->PreprocessInheritance();
+				instantiationDictionaries().push_front(const_cast<RuntimeInstantiationDictionary*>(&iface->runtimeInstantiations));
 			}
 			for (auto& cls : clses)
 			{
 				cls->PreprocessInheritance();
+				instantiationDictionaries().push_front(const_cast<RuntimeInstantiationDictionary*>(&cls->runtimeInstantiations));
 			}
 			NomLambda::ProcessPreprocessQueue();
 			for (auto& iface : ifaces)
@@ -168,47 +166,42 @@ namespace Nom
 				std::cout << "\n";
 			}
 
-			
-
-			/*for (auto& cls : clses)
-			{
-				cls->InitializeDictionary();
-			}*/
 			PreparedDictionary::LoadDictionaryContents();
 			GetGlobalsForAddressLookup().clear();
+
+			auto structSpecializedVTableOffset = RTStruct::GetLLVMLayout()->getElementOffset((unsigned char)RTStructFields::SpecializedVTable);
+			auto structCastSiteIDOffset = RTStruct::GetLLVMLayout()->getElementOffset((unsigned char)RTStructFields::SpecializedVTableCastID);
+			auto structPreallocatedSlotsOFfset = RTStruct::GetLLVMLayout()->getElementOffset((unsigned char)RTStructFields::PreallocatedSlots);
+			auto structMinOffset = std::min({ structSpecializedVTableOffset, structCastSiteIDOffset, structPreallocatedSlotsOFfset });
+			auto structMaxOffset = std::max({ structSpecializedVTableOffset, structCastSiteIDOffset, structPreallocatedSlotsOFfset });
+			structClearAreaSize = structMaxOffset - structMinOffset + sizeof(intptr_t);
 
 			for (auto& sdn : structDescriptorNames)
 			{
 				auto symAddress = NomJIT::Instance().lookup(sdn)->getAddress();
 				auto addrValue = (std::move(symAddress));
 				auto addrPtr = (char*)addrValue;
-				addrPtr += RTStruct::GetLLVMLayout()->getElementOffset((unsigned char)RTStructFields::SpecializedVTable);
+				structRecords().push_front(addrPtr + structMinOffset);
+				addrPtr += structSpecializedVTableOffset;
 				bgc_register_root(addrPtr, addrPtr + sizeof(intptr_t));
 			}
+
+			auto lambdaSpecializedVTableOffset = RTLambda::GetLLVMLayout()->getElementOffset((unsigned char)RTLambdaFields::SpecializedVTable);
+			auto lambdaCastSiteIDOffset = RTLambda::GetLLVMLayout()->getElementOffset((unsigned char)RTLambdaFields::SpecializedVTableCastID);
+			auto lambdaPreallocatedSlotsOFfset = RTLambda::GetLLVMLayout()->getElementOffset((unsigned char)RTLambdaFields::PreallocatedSlots);
+			auto lambdaMinOffset = std::min({ lambdaSpecializedVTableOffset, lambdaCastSiteIDOffset, lambdaPreallocatedSlotsOFfset });
+			auto lambdaMaxOffset = std::max({ lambdaSpecializedVTableOffset, lambdaCastSiteIDOffset, lambdaPreallocatedSlotsOFfset });
+			lambdaClearAreaSize = lambdaMaxOffset - lambdaMinOffset + sizeof(intptr_t);
 			for (auto& sdn : lambdaDescriptorNames)
 			{
 				auto symAddress = NomJIT::Instance().lookup(sdn)->getAddress();
 				auto addrValue = (std::move(symAddress));
 				auto addrPtr = (char*)addrValue;
-				addrPtr += RTLambda::GetLLVMLayout()->getElementOffset((unsigned char)RTLambdaFields::SpecializedVTable);
+				lambdaRecords().push_front(addrPtr + lambdaMinOffset);
+				addrPtr += lambdaSpecializedVTableOffset;
 				bgc_register_root(addrPtr, addrPtr + sizeof(intptr_t));
 			}
 
-
-			//std::cout << "\nadded to JIT, building method tables\n";
-			//for (auto& cls : clses)
-			//{
-			//	std::cout << "\nBuilding method table for class" + (cls->GetName())->ToStdString() +"\n";
-			//	void ** methodtable = (void **) nalloc(cls->MethodTable.size() * sizeof(void *));
-			//	for (auto& meth : cls->MethodTable)
-			//	{
-			//		std::cout << "\nFetching method" + (meth->GetName()) + "\n";
-			//		methodtable[meth->GetOffset()] = (void*) NomJIT::Instance().getSymbolAddress(meth->GetName());
-			//	}
-			//	((RTClass*)(cls->GetRTClass()))->methodtable = methodtable;
-			//}
-			//std::cout << "\nmethod tables complete\n";
-			//TODO: interface tables
 			GetVoidObject(); //make sure to call this once to initialize it
 		}
 

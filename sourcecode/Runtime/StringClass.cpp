@@ -16,6 +16,7 @@
 #include "IntClass.h"
 #include "CastStats.h"
 #include "NomClassType.h"
+#include "Runtime.h"
 
 using namespace Nom::Runtime;
 
@@ -139,8 +140,11 @@ namespace Nom
 
 extern "C" DLLEXPORT void* LIB_NOM_String_Print_1(void* str)
 {
-	std::cout << ((NomStringRef)GetReadFieldFunction()(str, 0))->ToStdString();
-	std::cout.flush();
+	if (!isInWarmup())
+	{
+		std::cout << ((NomStringRef)GetReadFieldFunction()(str, 0))->ToStdString();
+		std::cout.flush();
+	}
 	//std::cout << ((NomStringRef)(ObjectHeader(str).Fields()-sizeof(intptr_t)))->ToStdString();
 	return (void*)((intptr_t)(NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
 }

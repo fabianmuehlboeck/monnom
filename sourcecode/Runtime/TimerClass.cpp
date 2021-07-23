@@ -11,6 +11,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "VoidClass.h"
 #include "NomClassType.h"
+#include "Runtime.h"
 
 namespace Nom
 {
@@ -48,7 +49,10 @@ extern "C" DLLEXPORT void* LIB_NOM_Timer_PrintDifference_1(void* timer) noexcept
 	{
 		difference.QuadPart = current.QuadPart - value.QuadPart;
 		double floatdiff = ((double)(difference.QuadPart)) / Nom::Runtime::find_timer_frequency();
-		printf("%f Seconds\n", floatdiff);
+		if (!isInWarmup())
+		{
+			printf("%f Seconds\n", floatdiff);
+		}
 		return (void*)((intptr_t)(Nom::Runtime::GetVoidObject()));
 	}
 	else
@@ -64,7 +68,10 @@ extern "C" DLLEXPORT void* LIB_NOM_Timer_PrintDifference_1(void* timer) noexcept
 	{
 		long differenceMS = ((current.tv_sec - myvalptr->tv_sec) * 10000) + ((current.tv_nsec - myvalptr->tv_nsec) / 100000);
 		double floatdiff = ((double)differenceMS) / 10000.0;
-		printf("%f Seconds\n", floatdiff);
+		if (!isInWarmup())
+		{
+			printf("%f Seconds\n", floatdiff);
+		}
 		return (void*)((intptr_t)(Nom::Runtime::GetVoidObject()));
 	}
 	else
@@ -75,7 +82,11 @@ extern "C" DLLEXPORT void* LIB_NOM_Timer_PrintDifference_1(void* timer) noexcept
 	clock_t* myclock = (clock_t*)(((char*)timer) + sizeof(intptr_t));
 	clock_t now = clock();
 	long t = (long)(clock() - (*myclock);
-	printf("%f Seconds, (%li ticks)\n", ((double)t) / CLOCKS_PER_SEC, t);
+	auto tdiff = ((double)t) / CLOCKS_PER_SEC;
+	if (!isInWarmup())
+	{
+		printf("%f Seconds, (%li ticks)\n", tdiff, t);
+	}
 	return (void*)((intptr_t)(Nom::Runtime::GetVoidObject()));
 #endif
 #endif

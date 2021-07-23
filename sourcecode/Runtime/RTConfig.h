@@ -17,6 +17,7 @@ extern std::string NomPath;
 extern std::vector<std::string> NomDebugFunctions;
 extern std::vector<std::string> NomApplicationArgs;
 extern bool NomRuntimeStopAtEnd;
+extern int NomWarmupRuns;
 
 namespace Nom
 {

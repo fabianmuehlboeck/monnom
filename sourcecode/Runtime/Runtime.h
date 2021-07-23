@@ -27,3 +27,5 @@ int run(const std::vector<std::string> args);
 void initLibrary();
 
 int main(int argc, char** args);
+
+int isInWarmup();
