@@ -8,8 +8,6 @@ namespace Nom
 	{
 		class CallCheckedStaticMethod : public NomValueInstruction
 		{
-		private:
-			llvm::Value * * argarr = nullptr;
 		public:
 			const ConstantID Method;
 			const ConstantID TypeArgs;

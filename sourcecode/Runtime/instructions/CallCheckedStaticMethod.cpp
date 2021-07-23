@@ -33,10 +33,6 @@ namespace Nom
 			NomSubstitutionContextList substC = NomSubstitutionContextList(typeArgs);
 			NomInstantiationRef<const NomStaticMethod> method = NomConstants::GetStaticMethod(Method)->GetStaticMethod(&substC);
 			
-			if (argarr != nullptr)
-			{
-				nfree(argarr);
-			}
 			auto signature = method.Elem->Signature(&substC);
 
 			auto argcount = method.Elem->GetArgumentCount();
@@ -49,7 +45,7 @@ namespace Nom
 				throw new std::exception();
 			}
 
-			argarr = (Value**)nalloc(sizeof(Value*) * (method.Elem->GetArgumentCount() + typeArgs.size()));
+			auto argarr = makealloca(Value*, method.Elem->GetArgumentCount() + typeArgs.size());
 			llvm::Function* func = method.Elem->GetLLVMFunction(env->Module);
 			llvm::ArrayRef<llvm::Type*> funcparams = func->getFunctionType()->params();
 			for (int i = argcount - 1; i >= 0; i--)

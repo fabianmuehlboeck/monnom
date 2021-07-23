@@ -10,8 +10,6 @@ namespace Nom
 	{
 		class CallCheckedInstanceMethod : public NomValueInstruction
 		{
-		private:
-			llvm::Value * * argarr = nullptr;
 		public:
 			const RegIndex Receiver;
 			const ConstantID Method;

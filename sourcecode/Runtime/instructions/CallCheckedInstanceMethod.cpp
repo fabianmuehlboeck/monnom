@@ -29,7 +29,6 @@ namespace Nom
 	{
 		CallCheckedInstanceMethod::~CallCheckedInstanceMethod()
 		{
-			nfree(argarr);
 		}
 		void CallCheckedInstanceMethod::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
 		{
@@ -46,11 +45,6 @@ namespace Nom
 			}
 
 			NomSubstitutionContextList nscl(method.TypeArgs);
-			
-			if (argarr != nullptr)
-			{
-				nfree(argarr);
-			}
 
 			int additionalArgs = 0;
 			auto recContainer = method.Elem->GetContainer();
@@ -68,7 +62,7 @@ namespace Nom
 
 
 
-			argarr = (Value * *)nalloc(sizeof(Value*)*(method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() + 1 + additionalArgs+3));
+			auto argarr = makealloca(Value *,method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() + 1 + additionalArgs+3);
 			argarr += additionalArgs;
 
 			for (int i = 0; i < 4; i++)
