@@ -298,3 +298,8 @@ Runtime/instructions/*.d
 benchmark
 *.png
 !monnombuild/nombench
+
+*.aux
+*.bbl
+*.blg
+*.synctex
