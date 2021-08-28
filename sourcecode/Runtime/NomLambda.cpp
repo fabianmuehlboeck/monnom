@@ -71,14 +71,14 @@ namespace Nom
 			auto checkedFun = Body.GetLLVMElement(mod);
 			Function* dispatcherFun; 
 
-			bool specialDispatcherNeeded = false;
-			for (auto argT : Body.GetArgumentTypes(nullptr))
-			{
-				if (!NomType::Anything->IsSubtype(argT))
-				{
-					specialDispatcherNeeded = true;
-				}
-			}
+			bool specialDispatcherNeeded = true /*false*/;
+			//for (auto argT : Body.GetArgumentTypes(nullptr))
+			//{
+			//	if (!NomType::Anything->IsSubtype(argT))
+			//	{
+			//		specialDispatcherNeeded = true;
+			//	}
+			//}
 			if (specialDispatcherNeeded)
 			{
 				/*dispatcherFun = Function::Create(NomPartialApplication::GetDynamicDispatcherType(Body.GetDirectTypeParametersCount(), Body.GetArgumentCount()), linkage, "RT_NOM_LAMBDA_DD_" + name, &mod);
@@ -86,11 +86,11 @@ namespace Nom
 
 				BasicBlock* entryBlock = BasicBlock::Create(LLVMCONTEXT, "", dispatcherFun);
 				builder->SetInsertPoint(entryBlock);*/
-				dispatcherFun = NomPartialApplication::GetDispatcherEntry(mod, linkage, Body.GetDirectTypeParametersCount(), Body.GetArgumentCount(), &Body, this, &NomStructType::Instance());
+				dispatcherFun = NomPartialApplication::GetDispatcherEntry(mod, linkage, /*Body.GetDirectTypeParametersCount(), Body.GetArgumentCount(),*/ &Body, this/*, &NomStructType::Instance()*/);
 			}
 			else
 			{
-				dispatcherFun = Body.GetVersion(NomPartialApplication::GetDynamicDispatcherType(Body.GetDirectTypeParametersCount(), Body.GetArgumentCount()))->GetLLVMElement(mod);
+				dispatcherFun = Body.GetVersion(NomPartialApplication::GetDynamicDispatcherType(/*Body.GetDirectTypeParametersCount(), Body.GetArgumentCount()*/))->GetLLVMElement(mod);
 			}
 
 			auto constant = RTLambda::CreateConstant(this, Body.GetDirectTypeParametersCount(), GetArgumentCount(), RTSignature::CreateGlobalConstant(mod, linkage, "RT_NOM_SIG_" + name, &this->Body), checkedFun, dispatcherFun);

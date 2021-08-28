@@ -58,6 +58,9 @@ namespace Nom
 
 			// Inherited via NomType
 			virtual TypeReferenceType GetTypeReferenceType() const override;
+
+			// Inherited via NomType
+			virtual bool ContainsVariableIndex(int index) const override;
 		};
 	}
 }

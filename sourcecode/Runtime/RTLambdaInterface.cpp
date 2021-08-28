@@ -14,6 +14,7 @@
 #include "CallingConvConf.h"
 #include "LambdaHeader.h"
 #include "RefValueHeader.h"
+#include "RTSignature.h"
 
 using namespace llvm;
 using namespace std;
@@ -65,105 +66,106 @@ namespace Nom
 
 			for (decltype(IMTsize) i = 0; i < IMTsize; i++)
 			{
-				NomMethodKey* nmk = nullptr;
-				for (auto mte : irptr->MethodTable)
-				{
-					if (mte->Method->GetIMTIndex() == i)
-					{
-						auto nnmk = NomMethodKey::GetMethodKey(mte->Method);
-						if (nmk == nullptr || nmk == nnmk)
-						{
-							nmk = nnmk;
-						}
-						else
-						{
-							nmk = nullptr;
-							break;
-						}
-					}
-				}
-				if (nmk == nullptr)
-				{
-					if (imtFun == nullptr)
-					{
-						imtFun = Function::Create(GetIMTFunctionType(), linkage, "", mod);
-						imtFun->setCallingConv(NOMCC);
-						BasicBlock* imtBB = BasicBlock::Create(LLVMCONTEXT, "", imtFun);
+				imtArr[i] = ConstantPointerNull::get(GetIMTFunctionType()->getPointerTo());
+				//NomMethodKey* nmk = nullptr;
+				//for (auto mte : irptr->MethodTable)
+				//{
+				//	if (mte->Method->GetIMTIndex() == i)
+				//	{
+				//		auto nnmk = NomMethodKey::GetMethodKey(mte->Method);
+				//		if (nmk == nullptr || nmk == nnmk)
+				//		{
+				//			nmk = nnmk;
+				//		}
+				//		else
+				//		{
+				//			nmk = nullptr;
+				//			break;
+				//		}
+				//	}
+				//}
+				//if (nmk == nullptr)
+				//{
+				//	if (imtFun == nullptr)
+				//	{
+				//		imtFun = Function::Create(GetIMTFunctionType(), linkage, "", mod);
+				//		imtFun->setCallingConv(NOMCC);
+				//		BasicBlock* imtBB = BasicBlock::Create(LLVMCONTEXT, "", imtFun);
 
-						builder->SetInsertPoint(imtBB);
+				//		builder->SetInsertPoint(imtBB);
 
-						Value* args[5];
-						assert(imtFun->arg_size() == 5);
-						int argpos = 0;
-						for (auto& arg : imtFun->args())
-						{
-							args[argpos] = &arg;
-							argpos++;
-						}
+				//		Value* args[5];
+				//		assert(imtFun->arg_size() == 5);
+				//		int argpos = 0;
+				//		for (auto& arg : imtFun->args())
+				//		{
+				//			args[argpos] = &arg;
+				//			argpos++;
+				//		}
 
-						Value* callFun = args[0];
-						Value* receiver = args[1];
-						llvm::Value* instanceTypeArr = ConstantPointerNull::get(TYPETYPE->getPointerTo());
-						if (optimizedTypeVarAccess)
-						{
-							instanceTypeArr = LambdaHeader::GeneratePointerToCastTypeArguments(builder, receiver);
-						}
-						else if (irptr->GetTypeParametersCount() > 0)
-						{
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
-							instanceTypeArr = RTLambdaInterface::GetTypeArgumentsPointer(builder, vtable);
-						}
-						args[0] = instanceTypeArr;
-						auto castFunCall = builder->CreateCall(GetIMTCastFunctionType(), callFun, ArrayRef<Value*>(args , 5));
-						castFunCall->setCallingConv(NOMCC);
+				//		Value* callFun = args[0];
+				//		Value* receiver = args[1];
+				//		llvm::Value* instanceTypeArr = ConstantPointerNull::get(TYPETYPE->getPointerTo());
+				//		if (optimizedTypeVarAccess)
+				//		{
+				//			instanceTypeArr = LambdaHeader::GeneratePointerToCastTypeArguments(builder, receiver);
+				//		}
+				//		else if (irptr->GetTypeParametersCount() > 0)
+				//		{
+				//			auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+				//			instanceTypeArr = RTLambdaInterface::GetTypeArgumentsPointer(builder, vtable);
+				//		}
+				//		args[0] = instanceTypeArr;
+				//		auto castFunCall = builder->CreateCall(GetIMTCastFunctionType(), callFun, ArrayRef<Value*>(args , 5));
+				//		castFunCall->setCallingConv(NOMCC);
 
-						builder->CreateRet(castFunCall);
-					}
-					imtArr[i] = imtFun;
-				}
-				else
-				{
-					Function* specializedImtFun = Function::Create(GetIMTFunctionType(), linkage, "", mod);
-					specializedImtFun->setCallingConv(NOMCC);
-					BasicBlock* imtBB = BasicBlock::Create(LLVMCONTEXT, "", specializedImtFun);
+				//		builder->CreateRet(castFunCall);
+				//	}
+				//	imtArr[i] = imtFun;
+				//}
+				//else
+				//{
+				//	Function* specializedImtFun = Function::Create(GetIMTFunctionType(), linkage, "", mod);
+				//	specializedImtFun->setCallingConv(NOMCC);
+				//	BasicBlock* imtBB = BasicBlock::Create(LLVMCONTEXT, "", specializedImtFun);
 
-					builder->SetInsertPoint(imtBB);
+				//	builder->SetInsertPoint(imtBB);
 
-					Value* args[5];
-					assert(specializedImtFun->arg_size() == 5);
-					int argpos = 0;
-					for (auto& arg : specializedImtFun->args())
-					{
-						args[argpos] = &arg;
-						argpos++;
-					}
-					Value* receiver = args[1];
-					llvm::Value* instanceTypeArr = ConstantPointerNull::get(TYPETYPE->getPointerTo());
-					if (optimizedTypeVarAccess)
-					{
-						instanceTypeArr = LambdaHeader::GeneratePointerToCastTypeArguments(builder, receiver);
-					}
-					else if (irptr->GetTypeParametersCount() > 0)
-					{
-						auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
-						instanceTypeArr = RTLambdaInterface::GetTypeArgumentsPointer(builder, vtable);
-					}
-					args[0] = instanceTypeArr;
+				//	Value* args[5];
+				//	assert(specializedImtFun->arg_size() == 5);
+				//	int argpos = 0;
+				//	for (auto& arg : specializedImtFun->args())
+				//	{
+				//		args[argpos] = &arg;
+				//		argpos++;
+				//	}
+				//	Value* receiver = args[1];
+				//	llvm::Value* instanceTypeArr = ConstantPointerNull::get(TYPETYPE->getPointerTo());
+				//	if (optimizedTypeVarAccess)
+				//	{
+				//		instanceTypeArr = LambdaHeader::GeneratePointerToCastTypeArguments(builder, receiver);
+				//	}
+				//	else if (irptr->GetTypeParametersCount() > 0)
+				//	{
+				//		auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+				//		instanceTypeArr = RTLambdaInterface::GetTypeArgumentsPointer(builder, vtable);
+				//	}
+				//	args[0] = instanceTypeArr;
 
-					auto castFunCall = builder->CreateCall(nmk->GetLLVMElement(mod), ArrayRef<Value*>(args, 5));
-					castFunCall->setCallingConv(NOMCC);
+				//	auto castFunCall = builder->CreateCall(nmk->GetLLVMElement(mod), ArrayRef<Value*>(args, 5));
+				//	castFunCall->setCallingConv(NOMCC);
 
-					builder->CreateRet(castFunCall);
+				//	builder->CreateRet(castFunCall);
 
-					imtArr[i] = specializedImtFun;
-				}
+				//	imtArr[i] = specializedImtFun;
+				//}
 			}
 
 			Constant* imt = ConstantArray::get(arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize), llvm::ArrayRef<Constant*>(imtArr, IMTsize));
 
 			llvm::Function* wrap = GenerateRawInvokeWrap(&mod, linkage, "", irptr, functionptr);
 
-			gvar->setInitializer(ConstantStruct::get(gvartype, { /*ConstantArray::get(arrtype(InterfaceTableEntryType(), 1), {RTInterfaceTableEntry::CreateConstant(irptr->GetID(), 0)}),*//* ConstantArray::get(arrtype(POINTERTYPE, 1), {ConstantExpr::getPointerCast(functionptr, POINTERTYPE)}),*/ ConstantStruct::get(GetLLVMType(), {ConstantArray::get(arrtype(TYPETYPE,0),{}), RTInterface::CreateConstant(kind, irptr, RTInterfaceFlags::IsInterface | RTInterfaceFlags::IsFunctional, typeArgCount, superTypesCount, superTypeEntries, imt, instantiationDictionary),origInterfacePointer , ConstantExpr::getPointerCast(wrap, POINTERTYPE)}) }));
+			gvar->setInitializer(ConstantStruct::get(gvartype, { /*ConstantArray::get(arrtype(InterfaceTableEntryType(), 1), {RTInterfaceTableEntry::CreateConstant(irptr->GetID(), 0)}),*//* ConstantArray::get(arrtype(POINTERTYPE, 1), {ConstantExpr::getPointerCast(functionptr, POINTERTYPE)}),*/ ConstantStruct::get(GetLLVMType(), {ConstantArray::get(arrtype(TYPETYPE,0),{}), RTInterface::CreateConstant(kind, irptr, RTInterfaceFlags::IsInterface | RTInterfaceFlags::IsFunctional, typeArgCount, superTypesCount, superTypeEntries, imt, ConstantPointerNull::get(GetCheckReturnValueFunctionType()->getPointerTo()), ConstantPointerNull::get(GetMethodEnsureFunctionType()->getPointerTo()), instantiationDictionary, ConstantPointerNull::get(RTSignature::GetLLVMType()->getPointerTo())),origInterfacePointer , ConstantExpr::getPointerCast(wrap, POINTERTYPE)}) }));
 			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(/*2*/ /*1*/ 0) }));
 		}
 		llvm::Value* RTLambdaInterface::CreateCopyVTable(NomBuilder& builder, llvm::Value* vtable, llvm::Value* typeArgCount)

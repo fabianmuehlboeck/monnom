@@ -190,6 +190,19 @@ namespace Nom
 			return val;
 		}
 
+		/// <summary>
+		/// Integer Packing Protocol:
+		/// Step 1: Left Funnel Shift by 3 bits, i.e. the three most significant bits become the three least significant bits, and everything else is shifted left by 3.
+		///         These most significant bits are going to be replaced by the mask.
+		/// Step 2: Check three least significant bits of funnel shift result (i.e. the three most significant bits of the actual number)
+		///   - if 000, the mask becomes 011, i.e. a positive masked integer
+		///   - if 111, the mask becomes 111, i.e. a negative masked integer
+		///   - for all other combinations, the integer is boxed into a newly allocated reference value
+		/// Thus, all small enough (|n| ~ < 2^61) are masked, while bigger absolute values are boxed 
+		/// </summary>
+		/// <param name="builder"></param>
+		/// <param name="intval"></param>
+		/// <returns></returns>
 		llvm::Value* PackInt(NomBuilder& builder, llvm::Value* intval)
 		{
 			if (intval->getType() != INTTYPE)
@@ -315,6 +328,28 @@ namespace Nom
 			return builder->CreateIntrinsic(Intrinsic::fshr, { refAsInt->getType() }, { refAsInt, refAsInt, ConstantInt::get(refAsInt->getType(), 3) });
 		}
 
+		/// <summary>
+		/// Float Packing Protocol:
+		/// The following float masks exist:
+		/// - 001: either positive 0 if all other bits are 0, or some other floating point value
+		/// - 101: either negative 0 if all other bits are 0, or some other floating point value
+		/// - 010: a floating point value whose most significant bits happen to be 010
+		/// - 110: a floating point value whose most significant bits happen to be 110
+		/// Step 1: Left Funnel Shift by 3 bits, i.e. the three most significant bits become the three least significant bits, and everything else is shifted left by 3.
+		///         These most significant bits are going to be replaced by the mask.
+		/// Step 2: Check the whole funnel shift result (assuming 0s for any left-out positions to the left)
+		///   - if 000, float is positive 0.0, mask with 001
+		///   - if 100, float is negative 0.0, mask with 101
+		///   - if 101 or 001, the value is an extremely small value (1.49...E-154) and LSBs would collide with above masks, so these values are boxed
+		///   - otherwise, check the two least significant bits:
+		///     - if 01 or 10, the exponent is is between -511 and +512 (out of its overall -1022 -- +1023 range), and the sign bit is either 0 or 1, thus covering a good mid-range of values.
+		///       these values are left in the funnel shifted state, so the mask is just one of 001, 101, 010, or 110 (the mask collisions with the zero values don't matter because at least some other bit can distinguish them)
+		///     - all other values (i.e. those with more extreme exponents) are boxed
+		/// NOTE: together with the 000 mask for reference values and the 011/111 masks for integers, this leaves the mask 100, which is used in freezing reference values in dictionaries
+		/// </summary>
+		/// <param name="builder"></param>
+		/// <param name="floatval"></param>
+		/// <returns></returns>
 		llvm::Value* PackFloat(NomBuilder& builder, llvm::Value* floatval)
 		{
 			if (NomCastStats)

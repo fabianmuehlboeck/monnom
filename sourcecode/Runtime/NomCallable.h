@@ -48,7 +48,7 @@ namespace Nom
 		public:
 			virtual ~NomCallable() override {}
 
-			virtual NomTypeRef GetReturnType(const NomSubstitutionContext* context) const = 0;
+			virtual NomTypeRef GetReturnType(const NomSubstitutionContext* context = nullptr) const = 0;
 			virtual TypeList GetArgumentTypes(const NomSubstitutionContext *context) const = 0;
 			virtual int GetArgumentCount() const = 0;
 			virtual llvm::FunctionType* GetLLVMFunctionType(const NomSubstitutionContext* context = nullptr) const = 0;
@@ -61,11 +61,11 @@ namespace Nom
 			{
 				if (context != nullptr && context->GetTypeArgumentCount() > 0)
 				{
-					return NomSignature(GetArgumentTypes(context), GetReturnType(context));
+					return NomSignature(GetArgumentTypeParameters(), GetArgumentTypes(context), GetReturnType(context));
 				}
 				if (!signatureInitialized)
 				{
-					signature = NomSignature(GetArgumentTypes(context), GetReturnType(context));
+					signature = NomSignature(GetArgumentTypeParameters(), GetArgumentTypes(context), GetReturnType(context));
 					signatureInitialized = true;
 				}
 				return signature;

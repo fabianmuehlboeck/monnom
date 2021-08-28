@@ -36,15 +36,15 @@ namespace Nom
 
 		bool NomTypeVar::IsSubtype(NomTypeRef other, bool optimistic) const
 		{
-			return other->IsSupertype(this);
+			return other->IsSupertype(this, optimistic);
 		}
 		bool NomTypeVar::IsSubtype(NomBottomTypeRef other, bool optimistic) const
 		{
-			return GetUpperBound()->IsSubtype(other);
+			return GetUpperBound()->IsSubtype(other, optimistic);
 		}
 		bool NomTypeVar::IsSubtype(NomClassTypeRef other, bool optimistic) const
 		{
-			return this->GetUpperBound()->IsSubtype(other);
+			return this->GetUpperBound()->IsSubtype(other, optimistic);
 		}
 		bool NomTypeVar::IsSubtype(NomTopTypeRef other, bool optimistic) const
 		{
@@ -52,11 +52,11 @@ namespace Nom
 		}
 		bool NomTypeVar::IsSubtype(NomTypeVarRef other, bool optimistic) const
 		{
-			return this->GetIndex() == other->GetIndex() || this->GetUpperBound()->IsSubtype(other->GetLowerBound());
+			return this->GetIndex() == other->GetIndex() || this->GetUpperBound()->IsSubtype(other->GetLowerBound(), optimistic);
 		}
 		bool NomTypeVar::IsSupertype(NomTypeRef other, bool optimistic) const
 		{
-			return other->IsSubtype(this);
+			return other->IsSubtype(this, optimistic);
 		}
 		bool NomTypeVar::IsSupertype(NomBottomTypeRef other, bool optimistic) const
 		{
@@ -64,21 +64,25 @@ namespace Nom
 		}
 		bool NomTypeVar::IsSupertype(NomClassTypeRef other, bool optimistic) const
 		{
-			return this->GetLowerBound()->IsSupertype(other);
+			return this->GetLowerBound()->IsSupertype(other, optimistic);
 		}
 		bool NomTypeVar::IsSupertype(NomTopTypeRef other, bool optimistic) const
 		{
-			return this->GetLowerBound()->IsSupertype(other);
+			return this->GetLowerBound()->IsSupertype(other, optimistic);
 		}
 		bool NomTypeVar::IsSupertype(NomTypeVarRef other, bool optimistic) const
 		{
-			return this->GetIndex() == other->GetIndex() || this->GetLowerBound()->IsSupertype(other->GetUpperBound());
+			return this->GetIndex() == other->GetIndex() || this->GetLowerBound()->IsSupertype(other->GetUpperBound(), optimistic);
 		}
 		NomTypeRef NomTypeVar::SubstituteSubtyping(const NomSubstitutionContext* context) const
 		{
 			if (GetIndex() < context->GetTypeArgumentCount())
 			{
-				return context->GetTypeVariable(GetIndex());
+				auto replacement = context->GetTypeVariable(GetIndex());
+				if (replacement != nullptr)
+				{
+					return replacement;
+				}
 			}
 			return this;
 		}
@@ -124,7 +128,8 @@ namespace Nom
 		}
 		bool NomTypeVar::IsDisjoint(NomClassTypeRef other) const
 		{
-			return GetUpperBound()->IsDisjoint(other);
+			NomSingleSubstitutionContext nssc = NomSingleSubstitutionContext(this, GetDynamicType());
+			return GetUpperBound()->SubstituteSubtyping(&nssc)->IsDisjoint(other);
 		}
 		bool NomTypeVar::IsDisjoint(NomTopTypeRef other) const
 		{
@@ -132,7 +137,8 @@ namespace Nom
 		}
 		bool NomTypeVar::IsDisjoint(NomTypeVarRef other) const
 		{
-			return GetUpperBound()->IsDisjoint(other->GetUpperBound());
+			NomSingleSubstitutionContext nssc = NomSingleSubstitutionContext(this, GetDynamicType());
+			return other->IsDisjoint(GetUpperBound()->SubstituteSubtyping(&nssc));
 		}
 		bool NomTypeVar::IsSubtype(NomDynamicTypeRef other, bool optimistic) const
 		{
@@ -140,7 +146,7 @@ namespace Nom
 		}
 		bool NomTypeVar::IsSupertype(NomDynamicTypeRef other, bool optimistic) const
 		{
-			return optimistic || GetLowerBound()->IsSupertype(other);
+			return optimistic || GetLowerBound()->IsSupertype(other, optimistic);
 		}
 		bool NomTypeVar::PossiblyPrimitive() const
 		{
@@ -163,11 +169,16 @@ namespace Nom
 		}
 		bool NomTypeVar::IsDisjoint(NomMaybeTypeRef other) const
 		{
-			return GetUpperBound()->IsDisjoint(other);
+			NomSingleSubstitutionContext nssc = NomSingleSubstitutionContext(this, GetDynamicType());
+			return GetUpperBound()->SubstituteSubtyping(&nssc)->IsDisjoint(other);
 		}
 		TypeReferenceType NomTypeVar::GetTypeReferenceType() const
 		{
 			return TypeReferenceType::Reference;
+		}
+		bool NomTypeVar::ContainsVariableIndex(int index) const
+		{
+			return this->GetIndex()==index;
 		}
 	}
 }

@@ -3,15 +3,14 @@
 #include "NomTypeDecls.h"
 #include "NomBuilder.h"
 #include "AvailableExternally.h"
+#include "RTSubstStack.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
 		class CompileEnv;
-		enum class TypeArgumentListStackFields :unsigned char { Next = 0, Types = 1 };
 
-		llvm::Value* GenerateGetTypeArgumentListStackTypes(NomBuilder& builder, llvm::Value* talst);
 
 		class RTCast
 		{

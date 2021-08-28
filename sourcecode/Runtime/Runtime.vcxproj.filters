@@ -66,9 +66,6 @@
     <ClCompile Include="NomValueInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="instructions\TypeArgumentInstruction.cpp">
-      <Filter>Instructions</Filter>
-    </ClCompile>
     <ClCompile Include="NomMethod.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
@@ -155,9 +152,6 @@
     </ClCompile>
     <ClCompile Include="CharStream.cpp">
       <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="instructions\PhiEntry.cpp">
-      <Filter>Instructions</Filter>
     </ClCompile>
     <ClCompile Include="ManifestReader.cpp">
       <Filter>Parse</Filter>
@@ -549,6 +543,27 @@
     <ClCompile Include="NomTopType.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
+    <ClCompile Include="EnsureCheckedMethodInstruction.cpp">
+      <Filter>Instructions</Filter>
+    </ClCompile>
+    <ClCompile Include="RTStructuralVTable.cpp">
+      <Filter>Runtime Data</Filter>
+    </ClCompile>
+    <ClCompile Include="EnsureDynamicMethodInstruction.cpp">
+      <Filter>Instructions</Filter>
+    </ClCompile>
+    <ClCompile Include="StructuralValueHeader.cpp">
+      <Filter>Runtime Data</Filter>
+    </ClCompile>
+    <ClCompile Include="RTSTable.cpp">
+      <Filter>Runtime Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Metadata.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="RTSubstStack.cpp">
+      <Filter>Runtime</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -567,9 +582,6 @@
       <Filter>Instructions</Filter>
     </ClInclude>
     <ClInclude Include="instructions\ReturnInstruction.h">
-      <Filter>Instructions</Filter>
-    </ClInclude>
-    <ClInclude Include="instructions\TypeArgumentInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
     <ClInclude Include="instructions\PhiNode.h">
@@ -694,9 +706,6 @@
     </ClInclude>
     <ClInclude Include="CharStream.h">
       <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="instructions\PhiEntry.h">
-      <Filter>Instructions</Filter>
     </ClInclude>
     <ClInclude Include="ManifestReader.h">
       <Filter>Parse</Filter>
@@ -1126,6 +1135,27 @@
     </ClInclude>
     <ClInclude Include="NomTopType.h">
       <Filter>Intermediate Representation</Filter>
+    </ClInclude>
+    <ClInclude Include="EnsureCheckedMethodInstruction.h">
+      <Filter>Instructions</Filter>
+    </ClInclude>
+    <ClInclude Include="RTStructuralVTable.h">
+      <Filter>Runtime Data</Filter>
+    </ClInclude>
+    <ClInclude Include="EnsureDynamicMethodInstruction.h">
+      <Filter>Instructions</Filter>
+    </ClInclude>
+    <ClInclude Include="StructuralValueHeader.h">
+      <Filter>Runtime Data</Filter>
+    </ClInclude>
+    <ClInclude Include="RTSTable.h">
+      <Filter>Runtime Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Metadata.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="RTSubstStack.h">
+      <Filter>Runtime</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -15,8 +15,8 @@ namespace Nom
 			const ConstantID TypeArguments;
 			CallDispatchBestMethod(RegIndex reg, RegIndex receiver, ConstantID methodName, ConstantID typeArgs);
 			virtual ~CallDispatchBestMethod();
-			static llvm::Value* GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, NomValue receiver, llvm::Value* typeargcount, llvm::Value* argcount);
-			static llvm::Value* GenerateBestInvoke(NomBuilder& builder, llvm::Value* receiver, uint32_t typeargcount, uint32_t argCount, llvm::ArrayRef<llvm::Value*> args);
+			//static llvm::Value* GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, NomValue receiver/*, llvm::Value* typeargcount, llvm::Value* argcount*/);
+			//static llvm::Value* GenerateBestInvoke(NomBuilder& builder, llvm::Value* receiver, uint32_t typeargcount, uint32_t argCount, llvm::ArrayRef<llvm::Value*> args);
 			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
 
 			// Inherited via NomValueInstruction

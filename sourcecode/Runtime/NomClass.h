@@ -95,6 +95,7 @@ namespace Nom
 			virtual llvm::Constant* GetInterfaceTableLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
+			llvm::Function* GetMethodEnsureFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
 			static llvm::FunctionType* GetExpandoReaderType();
 			llvm::Function* GetExpandoReaderFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;

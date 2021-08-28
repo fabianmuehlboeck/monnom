@@ -17,6 +17,15 @@ namespace Nom.Bytecode
             ReceiverRegister = receiverRegister;
         }
 
+        //public override ulong InstructionCount => base.InstructionCount + 1;
+
+        //public override void WriteByteCode(Stream ws)
+        //{
+        //    ws.WriteByte((byte)OpCode.EnsureCheckedMethod);
+        //    ws.WriteValue(Method.Constant.MethodNameConstant.ConstantID);
+        //    ws.WriteValue(ReceiverRegister);
+        //    base.WriteByteCode(ws);
+        //}
         protected override void WriteArguments(Stream ws)
         {
             ws.WriteValue(Method.ConstantID);

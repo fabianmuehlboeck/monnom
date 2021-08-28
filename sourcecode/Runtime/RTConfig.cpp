@@ -1,6 +1,7 @@
 #include "RTConfig.h"
 #include <iostream>
 #include <string.h>
+#include <fstream>
 
 std::string NomRuntimePath = "";
 int NomBlameLevel = 0;
@@ -20,6 +21,15 @@ std::string NomPath = ".";
 std::vector<std::string> NomDebugFunctions = std::vector<std::string>();
 std::vector<std::string> NomApplicationArgs = std::vector<std::string>();
 bool NomRuntimeStopAtEnd = false;
+std::ostream * RT_debugout = &std::cout;
+
+bool RTConfig_CheckLambdaSignaturesAtCast = true;
+int RTConfig_NumberOfVarargsArguments = 2;
+bool RTConfig_IgnoreEnsureMethod = false;
+bool RTConfig_RunUnncessesaryLambdaCallTagChecks = false;
+bool RTConfig_OmitLambdaCallTags = false;
+bool RTConfig_AdditionalOptPasses = false;
+
 //using namespace llvm;
 using namespace std;
 namespace Nom
@@ -102,6 +112,14 @@ namespace Nom
 								break;
 							case '3':
 								NomOptLevel = 3;
+								break;
+							case '4':
+								NomOptLevel = 2;
+								RTConfig_AdditionalOptPasses = true;
+								break;
+							case '5':
+								NomOptLevel = 3;
+								RTConfig_AdditionalOptPasses = true;
 								break;
 							default:
 								std::cout << "\nERROR: Invalid optimization level!\n";
@@ -256,6 +274,23 @@ namespace Nom
 						else if (strncmp(args[argpos], "--version", 12) == 0)
 						{
 							std::cout << "MonNom Runtime Version 0.2\n";
+						}
+						else if (strncmp(args[argpos], "--omittypedensuremethod", 24) == 0)
+						{
+							RTConfig_IgnoreEnsureMethod = true;
+						}
+						else if (strncmp(args[argpos], "--debugout", 12) == 0)
+						{
+							argpos++;
+							if (argpos < argc)
+							{
+								RT_debugout = new std::basic_ofstream<char>(args[argpos]);
+							}
+						}
+						else
+						{
+							std::cout << "\nERROR: Invalid runtime flag!\n";
+							throw new std::exception();
 						}
 						break;
 					default:

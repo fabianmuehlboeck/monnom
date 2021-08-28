@@ -33,18 +33,12 @@ namespace Nom.Bytecode
                     throw new NotImplementedException();//unused
                 case OpCode.PhiNode:
                     return PhiNode.Read(s, rcs);
-                case OpCode.PhiEntry:
-                    throw new NotImplementedException();//unused
                 case OpCode.Return:
                     return ReturnInstruction.Read(s, rcs);
                 case OpCode.ReturnVoid:
                     return ReturnVoidInstruction.Read(s, rcs);
                 case OpCode.Argument:
                     return ACallInstruction.Read(s, rcs, opcode);
-                case OpCode.TypeArgument:
-                    throw new NotImplementedException();//unused
-                case OpCode.New:
-                    throw new NotImplementedException();//unused
                 case OpCode.LoadStringConstant:
                     return LoadStringConstantInstruction.Read(s, rcs);
                 case OpCode.LoadIntConstant:
@@ -57,18 +51,10 @@ namespace Nom.Bytecode
                     return LoadNullConstantInstruction.Read(s, rcs);
                 case OpCode.InvokeCheckedInstance:
                     return ACallInstruction.Read(s, rcs, opcode);
-                case OpCode.CallCheckedInterface:
-                    return ACallInstruction.Read(s, rcs, opcode);//unused
                 case OpCode.CallCheckedStatic:
                     return ACallInstruction.Read(s, rcs,opcode);
                 case OpCode.CallConstructor:
                     return ACallInstruction.Read(s, rcs, opcode);
-                case OpCode.CallDispatchFixed:
-                    return ACallInstruction.Read(s, rcs, opcode);//unused
-                case OpCode.CallDispatchStatic:
-                    return ACallInstruction.Read(s, rcs, opcode);//unused
-                case OpCode.CallDispatchJoin:
-                    return ACallInstruction.Read(s, rcs, opcode);//unused
                 case OpCode.CallDispatchBest:
                     return ACallInstruction.Read(s, rcs, opcode);
                 case OpCode.CallFinal:

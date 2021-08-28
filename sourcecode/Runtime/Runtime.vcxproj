@@ -79,6 +79,7 @@
     <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(NOMBUILDPATH)\Runtime\Intermediates\$(Platform)\$(Configuration)\</IntDir>
     <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
+    <TargetName>nomd</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
@@ -86,6 +87,7 @@
     <LinkIncremental>true</LinkIncremental>
     <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
     <PreLinkEventUseInBuild>true</PreLinkEventUseInBuild>
+    <TargetName>nom</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">
     <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
@@ -198,6 +200,8 @@
     <ClCompile Include="Defs.cpp" />
     <ClCompile Include="Directory.cpp" />
     <ClCompile Include="DispatchDictionaryEntry.cpp" />
+    <ClCompile Include="EnsureCheckedMethodInstruction.cpp" />
+    <ClCompile Include="EnsureDynamicMethodInstruction.cpp" />
     <ClCompile Include="ExpandoObjectClass.cpp" />
     <ClCompile Include="File.cpp" />
     <ClCompile Include="FloatClass.cpp" />
@@ -224,13 +228,11 @@
     <ClCompile Include="instructions\LoadIntConstantInstruction.cpp" />
     <ClCompile Include="instructions\LoadStringConstantInstruction.cpp" />
     <ClCompile Include="instructions\NoopInstruction.cpp" />
-    <ClCompile Include="instructions\PhiEntry.cpp" />
     <ClCompile Include="instructions\PhiNode.cpp" />
     <ClCompile Include="instructions\ReadFieldInstruction.cpp" />
     <ClCompile Include="instructions\ReturnInstruction.cpp" />
     <ClCompile Include="instructions\ReturnVoidInstruction.cpp" />
     <ClCompile Include="instructions\RTCmdInstruction.cpp" />
-    <ClCompile Include="instructions\TypeArgumentInstruction.cpp" />
     <ClCompile Include="instructions\WriteFieldInstruction.cpp" />
     <ClCompile Include="IntClass.cpp" />
     <ClCompile Include="IPairInterface.cpp" />
@@ -248,6 +250,7 @@
     <ClCompile Include="ManifestReader.cpp" />
     <ClCompile Include="MathClass.cpp" />
     <ClCompile Include="Maybe.cpp" />
+    <ClCompile Include="Metadata.cpp" />
     <ClCompile Include="NomAlloc.cpp" />
     <ClCompile Include="NomBottomType.cpp" />
     <ClCompile Include="NomBuilder.cpp" />
@@ -319,8 +322,11 @@
     <ClCompile Include="RTMaybeType.cpp" />
     <ClCompile Include="RTMulticastedInterface.cpp" />
     <ClCompile Include="RTSignature.cpp" />
+    <ClCompile Include="RTSTable.cpp" />
     <ClCompile Include="RTStructInterface.cpp" />
     <ClCompile Include="RTConfig.cpp" />
+    <ClCompile Include="RTStructuralVTable.cpp" />
+    <ClCompile Include="RTSubstStack.cpp" />
     <ClCompile Include="RTTypeEq.cpp" />
     <ClCompile Include="RTVTable.cpp" />
     <ClCompile Include="RTInterfaceTableEntry.cpp" />
@@ -339,6 +345,7 @@
     <ClCompile Include="SourcePos.cpp" />
     <ClCompile Include="StringClass.cpp" />
     <ClCompile Include="StructHeader.cpp" />
+    <ClCompile Include="StructuralValueHeader.cpp" />
     <ClCompile Include="TimerClass.cpp" />
     <ClCompile Include="TypeList.cpp" />
     <ClCompile Include="NullClass.cpp" />
@@ -372,6 +379,8 @@
     <ClInclude Include="Directory.h" />
     <ClInclude Include="DispatchDictionaryEntry.h" />
     <ClInclude Include="DLLExport.h" />
+    <ClInclude Include="EnsureCheckedMethodInstruction.h" />
+    <ClInclude Include="EnsureDynamicMethodInstruction.h" />
     <ClInclude Include="ExpandoObjectClass.h" />
     <ClInclude Include="File.h" />
     <ClInclude Include="FileSysDefs.h" />
@@ -381,6 +390,7 @@
     <ClInclude Include="gcinclude_config.h" />
     <ClInclude Include="GloballyNamed.h" />
     <ClInclude Include="GlobalNameAddressLookupList.h" />
+    <ClInclude Include="Metadata.h" />
     <ClInclude Include="NomBuilder.h" />
     <ClInclude Include="NomMethodKey.h" />
     <ClInclude Include="NomTopType.h" />
@@ -465,8 +475,11 @@
     <ClInclude Include="RTMaybeType.h" />
     <ClInclude Include="RTMulticastedInterface.h" />
     <ClInclude Include="RTSignature.h" />
+    <ClInclude Include="RTSTable.h" />
     <ClInclude Include="RTStructInterface.h" />
     <ClInclude Include="RTConfig.h" />
+    <ClInclude Include="RTStructuralVTable.h" />
+    <ClInclude Include="RTSubstStack.h" />
     <ClInclude Include="RTTypeEq.h" />
     <ClInclude Include="RTVTable.h" />
     <ClInclude Include="RTInterfaceTableEntry.h" />
@@ -489,8 +502,6 @@
     <ClInclude Include="instructions\CallCheckedStaticMethod.h" />
     <ClInclude Include="instructions\CallDispatchBestMethod.h" />
     <ClInclude Include="instructions\LoadStringConstantInstruction.h" />
-    <ClInclude Include="instructions\PhiEntry.h" />
-    <ClInclude Include="instructions\TypeArgumentInstruction.h" />
     <ClInclude Include="Iter.h" />
     <ClInclude Include="Library.h" />
     <ClInclude Include="LibraryDependency.h" />
@@ -532,6 +543,7 @@
     <ClInclude Include="SmallMap.h" />
     <ClInclude Include="StringClass.h" />
     <ClInclude Include="StructHeader.h" />
+    <ClInclude Include="StructuralValueHeader.h" />
     <ClInclude Include="TimerClass.h" />
     <ClInclude Include="TypeList.h" />
     <ClInclude Include="NomTypeRegistry.h" />

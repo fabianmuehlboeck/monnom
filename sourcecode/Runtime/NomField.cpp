@@ -165,42 +165,42 @@ namespace Nom
 			{
 				builder->SetInsertPoint(refValueBlock);
 				BasicBlock* realVtableBlock = nullptr, * pureLambdaBlock = nullptr, * pureStructBlock = nullptr, * purePartialAppBlock = nullptr;
-				Value* vtableVar;
-				RefValueHeader::GenerateVTableTagSwitch(builder, receiver, &vtableVar, &realVtableBlock, &pureLambdaBlock, &pureStructBlock, &purePartialAppBlock);
+				Value* vtableVar, *sTableVar;
+				RefValueHeader::GenerateVTableTagSwitch(builder, receiver, &vtableVar, &sTableVar, &realVtableBlock, &pureLambdaBlock, &pureStructBlock, &purePartialAppBlock);
 
 				if (realVtableBlock != nullptr)
 				{
-					BasicBlock* classObjectBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr, * multiCastBlock = nullptr;
+					//BasicBlock* classObjectBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr, * multiCastBlock = nullptr;
 					builder->SetInsertPoint(realVtableBlock);
-					RTVTable::GenerateVTableKindSwitch(builder, vtableVar, &classObjectBlock, &lambdaBlock, &structBlock, &partialAppBlock, &multiCastBlock);
+					//RTVTable::GenerateVTableKindSwitch(builder, vtableVar, &classObjectBlock, &lambdaBlock, &structBlock, &partialAppBlock, &multiCastBlock);
 
-					if (classObjectBlock != nullptr)
-					{
-						builder->SetInsertPoint(classObjectBlock);
+					//if (classObjectBlock != nullptr)
+					//{
+					//	builder->SetInsertPoint(classObjectBlock);
 						auto fieldStoreFun = RTClass::GenerateReadFieldStore(builder, vtableVar);
 						builder->CreateCall(NomClass::GetDynamicFieldStoreType(), fieldStoreFun, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), EnsurePacked(builder, value) })->setCallingConv(NOMCC);
 						builder->CreateBr(outBlock);
-					}
-					if (lambdaBlock != nullptr)
-					{
-						RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Lambdas have no dictionary fields to write to!", lambdaBlock);
-					}
-					if (structBlock != nullptr)
-					{
-						builder->SetInsertPoint(structBlock);
-						auto structDesc = StructHeader::GenerateReadStructDescriptor(builder, receiver);
-						auto fieldStoreFun = RTStruct::GenerateReadFieldStore(builder, structDesc);
-						builder->CreateCall(NomStruct::GetDynamicFieldStoreType(), fieldStoreFun, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), EnsurePacked(builder, value) })->setCallingConv(NOMCC);
-						builder->CreateBr(outBlock);
-					}
-					if (partialAppBlock != nullptr)
-					{
-						RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Partial Applications have no dictionary fields to write to!", partialAppBlock);
-					}
-					if (multiCastBlock != nullptr)
-					{
-						RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Dictionary field write not implemented for multi-casted values!", multiCastBlock);
-					}
+					//}
+					//if (lambdaBlock != nullptr)
+					//{
+					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Lambdas have no dictionary fields to write to!", lambdaBlock);
+					//}
+					//if (structBlock != nullptr)
+					//{
+					//	builder->SetInsertPoint(structBlock);
+					//	auto structDesc = StructHeader::GenerateReadStructDescriptor(builder, receiver);
+					//	auto fieldStoreFun = RTStruct::GenerateReadFieldStore(builder, structDesc);
+					//	builder->CreateCall(NomStruct::GetDynamicFieldStoreType(), fieldStoreFun, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), EnsurePacked(builder, value) })->setCallingConv(NOMCC);
+					//	builder->CreateBr(outBlock);
+					//}
+					//if (partialAppBlock != nullptr)
+					//{
+					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Partial Applications have no dictionary fields to write to!", partialAppBlock);
+					//}
+					//if (multiCastBlock != nullptr)
+					//{
+					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Dictionary field write not implemented for multi-casted values!", multiCastBlock);
+					//}
 				}
 
 				if (pureLambdaBlock != nullptr)
@@ -210,7 +210,7 @@ namespace Nom
 				if (pureStructBlock != nullptr)
 				{
 					builder->SetInsertPoint(pureStructBlock);
-					auto structDesc = StructHeader::GenerateReadStructDescriptor(builder, receiver);
+					auto structDesc = sTableVar;
 					auto fieldStoreFun = RTStruct::GenerateReadFieldStore(builder, structDesc);
 					builder->CreateCall(NomStruct::GetDynamicFieldStoreType(), fieldStoreFun, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), EnsurePacked(builder, value) })->setCallingConv(NOMCC);
 					builder->CreateBr(outBlock);

@@ -303,6 +303,7 @@ double slowestSoFar = -1;
 
 DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebugPrintValueType valueType, int64_t value, decltype(NomDebugPrintLevel) level)
 {
+	auto& outstream = *RT_debugout;
 	if (NomStatsLevel > 3)
 	{
 #ifdef _WIN32
@@ -336,7 +337,7 @@ DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebug
 						{
 							auto npp = ProgramPos(funnameid, linenum, seconds);
 							slowPositions.insert(iter, std::move(npp));
-							cout << "SLOW: " << (*debugFunNames[funnameid]) << ":" << linenum << " - " << seconds << "s\n";
+							outstream << "SLOW: " << (*debugFunNames[funnameid]) << ":" << linenum << " - " << seconds << "s\n";
 							found = true;
 							break;
 						}
@@ -345,7 +346,7 @@ DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebug
 					{
 						auto npp = ProgramPos(funnameid, linenum, seconds);
 						slowPositions.insert(iter, std::move(npp));
-						cout << "SLOW: " << (*debugFunNames[funnameid]) << ":" << linenum << " - " << seconds << "s\n";
+						outstream << "SLOW: " << (*debugFunNames[funnameid]) << ":" << linenum << " - " << seconds << "s\n";
 					}
 					if (slowPositions.size() > 100)
 					{
@@ -376,25 +377,25 @@ DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebug
 	}
 	if (NomDebugPrintLevel >= level)
 	{
-		std::cout << *(debugFunNames[funnameid]) << ":" << std::dec << linenum << "\n";
+		outstream << *(debugFunNames[funnameid]) << ":" << std::dec << linenum << "\n";
 		switch (valueType)
 		{
 		case NomDebugPrintValueType::Pointer:
-			std::cout << "   Pointer: " << std::hex << value << "\n";
+			outstream << "   Pointer: " << std::hex << value << "\n";
 			break;
 		case NomDebugPrintValueType::Int:
-			std::cout << "   Int: " << std::dec << value << "\n";
+			outstream << "   Int: " << std::dec << value << "\n";
 			break;
 		case NomDebugPrintValueType::Float:
-			std::cout << "   Float: " << std::hex << value << "\n";
+			outstream << "   Float: " << std::hex << value << "\n";
 			break;
 		case NomDebugPrintValueType::Bool:
-			std::cout << "   Bool: " << std::dec << value << "\n";
+			outstream << "   Bool: " << std::dec << value << "\n";
 			break;
 		case NomDebugPrintValueType::Nothing:
 			break;
 		}
-		std::cout.flush();
+		outstream.flush();
 	}
 	if (NomStatsLevel > 1)
 	{
@@ -417,6 +418,7 @@ DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebug
 }
 DLLEXPORT int RT_NOM_STATS_Print(int level)
 {
+	auto& outstream = *RT_debugout;
 	int rbufpos = debugPrint_rbufpos[level];
 	int target = rbufpos - 1;
 	if (target < 0)
@@ -438,16 +440,16 @@ DLLEXPORT int RT_NOM_STATS_Print(int level)
 		switch (valueType)
 		{
 		case NomDebugPrintValueType::Pointer:
-			std::cout << "   Pointer: " << std::hex << value << "\n";
+			outstream << "   Pointer: " << std::hex << value << "\n";
 			break;
 		case NomDebugPrintValueType::Int:
-			std::cout << "   Int: " << std::dec << value << "\n";
+			outstream << "   Int: " << std::dec << value << "\n";
 			break;
 		case NomDebugPrintValueType::Float:
-			std::cout << "   Float: " << std::hex << value << "\n";
+			outstream << "   Float: " << std::hex << value << "\n";
 			break;
 		case NomDebugPrintValueType::Bool:
-			std::cout << "   Bool: " << std::dec << value << "\n";
+			outstream << "   Bool: " << std::dec << value << "\n";
 			break;
 		case NomDebugPrintValueType::Nothing:
 			break;
@@ -466,24 +468,24 @@ DLLEXPORT int RT_NOM_STATS_Print(int level)
 			switch (valueType)
 			{
 			case NomDebugPrintValueType::Pointer:
-				std::cout << "   Pointer: " << std::hex << value << "\n";
+				outstream << "   Pointer: " << std::hex << value << "\n";
 				break;
 			case NomDebugPrintValueType::Int:
-				std::cout << "   Int: " << std::dec << value << "\n";
+				outstream << "   Int: " << std::dec << value << "\n";
 				break;
 			case NomDebugPrintValueType::Float:
-				std::cout << "   Float: " << std::hex << value << "\n";
+				outstream << "   Float: " << std::hex << value << "\n";
 				break;
 			case NomDebugPrintValueType::Bool:
-				std::cout << "   Bool: " << std::dec << value << "\n";
+				outstream << "   Bool: " << std::dec << value << "\n";
 				break;
 			case NomDebugPrintValueType::Nothing:
 				break;
 			}
 		}
 	}
-	std::cout << "------------------------------------------------------\n";
-	std::cout.flush();
+	outstream << "------------------------------------------------------\n";
+	outstream.flush();
 	return rbufpos;
 }
 
@@ -512,40 +514,41 @@ namespace Nom
 		}
 		void PrintCastStats()
 		{
-			cout << "\n\nCasting Stats:\n----------------------";
-			cout << "\n#Total Casts: " << std::dec << castCount;
-			cout << "\n#Monotonic Casts: " << std::dec << monoCastCount;
-			cout << "\n#Subtyping Checks: " << std::dec << subtypingChecksCount;
-			cout << "\n#Type-Arg Recursions: " << std::dec << typeArgumentRecursionsCount;
-			cout << "\n#VTable Allocations: " << std::dec << vtableAllocationsCount;
-			cout << "\n#Mono casts using preallocation: " << std::dec << enoughSpaceCastsCount;
-			cout << "\n#Casting Mono Casts: " << std::dec << castingMonoCastsCount;
-			cout << "\n#Checked Mono Casts: " << std::dec << checkedMonoCastsCount;
-			cout << "\n#Int Packs: " << std::dec << intPacksCount;
-			cout << "\n#Int Unpacks: " << std::dec << intUnpacksCount;
-			cout << "\n#Int Boxes: " << std::dec << intBoxesCount;
-			cout << "\n#Int Unboxes: " << std::dec << intUnboxesCount;
-			cout << "\n#Float Packs: " << std::dec << floatPacksCount;
-			cout << "\n#Float Unpacks: " << std::dec << floatUnpacksCount;
-			cout << "\n#Float Boxes: " << std::dec << floatBoxesCount;
-			cout << "\n#Float Unboxes: " << std::dec << floatUnboxesCount;
-			cout << "\n\nAllocation Stats:\n----------------------";
-			cout << "\n#General Allocations: " << std::dec << general_allocations;
-			cout << "\n#Object Allocations: " << std::dec << object_allocations;
-			cout << "\n#Closure Allocations: " << std::dec << closure_allocations;
-			cout << "\n#Record Allocations: " << std::dec << record_allocations;
-			cout << "\n#Class Type Allocations: " << std::dec << classtype_allocations;
-			cout << "\n#Total Allocations: " << std::dec << (general_allocations + object_allocations + closure_allocations + record_allocations + classtype_allocations);
-			cout << "\n\nCall/Lookup Stats:\n----------------------";
-			cout << "\n#Direct Class Method Calls: " << std::dec << directClassMethodCalls;
-			cout << "\n#Interface Method Calls: " << std::dec << (interfaceMethodCalls + extendedInterfaceMethodCalls);
-			cout << "\n  #Interface Method Calls with Extended Argument Arrays: " << std::dec << extendedInterfaceMethodCalls;
-			cout << "\n#Typed Raw Invocations: " << std::dec << typedRawInvokes;
-			cout << "\n#Final Instance Method Calls: " << std::dec << finalInstanceMethodCalls;
-			cout << "\n#Static Method Calls: " << std::dec << staticMethodCalls;
-			cout << "\n#Dynamic Invokes: " << std::dec << dynamicInvokes;
-			cout << "\n#Dynamic Method Calls: " << std::dec << dynamicMethodCalls;
-			cout << "\n#Dynamic Field Lookups: " << std::dec << dynamicFieldLookups;
+			auto& outstream = *RT_debugout;
+			outstream << "\n\nCasting Stats:\n----------------------";
+			outstream << "\n#Total Casts: " << std::dec << castCount;
+			outstream << "\n#Monotonic Casts: " << std::dec << monoCastCount;
+			outstream << "\n#Subtyping Checks: " << std::dec << subtypingChecksCount;
+			outstream << "\n#Type-Arg Recursions: " << std::dec << typeArgumentRecursionsCount;
+			outstream << "\n#VTable Allocations: " << std::dec << vtableAllocationsCount;
+			outstream << "\n#Mono casts using preallocation: " << std::dec << enoughSpaceCastsCount;
+			outstream << "\n#Casting Mono Casts: " << std::dec << castingMonoCastsCount;
+			outstream << "\n#Checked Mono Casts: " << std::dec << checkedMonoCastsCount;
+			outstream << "\n#Int Packs: " << std::dec << intPacksCount;
+			outstream << "\n#Int Unpacks: " << std::dec << intUnpacksCount;
+			outstream << "\n#Int Boxes: " << std::dec << intBoxesCount;
+			outstream << "\n#Int Unboxes: " << std::dec << intUnboxesCount;
+			outstream << "\n#Float Packs: " << std::dec << floatPacksCount;
+			outstream << "\n#Float Unpacks: " << std::dec << floatUnpacksCount;
+			outstream << "\n#Float Boxes: " << std::dec << floatBoxesCount;
+			outstream << "\n#Float Unboxes: " << std::dec << floatUnboxesCount;
+			outstream << "\n\nAllocation Stats:\n----------------------";
+			outstream << "\n#General Allocations: " << std::dec << general_allocations;
+			outstream << "\n#Object Allocations: " << std::dec << object_allocations;
+			outstream << "\n#Closure Allocations: " << std::dec << closure_allocations;
+			outstream << "\n#Record Allocations: " << std::dec << record_allocations;
+			outstream << "\n#Class Type Allocations: " << std::dec << classtype_allocations;
+			outstream << "\n#Total Allocations: " << std::dec << (general_allocations + object_allocations + closure_allocations + record_allocations + classtype_allocations);
+			outstream << "\n\nCall/Lookup Stats:\n----------------------";
+			outstream << "\n#Direct Class Method Calls: " << std::dec << directClassMethodCalls;
+			outstream << "\n#Interface Method Calls: " << std::dec << (interfaceMethodCalls + extendedInterfaceMethodCalls);
+			outstream << "\n  #Interface Method Calls with Extended Argument Arrays: " << std::dec << extendedInterfaceMethodCalls;
+			outstream << "\n#Typed Raw Invocations: " << std::dec << typedRawInvokes;
+			outstream << "\n#Final Instance Method Calls: " << std::dec << finalInstanceMethodCalls;
+			outstream << "\n#Static Method Calls: " << std::dec << staticMethodCalls;
+			outstream << "\n#Dynamic Invokes: " << std::dec << dynamicInvokes;
+			outstream << "\n#Dynamic Method Calls: " << std::dec << dynamicMethodCalls;
+			outstream << "\n#Dynamic Field Lookups: " << std::dec << dynamicFieldLookups;
 
 #ifdef _WIN32
 			double castSeconds = timeUnitsInCasts / find_timer_frequency();
@@ -556,34 +559,34 @@ namespace Nom
 			double castSeconds = ((double)timeUnitsInCasts) / CLOCKS_PER_SEC;
 #endif
 #endif
-			cout << "\nTime spent in casts: " << std::dec << castSeconds << " Seconds";
+			outstream << "\nTime spent in casts: " << std::dec << castSeconds << " Seconds";
 
-			cout << "\n";
+			outstream << "\n";
 
 			if (NomStatsLevel > 1)
 			{
-				cout << "\nProfile Summary:\n----------------------\n\n";
+				outstream << "\nProfile Summary:\n----------------------\n\n";
 				auto maxid = NomNameRepository::ProfilingInstance().GetMaxID();
 				for (decltype(maxid) i = 1; i <= maxid; i++)
 				{
-					cout << (*debugFunNames[i]) << ": " << std::dec << profileCounterArray[i] << "\n";
+					outstream << (*debugFunNames[i]) << ": " << std::dec << profileCounterArray[i] << "\n";
 				}
 
 				if (NomStatsLevel > 3)
 				{
-					cout << "\n\nSlow Timings:\n----------------------\n\n";
+					outstream << "\n\nSlow Timings:\n----------------------\n\n";
 					for (auto pp : slowPositions)
 					{
-						cout << (*debugFunNames[pp.FunName]) << ":" << pp.LineNum << " - " << pp.Seconds << "s\n";
+						outstream << (*debugFunNames[pp.FunName]) << ":" << pp.LineNum << " - " << pp.Seconds << "s\n";
 					}
 				}
 
 				if (NomStatsLevel > 2)
 				{
-					cout << "\n\nProfile Data:\n----------------------\n\n";
+					outstream << "\n\nProfile Data:\n----------------------\n\n";
 					for (decltype(maxid) i = 1; i <= maxid; i++)
 					{
-						cout << (*debugFunNames[i]) << ": " << std::dec << profileCounterArray[i] << "\n";
+						outstream << (*debugFunNames[i]) << ": " << std::dec << profileCounterArray[i] << "\n";
 						vector<size_t>& dpca = detailedProfileCounterArray[i];
 						if (dpca.size() > 0)
 						{
@@ -591,7 +594,7 @@ namespace Nom
 							{
 								if (dpca[j] > 0)
 								{
-									cout << "    " << j << ": " << dpca[j] << "\n";
+									outstream << "    " << j << ": " << dpca[j] << "\n";
 								}
 							}
 						}

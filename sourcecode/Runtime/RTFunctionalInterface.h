@@ -10,7 +10,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		enum class RTFunctionalInterfaceFields : unsigned char {RTInterface = 0, Signature = 1, CheckedVTableOpt = 2, CheckedVTable =3 , ProtoMismatchVTableOpt = 4, ProtoMismatchVTable =5, CastingVTableOpt = 6, CastingVTable = 7};
+		enum class RTFunctionalInterfaceFields : unsigned char { RTInterface = 0, CheckedWrapper = 1, ProtoMismatchWrapper = 2, CastingWrapper = 3, CheckedVTableOpt = 4, CheckedVTable = 5, ProtoMismatchVTableOpt = 6, ProtoMismatchVTable = 7, CastingVTableOpt = 8, CastingVTable = 9 };
 		class RTFunctionalInterface : public ARTRep<RTFunctionalInterface, RTFunctionalInterfaceFields>
 		{
 		public:
@@ -19,6 +19,9 @@ namespace Nom
 
 			static llvm::Constant* FindConstant(llvm::Module& mod, const llvm::StringRef name);
 
+			static llvm::Value* GenerateReadCheckedRawInvokeWrapper(NomBuilder& builder, llvm::Value* descriptorPtr);
+			static llvm::Value* GenerateReadProtoMismatchRawInvokeWrapper(NomBuilder& builder, llvm::Value* descriptorPtr);
+			static llvm::Value* GenerateReadCastingRawInvokeWrapper(NomBuilder& builder, llvm::Value* descriptorPtr);
 			static llvm::Value* GenerateReadRTSignature(NomBuilder& builder, llvm::Value* descriptorPtr);
 			static llvm::Value* GenerateReadProtoMatchVTableOpt(NomBuilder& builder, llvm::Value* descriptorPtr);
 			static llvm::Value* GenerateReadProtoMatchVTable(NomBuilder& builder, llvm::Value* descriptorPtr);

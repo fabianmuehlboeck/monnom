@@ -25,7 +25,8 @@ namespace Nom
 			static llvm::Value* GenerateReadVTablePointer(NomBuilder& builder, llvm::Value* refValue);
 
 			static int GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar,  llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar);
-			static int GenerateVTableTagSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::BasicBlock** realPointerBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** structBlock, llvm::BasicBlock** partialAppBlock);
+			static int GenerateRefValueKindSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vTableVar, llvm::Value** sTableVar, llvm::BasicBlock** nominalObjectBlockVar, llvm::BasicBlock** structuralValueBlockVar);
+			static int GenerateVTableTagSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::Value** sTableVar, llvm::BasicBlock** realPointerBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** structBlock, llvm::BasicBlock** partialAppBlock);
 
 			static int GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** postMaskedInt, llvm::BasicBlock** negMaskedInt, llvm::BasicBlock** posZerofloatBlock, llvm::BasicBlock** negZerofloatBlock, llvm::BasicBlock** maksedfloatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar);
 

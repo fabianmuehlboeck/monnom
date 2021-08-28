@@ -127,17 +127,12 @@ namespace Nom.Bytecode
 
         public void Emit(Func<string, Stream> opener)
         {
-            //FileInfo fi = new FileInfo(path + "/" + ProgramName + ".manifest");
-            //if (fi.Exists)
-            //{
-            //    fi.Delete();
-            //}
             using (Stream fs = opener(ProgramName))
             {
                 using (StreamWriter sw = new StreamWriter(fs))
                 {
                     sw.WriteLine("<?xml version=\"1.0\" encoding=\"ISO - 8859 - 1\" ?>");
-                    sw.WriteLine("<nomlibrary name = \"" + ProgramName + "\" major=\"" + Version.Major.ToString() + "\" minor=\"" + Version.Minor.ToString() + "\" revision=\"" + Version.Revision.ToString() + "\" build=\"" + Version.Build.ToString() + "\" >");
+                    sw.WriteLine("<nomlibrary name = \"" + ProgramName + "\" major=\"" + Version.Major.ToString() + "\" minor=\"" + Version.Minor.ToString() + "\" revision=\"" + Version.Revision.ToString() + "\" build=\"" + Version.Build.ToString() + "\" fversion=\"2\" >");
                     if (MainClass.HasElem)
                     {
                         sw.WriteLine("<mainclass name = \"" + MainClass.Elem + "\" />");

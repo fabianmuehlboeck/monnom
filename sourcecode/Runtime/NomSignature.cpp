@@ -9,7 +9,7 @@ namespace Nom
 		NomSignature::NomSignature():ReturnType(NomType::AnythingRef)
 		{
 		}
-		NomSignature::NomSignature(const std::vector<NomTypeRef>& argTypes, const NomTypeRef returnType) : ReturnType(returnType), ArgumentTypes(argTypes)
+		NomSignature::NomSignature(const std::vector<NomTypeParameterRef>&& typeArguments, const std::vector<NomTypeRef>&& argTypes, const NomTypeRef returnType) : ReturnType(returnType), ArgumentTypes(argTypes), TypeArguments(typeArguments)
 		{
 		}
 		NomSignature::~NomSignature()
@@ -22,7 +22,8 @@ namespace Nom
 			{
 				ntr.push_back(argT->SubstituteSubtyping(context));
 			}
-			return NomSignature(ntr, ReturnType->SubstituteSubtyping(context));
+			std::vector<NomTypeParameterRef> targs = TypeArguments;
+			return NomSignature(std::move(targs), std::move(ntr), ReturnType->SubstituteSubtyping(context));
 		}
 		bool NomSignature::SatisfiesArguments(const NomSignature& other, bool optimistic) const
 		{

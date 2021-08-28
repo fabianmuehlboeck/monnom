@@ -5,6 +5,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ADT/Twine.h"
 #include "NomBuilder.h"
+#include "NomInstantiationRef.h"
 
 namespace Nom
 {
@@ -36,6 +37,8 @@ namespace Nom
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 
 			virtual llvm::Function* findLLVMElement(llvm::Module& mod) const override;
+
+			static llvm::Value* GenerateInlinedSignatureSubtyping(NomBuilder& builder, llvm::Value* signature, llvm::Value* leftSubst, NomInstantiationRef<NomCallable> rightMethod, llvm::Value* rightSubst, bool onlyPessimistic=false);
 
 		};
 	}

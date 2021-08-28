@@ -25,6 +25,8 @@
 #include "instructions/ErrorInstruction.h"
 #include "instructions/RTCmdInstruction.h"
 #include "LoadNullConstantInstruction.h"
+#include "EnsureCheckedMethodInstruction.h"
+#include "EnsureDynamicMethodInstruction.h"
 #include <exception>
 #include "NomLambda.h"
 #include "RTConfig.h"
@@ -40,8 +42,16 @@ namespace Nom
 		BytecodeReader::BytecodeReader(CharStream& stream) :stream(stream)
 		{
 			uint64_t versionflag = this->stream.read<uint32_t>();
-			if (versionflag != 1)
+			if (versionflag != 2)
 			{
+				if (versionflag < 2)
+				{
+					std::cout << "The given bytecode file uses an older format that is not supported by this runtime!\n";
+				}
+				else
+				{
+					std::cout << "The given bytecode file uses an newer format that is not supported by this runtime!\n";
+				}
 				throw new std::exception(/*"Wrong Bytecode version!"*/);
 			}
 		}
@@ -70,11 +80,16 @@ namespace Nom
 			case OpCode::ReturnVoid: {
 				return new ReturnVoidInstruction();
 			}
-									 /*case OpCode::PhiNode: {
-										 RegIndex intSize = stream.read<RegIndex>();
-										 RegIndex floatSize = stream.read<RegIndex>();
-										 RegIndex refSize = stream.read<RegIndex>();
-										 return new PhiNode(intSize, floatSize, refSize); }*/
+			case OpCode::EnsureCheckedMethod: {
+				LocalConstantID methodName = stream.read<LocalConstantID>();
+				RegIndex receiver = stream.read<RegIndex>();
+				return new EnsureCheckedMethodInstruction(context.GetGlobalID(methodName), receiver);
+			}
+			case OpCode::EnsureDynamicMethod: {
+				LocalConstantID methodName = stream.read<LocalConstantID>();
+				RegIndex receiver = stream.read<RegIndex>();
+				return new EnsureDynamicMethodInstruction(context.GetGlobalID(methodName), receiver);
+			}
 			case OpCode::LoadIntConstant: {
 				uint64_t value = stream.read<uint64_t>();
 				RegIndex reg = stream.read<RegIndex>();

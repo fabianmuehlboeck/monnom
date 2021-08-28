@@ -126,7 +126,7 @@ namespace Nom
 			BasicBlock* checkReturnTypeBlock = BasicBlock::Create(LLVMCONTEXT, "checkReturnType", fun);
 			BasicBlock* pessimisticReturnMatchBlock = BasicBlock::Create(LLVMCONTEXT, "pessimisticReturnMatch", fun);
 			BasicBlock* optimisticReturnMatchBlock = BasicBlock::Create(LLVMCONTEXT, "optimisticReturnMatch", fun);
-			
+
 			BasicBlock* failBlock = BasicBlock::Create(LLVMCONTEXT, "fail", fun);
 
 			builder->SetInsertPoint(startBlock);
@@ -155,7 +155,7 @@ namespace Nom
 			builder->CreateCondBr(builder->CreateICmpEQ(TPcountPHI, ConstantInt::get(TPcountPHI->getType(), 0)), checkParametersBlock, checkNextTypeParameterBlock);
 
 			builder->SetInsertPoint(checkNextTypeParameterBlock);
-			auto tppos = builder->CreateSub(TPcountPHI, ConstantInt::get(TPcountPHI->getType(),1));
+			auto tppos = builder->CreateSub(TPcountPHI, ConstantInt::get(TPcountPHI->getType(), 1));
 			auto leftTP = GenerateReadTypeParameter(builder, leftSig, tppos);
 			auto rightTP = GenerateReadTypeParameter(builder, rightSig, tppos);
 			//TODO: implement checking type parameter matchup
@@ -195,7 +195,7 @@ namespace Nom
 			returnTypeCheckSwitch->addCase(ConstantInt::get(inttype(2), 1), optimisticReturnMatchBlock);
 
 			builder->SetInsertPoint(pessimisticReturnMatchBlock);
-			builder->CreateRet(builder->CreateAdd(builder->CreateMul(builder->CreateZExt(PpessimisticPHI, inttype(2)), MakeInt(2,(uint64_t)2)), builder->CreateZExt(PpessimisticPHI, inttype(2))));
+			builder->CreateRet(builder->CreateAdd(builder->CreateMul(builder->CreateZExt(PpessimisticPHI, inttype(2)), MakeInt(2, (uint64_t)2)), builder->CreateZExt(PpessimisticPHI, inttype(2))));
 
 			builder->SetInsertPoint(optimisticReturnMatchBlock);
 			builder->CreateRet(ConstantInt::get(inttype(2), 1));
@@ -220,6 +220,83 @@ namespace Nom
 		llvm::Function* RTSignature::findLLVMElement(llvm::Module& mod) const
 		{
 			return mod.getFunction("RT_NOM_SignatureSubtyping");
+		}
+
+		llvm::Value* RTSignature::GenerateInlinedSignatureSubtyping(NomBuilder& builder, llvm::Value* signature, llvm::Value* leftSubst, NomInstantiationRef<NomCallable> rightMethod, llvm::Value* rightSubst, bool onlyPessimistic)
+		{
+			BasicBlock* incomingBlock = builder->GetInsertBlock();
+			Function* fun = incomingBlock->getParent();
+			auto subtypingFun = RTSubtyping::Instance().GetLLVMElement(*fun->getParent());
+			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "inlineSignatureSubtypingOut", fun);
+			builder->SetInsertPoint(outBlock);
+			auto outPHI = builder->CreatePHI(inttype((onlyPessimistic ? 1 : 2)), (onlyPessimistic ? 2 : 3));
+
+			
+			BasicBlock* failBlock = BasicBlock::Create(LLVMCONTEXT, "inlineSignatureSubtypingFail", fun);
+			builder->SetInsertPoint(failBlock);
+			outPHI->addIncoming(MakeUInt(onlyPessimistic ? 1 : 2, 0), failBlock);
+			builder->CreateBr(outBlock);
+
+
+			BasicBlock* checkReturnTypeBlock = BasicBlock::Create(LLVMCONTEXT, "inlineSignatureSubtypingCheckReturnType", fun);
+			builder->SetInsertPoint(incomingBlock);
+			auto tpcount = RTSignature::GenerateReadTypeParamCount(builder, signature);
+			auto paramcount = RTSignature::GenerateReadParamCount(builder, signature);
+			auto pcounteq = builder->CreateAnd(builder->CreateICmpEQ(tpcount, MakeIntLike(tpcount, rightMethod.Elem->GetDirectTypeParametersCount())), builder->CreateICmpEQ(paramcount, MakeIntLike(paramcount, rightMethod.Elem->GetArgumentCount())));
+			builder->CreateCondBr(pcounteq, checkReturnTypeBlock, failBlock);
+
+			builder->SetInsertPoint(checkReturnTypeBlock);
+			auto returnType = RTSignature::GenerateReadReturnType(builder, signature);
+
+			BasicBlock* pessimisticNextBlock = BasicBlock::Create(LLVMCONTEXT, "inlineSignaturePessimisticNext", fun);
+			BasicBlock* optimisticNextBlock = onlyPessimistic ? nullptr : BasicBlock::Create(LLVMCONTEXT, "inlineSignatureOptimisticNext", fun);
+
+			NomSubstitutionContextList nscl(rightMethod.TypeArgs);
+			auto rightReturnType = rightMethod.Elem->GetReturnType(&nscl);
+			RTSubtyping::CreateInlineSubtypingCheck(builder, returnType, leftSubst, rightReturnType, rightSubst, pessimisticNextBlock, optimisticNextBlock, failBlock);
+
+			auto argTypes = rightMethod.Elem->GetArgumentTypes(&nscl);
+			int argIndex = 0;
+			for (auto& methArgType : argTypes)
+			{
+				if (optimisticNextBlock != nullptr)
+				{
+					builder->SetInsertPoint(optimisticNextBlock);
+					optimisticNextBlock = BasicBlock::Create(LLVMCONTEXT, "inlineSignatureOptimisticNext"+std::to_string(argIndex), fun);
+					auto paramType = RTSignature::GenerateReadParameter(builder, signature, MakeInt32(argIndex));
+					auto subtCall = builder->CreateCall(subtypingFun, { methArgType->GetLLVMElement(*fun->getParent()), paramType, rightSubst, leftSubst });
+					subtCall->setCallingConv(subtypingFun->getCallingConv());
+					builder->CreateCondBr(builder->CreateICmpEQ(subtCall, MakeIntLike(subtCall, 0)), failBlock, optimisticNextBlock);
+				}
+				builder->SetInsertPoint(pessimisticNextBlock);
+				pessimisticNextBlock = BasicBlock::Create(LLVMCONTEXT, "inlineSignaturePessimisticNext" + std::to_string(argIndex), fun);
+				auto paramType = RTSignature::GenerateReadParameter(builder, signature, MakeInt32(argIndex));
+				auto subtCall = builder->CreateCall(subtypingFun, {methArgType->GetLLVMElement(*fun->getParent()), paramType, rightSubst, leftSubst});
+				subtCall->setCallingConv(subtypingFun->getCallingConv());
+				if (optimisticNextBlock != nullptr)
+				{
+					auto resultSwitch = builder->CreateSwitch(subtCall, failBlock, 2);
+					resultSwitch->addCase(MakeIntLike(subtCall, 3), pessimisticNextBlock);
+					resultSwitch->addCase(MakeIntLike(subtCall, 1), optimisticNextBlock);
+				}
+				else
+				{
+					builder->CreateCondBr(builder->CreateICmpEQ(subtCall, MakeIntLike(subtCall, 3)), pessimisticNextBlock, failBlock);
+				}
+			}
+			builder->SetInsertPoint(pessimisticNextBlock);
+			outPHI->addIncoming(MakeUInt(onlyPessimistic ? 1 : 2, onlyPessimistic ? 1 : 3), pessimisticNextBlock);
+			builder->CreateBr(outBlock);
+
+			if (optimisticNextBlock!=nullptr)
+			{
+				builder->SetInsertPoint(optimisticNextBlock);
+				outPHI->addIncoming(MakeUInt(2, 1), optimisticNextBlock);
+				builder->CreateBr(outBlock);
+			}
+
+			builder->SetInsertPoint(outBlock);
+			return outPHI;
 		}
 
 	}

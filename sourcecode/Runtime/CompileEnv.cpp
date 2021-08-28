@@ -28,23 +28,40 @@ namespace Nom
 	namespace Runtime
 	{
 
-		CompileEnv::CompileEnv(const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context) : contextName(contextName), Module(function==nullptr?nullptr:function->getParent()), Function(function), Context(context) {}
+		CompileEnv::CompileEnv(const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context) : contextName(contextName), Module(function == nullptr ? nullptr : function->getParent()), Function(function), Context(context) {}
 #pragma region ACompileEnv
-		ACompileEnv::ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType) : CompileEnv(contextName, function, context), regcount(regcount), registers(new NomValue[regcount]), phiNodes(phiNodes)
+		ACompileEnv::ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<llvm::Value*> typeArgValues) : CompileEnv(contextName, function, context), regcount(regcount), registers(new NomValue[regcount]), phiNodes(phiNodes)
+		{
+			if (directTypeArgs.size() != typeArgValues.size())
+			{
+				throw new std::exception();
+			}
+			for (decltype(directTypeArgs.size()) i = 0; i < directTypeArgs.size(); i++)
+			{
+				TypeArguments.push_back(NomTypeVarValue(typeArgValues[i], directTypeArgs[i]->GetVariable()));
+			}
+		}
+
+		ACompileEnv::ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType) : CompileEnv(contextName, function, context), regcount(regcount), registers(new NomValue[regcount]), phiNodes(phiNodes)
 		{
 			size_t argcount = 0;
 			RegIndex argindex = 0;
 			size_t typeArgCount = directTypeArgs.size();
 			for (auto& Arg : function->args())
 			{
-				if (argcount==0&&thisType != nullptr)
+				if (argument_offset > 0)
+				{
+					argument_offset--;
+					continue;
+				}
+				if (argcount == 0 && thisType != nullptr)
 				{
 					registers[argindex] = NomValue(&Arg, thisType);
 					argindex++;
 				}
-				else if (argcount + (thisType != nullptr ? 0 : 1) <= typeArgCount )
+				else if (argcount + (thisType != nullptr ? 0 : 1) <= typeArgCount)
 				{
-					TypeArguments.push_back(NomTypeVarValue(&Arg, directTypeArgs[argcount- (thisType != nullptr ? 1 : 0)]->GetVariable()));
+					TypeArguments.push_back(NomTypeVarValue(&Arg, directTypeArgs[argcount - (thisType != nullptr ? 1 : 0)]->GetVariable()));
 				}
 				else
 				{
@@ -58,6 +75,36 @@ namespace Nom
 				throw new std::exception();
 			}
 		}
+		ACompileEnv::ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType)
+			: ACompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, context, argtypes, thisType) {}
+		//ACompileEnv::ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType) : CompileEnv(contextName, function, context), regcount(regcount), registers(new NomValue[regcount]), phiNodes(phiNodes)
+		//{
+		//	size_t argcount = 0;
+		//	RegIndex argindex = 0;
+		//	size_t typeArgCount = directTypeArgs.size();
+		//	for (auto& Arg : function->args())
+		//	{
+		//		if (argcount==0&&thisType != nullptr)
+		//		{
+		//			registers[argindex] = NomValue(&Arg, thisType);
+		//			argindex++;
+		//		}
+		//		else if (argcount + (thisType != nullptr ? 0 : 1) <= typeArgCount )
+		//		{
+		//			TypeArguments.push_back(NomTypeVarValue(&Arg, directTypeArgs[argcount- (thisType != nullptr ? 1 : 0)]->GetVariable()));
+		//		}
+		//		else
+		//		{
+		//			registers[argindex] = NomValue(&Arg, argtypes[argindex - (thisType == nullptr ? 0 : 1)]);
+		//			argindex++;
+		//		}
+		//		argcount++;
+		//	}
+		//	if (argcount != typeArgCount + argtypes.size() + (thisType == nullptr ? 0 : 1))
+		//	{
+		//		throw new std::exception();
+		//	}
+		//}
 
 		ACompileEnv::~ACompileEnv()
 		{
@@ -74,6 +121,18 @@ namespace Nom
 		void ACompileEnv::PushArgument(NomValue arg)
 		{
 			Arguments.push_back(arg);
+		}
+
+		void ACompileEnv::PushDispatchPair(llvm::Value* dpair)
+		{
+			dispatcherPairs.push(dpair);
+		}
+
+		llvm::Value* ACompileEnv::PopDispatchPair()
+		{
+			auto ret = dispatcherPairs.top();
+			dispatcherPairs.pop();
+			return ret;
 		}
 
 		void ACompileEnv::ClearArguments()
@@ -291,8 +350,8 @@ namespace Nom
 		}
 #pragma endregion
 #pragma region CastedValueCompileEnv
-		CastedValueCompileEnv::CastedValueCompileEnv(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Value* localTypeArr, llvm::Value* instanceTypeArr)
-			: CompileEnv("", nullptr, nullptr), directTypeArgs(directTypeArgs), instanceTypeArgs(instanceTypeArgs), localTypeArr(localTypeArr), instanceTypeArr(instanceTypeArr)
+		CastedValueCompileEnv::CastedValueCompileEnv(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, int regular_args_begin, int funValueArgCount, llvm::Value* instanceTypeArrPtr)
+			: CompileEnv("", nullptr, nullptr), directTypeArgs(directTypeArgs), instanceTypeArgs(instanceTypeArgs), function(fun), regularArgsBegin(regular_args_begin), funValueArgCount(funValueArgCount), instanceTypeArrPtr(instanceTypeArrPtr)
 		{
 		}
 		NomValue& CastedValueCompileEnv::operator[](const RegIndex index)
@@ -303,11 +362,29 @@ namespace Nom
 		{
 			if (i > instanceTypeArgs.size())
 			{
-				return NomTypeVarValue(MakeLoad(builder, builder->CreateGEP(localTypeArr, MakeInt32(-((i - instanceTypeArgs.size()) + 1)))), new NomTypeVar(directTypeArgs[i-instanceTypeArgs.size()]));
+				auto fargs = function->arg_begin();
+				i -= instanceTypeArgs.size();
+				auto funargcount = function->getFunctionType()->getNumParams() - regularArgsBegin;
+				if (i < funargcount - 1 || funargcount >= directTypeArgs.size() + funValueArgCount)
+				{
+					for (int j = 0; j < regularArgsBegin+i; j++)
+					{
+						fargs++;
+					}
+					return NomTypeVarValue(fargs, new NomTypeVar(directTypeArgs[i - instanceTypeArgs.size()]));
+				}
+				else
+				{
+					for (int j = 0; j < function->getFunctionType()->getNumParams() - 1; j++)
+					{
+						fargs++;
+					}
+					return NomTypeVarValue(MakeInvariantLoad(builder, builder->CreatePointerCast(fargs, TYPETYPE), MakeInt32(i-(funargcount-1))), new NomTypeVar(directTypeArgs[i - instanceTypeArgs.size()]));
+				}
 			}
 			else
 			{
-				return NomTypeVarValue(MakeLoad(builder, builder->CreateGEP(instanceTypeArr, MakeInt32(-(i+1)))), new NomTypeVar(instanceTypeArgs[i]));
+				return NomTypeVarValue(MakeInvariantLoad(builder, builder->CreateGEP(instanceTypeArrPtr ->getType()==TYPETYPE->getPointerTo()->getPointerTo()?MakeInvariantLoad(builder, instanceTypeArrPtr):instanceTypeArrPtr, MakeInt32(-(i + 1)))), new NomTypeVar(instanceTypeArgs[i]));
 			}
 		}
 		NomValue CastedValueCompileEnv::GetArgument(int i)
@@ -340,12 +417,20 @@ namespace Nom
 		}
 		llvm::Value* CastedValueCompileEnv::GetLocalTypeArgumentArray(NomBuilder& builder)
 		{
-			return localTypeArr;
+			throw new std::exception();
 		}
 		llvm::Value* CastedValueCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
 		{
-			return instanceTypeArr;
+			return instanceTypeArrPtr->getType() == TYPETYPE->getPointerTo()->getPointerTo() ? MakeInvariantLoad(builder, instanceTypeArrPtr) : instanceTypeArrPtr;
+		}
+		void CastedValueCompileEnv::PushDispatchPair(llvm::Value* dpair)
+		{
+			throw new std::exception();
+		}
+		llvm::Value* CastedValueCompileEnv::PopDispatchPair()
+		{
+			throw new std::exception();
 		}
 #pragma endregion
-}
+	}
 }

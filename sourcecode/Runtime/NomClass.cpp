@@ -39,6 +39,7 @@
 #include "RTCompileConfig.h"
 #include "RawInvoke.h"
 #include "NomMethodKey.h"
+#include "EnsureDynamicMethodInstruction.h"
 
 namespace Nom
 {
@@ -263,7 +264,10 @@ namespace Nom
 					MakeInt(GetInstantiations().size()),
 					GetSuperInstances(mod, linkage),
 					GetMethodTable(mod, linkage),
-					GetInterfaceTableLookup(mod, linkage));
+					ConstantPointerNull::get(GetCheckReturnValueFunctionType()->getPointerTo()),
+					GetMethodEnsureFunction(mod, linkage),
+					GetInterfaceTableLookup(mod, linkage),
+					GetSignature(mod,linkage));
 				new GlobalVariable(mod, ret->getType(), true, linkage, ret, "NOM_CDREF_" + this->GetName()->ToStdString());
 
 				RegisterGlobalForAddressLookup(nameref.str());
@@ -278,6 +282,42 @@ namespace Nom
 				}
 			}
 			return ret;
+		}
+
+		llvm::Function* NomClass::GetMethodEnsureFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		{
+			Function* fun = Function::Create(GetMethodEnsureFunctionType(), linkage, "MONNOM_RT_METHODENSURE_" + this->GetName()->ToStdString(), mod);
+			NomBuilder builder;
+
+			auto args = fun->arg_begin();
+			Value* receiver = args;
+			args++;
+			Value* methodName = args;
+
+			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "start", fun);
+			BasicBlock* falseBlock = BasicBlock::Create(LLVMCONTEXT, "methodDoesNotExist", fun);
+			builder->SetInsertPoint(startBlock);
+
+			if (this->Methods.size() > 0)
+			{
+				BasicBlock* trueBlock = BasicBlock::Create(LLVMCONTEXT, "methodExists", fun);
+				auto nameSwitch = builder->CreateSwitch(methodName, falseBlock, this->Methods.size());
+				for (auto& meth : this->Methods)
+				{
+					nameSwitch->addCase(MakeIntLike(methodName,NomNameRepository::Instance().GetNameID(meth->GetName())), trueBlock);
+				}
+				builder->SetInsertPoint(trueBlock);
+				builder->CreateRet(MakeUInt(1, 1));
+			}
+			else
+			{
+				builder->CreateBr(falseBlock);
+			}
+
+			builder->SetInsertPoint(falseBlock);
+			builder->CreateRet(MakeUInt(1, 0));
+
+			return fun;
 		}
 
 		size_t NomClass::GetTypeArgOffset() const
@@ -663,13 +703,13 @@ namespace Nom
 
 		llvm::StructType* NomClass::GetDynamicDispatcherLookupResultType()
 		{
-			static llvm::StructType* st = StructType::create(LLVMCONTEXT, { POINTERTYPE, REFTYPE }, "DynamicDispatcherResultPair");
+			static llvm::StructType* st = StructType::create(LLVMCONTEXT, { NomPartialApplication::GetDynamicDispatcherType()->getPointerTo(), REFTYPE }, "DynamicDispatcherResultPair");
 			return st;
 		}
 
 		llvm::FunctionType* NomClass::GetDynamicDispatcherLookupType()
 		{
-			static llvm::FunctionType* funtype = FunctionType::get(GetDynamicDispatcherLookupResultType(), { REFTYPE, numtype(size_t), numtype(int32_t), numtype(int32_t) }, false);
+			static llvm::FunctionType* funtype = FunctionType::get(GetDynamicDispatcherLookupResultType(), { REFTYPE, numtype(size_t)/*, numtype(int32_t), numtype(int32_t)*/ }, false);
 			return funtype;
 		}
 
@@ -738,17 +778,17 @@ namespace Nom
 				llvm::Argument* thisarg = argiter;
 				argiter++;
 				llvm::Argument* namearg = argiter;
-				argiter++;
-				llvm::Argument* tacarg = argiter;
-				argiter++;
-				llvm::Argument* argcarg = argiter;
+				//argiter++;
+				//llvm::Argument* tacarg = argiter;
+				//argiter++;
+				//llvm::Argument* argcarg = argiter;
 
 				NomBuilder builder;
 
 				BasicBlock* start = BasicBlock::Create(LLVMCONTEXT, "", fun);
 				BasicBlock* notfound = BasicBlock::Create(LLVMCONTEXT, "notFoundBlock", fun);
 
-				unordered_map<size_t, unordered_map<uint32_t, unordered_map<uint32_t, vector<const NomCallable*>>>> overloadings;
+				unordered_map<size_t, vector<const NomCallable*>> overloadings;
 
 				for (NomMethodTableEntry* mte : MethodTable)
 				{
@@ -756,11 +796,11 @@ namespace Nom
 					auto match = overloadings.find(namekey);
 					if (match == overloadings.end())
 					{
-						overloadings[namekey] = unordered_map<uint32_t, unordered_map<uint32_t, vector<const NomCallable*>>>();
+						overloadings[namekey] = vector<const NomCallable*>();
 					}
-					uint32_t dtac = mte->Method->GetDirectTypeParametersCount();
+					//uint32_t dtac = mte->Method->GetDirectTypeParametersCount();
 					auto& ole = overloadings[namekey];
-					auto tamatch = ole.find(dtac);
+					/*auto tamatch = ole.find(dtac);
 					if (tamatch == ole.end())
 					{
 						ole[dtac] = unordered_map<uint32_t, vector<const NomCallable* >>();
@@ -771,8 +811,8 @@ namespace Nom
 					if (argmatch == ole2.end())
 					{
 						ole2[tpc] = vector<const NomCallable*>();
-					}
-					ole2[tpc].push_back(mte->Method);
+					}*/
+					ole.push_back(mte->Method);
 				}
 
 				builder->SetInsertPoint(start);
@@ -786,7 +826,7 @@ namespace Nom
 				builder->CreateRet(UndefValue::get(fun->getReturnType()));
 
 				//builder->SetInsertPoint(namenotfound);
-				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ /*&NomDynamicType::Instance(),*/ NomIntClass::GetInstance()->GetType(), NomIntClass::GetInstance()->GetType(), NomIntClass::GetInstance()->GetType() }), thisType);
+				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ /*&NomDynamicType::Instance(),*/ NomIntClass::GetInstance()->GetType()/*, NomIntClass::GetInstance()->GetType(), NomIntClass::GetInstance()->GetType()*/ }), thisType);
 				for (auto field : AllFields)
 				{
 					std::string fieldName = field->GetName()->ToStdString();
@@ -794,7 +834,7 @@ namespace Nom
 					switch1->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
 					auto fieldValue = EnsurePacked(builder, field->GenerateRead(builder, &scce, NomValue(thisarg, thisType)));
-					auto fieldInvokeDispatcher = CallDispatchBestMethod::GenerateGetBestInvokeDispatcherDyn(builder, fieldValue, tacarg, argcarg);
+					auto fieldInvokeDispatcher = EnsureDynamicMethodInstruction::GenerateGetBestInvokeDispatcherDyn(builder, fieldValue/*, tacarg, argcarg*/);
 					auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), builder->CreateExtractValue(fieldInvokeDispatcher, { 0 }), { 0 });
 					retStruct = builder->CreateInsertValue(retStruct, fieldValue, { 1 });
 					builder->CreateRet(retStruct);
@@ -806,7 +846,7 @@ namespace Nom
 					BasicBlock* ob1 = BasicBlock::Create(LLVMCONTEXT, "methodname:" + *NomNameRepository::Instance().GetNameFromID(ole1.first), fun);
 					switch1->addCase(MakeInt<size_t>(ole1.first), ob1);
 					builder->SetInsertPoint(ob1);
-					SwitchInst* switch2 = builder->CreateSwitch(tacarg, notfound, ole1.second.size());
+					/*SwitchInst* switch2 = builder->CreateSwitch(tacarg, notfound, ole1.second.size());
 
 					for (auto& ole2 : ole1.second)
 					{
@@ -819,20 +859,20 @@ namespace Nom
 						{
 							BasicBlock* ob3 = BasicBlock::Create(LLVMCONTEXT, "argCount" + to_string(ole3.first), fun);
 							switch3->addCase(MakeInt<uint32_t>(ole3.first), ob3);
-							builder->SetInsertPoint(ob3);
+							builder->SetInsertPoint(ob3);*/
 
 							//Dynamic dispatching never changes through casting: methods do not become more accepting of arguments - if they already restrict arguments in some way,
 							//then that is grounds to reject a cast to more permissive arguments right away
 							//If basic methods are changed and not just interface table entries on casting, then the dispatchers for such classes should do a method table lookup
 							//instead of a direct statically bound call, but that should suffice
 
-							Function* dispatcher = NomPartialApplication::GetDispatcherEntry(mod, linkage, ole2.first, ole3.first, ole3.second, this, thisType);
-							auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), llvm::ConstantExpr::getPointerCast(dispatcher, POINTERTYPE), { 0 });
+							Function* dispatcher = NomPartialApplication::GetDispatcherEntry(mod, linkage, /*ole2.first, ole3.first, */ole1.second, this/*, thisType*/);
+							auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()),/* llvm::ConstantExpr::getPointerCast(*/dispatcher/*, POINTERTYPE)*/, { 0 });
 							retStruct = builder->CreateInsertValue(retStruct, thisarg, { 1 });
 							builder->CreateRet(retStruct);
 
-						}
-					}
+					//	}
+					//}
 				}
 				llvm::raw_os_ostream out(std::cout);
 				if (verifyFunction(*fun, &out))

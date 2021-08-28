@@ -155,5 +155,9 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
+		bool NomPartialAppType::ContainsVariableIndex(int index) const
+		{
+			return false;
+		}
 	}
 }

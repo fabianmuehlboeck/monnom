@@ -220,6 +220,10 @@ namespace Nom.Bytecode
             public Func<NullInstruction, BytecodeUnit, IInstruction> VisitNullInstruction => (instr, bcu) => new LoadNullConstantInstruction(instr.Register.Index);
 
             public Func<TypeChecker.UnaryOpInstruction, BytecodeUnit, IInstruction> VisitUnaryOpInstruction => (instr, bcu) => new UnaryOpInstruction(instr.Operator, instr.Arg.Index, instr.Register.Index);
+
+            public Func<TypeChecker.EnsureCheckedMethodInstruction, BytecodeUnit, IInstruction> VisitEnsureCheckedMethodInstruction => (instr, bcu) => new EnsureCheckedMethodInstruction(bcu.GetStringConstant(instr.MethodName), instr.Receiver.Index);
+
+            public Func<TypeChecker.EnsureDynamicMethodInstruction, BytecodeUnit, IInstruction> VisitEnsureDynamicMethodInstruction => (instr, bcu) => new EnsureDynamicMethodInstruction(bcu.GetStringConstant(instr.MethodName), instr.Receiver.Index);
         }
 
         //private class NamespaceConstantVisitor : ITDNamespaceVisitor<object, INamespaceConstant>

@@ -165,7 +165,7 @@ namespace Nom.TypeChecker
             }
             public ICallReceiverTransformResult GenerateCall(IExprTransformResult receiver, IEnumerable<IExprTransformResult> arguments, ICodeTransformEnvironment env)
             {
-                List<IInstruction> instructions = receiver.Concat(arguments.Flatten()).ToList();
+                List<IInstruction> instructions = receiver.Snoc(new EnsureDynamicMethodInstruction(receiver.Register,MethodName)).Concat(arguments.Flatten()).ToList();
                 CallExpandoMethodInstruction cemi = new CallExpandoMethodInstruction(receiver.Register, MethodName, TypeArguments.Select(targ => targ.AsType), arguments.Select(arg => arg.Register), env.CreateRegister());
                 instructions.Add(cemi);
                 return new CallReceiverTransformResult(new DynamicType(), cemi.Register, instructions);
@@ -187,7 +187,7 @@ namespace Nom.TypeChecker
 
             public ICallReceiverTransformResult GenerateCall(IExprTransformResult receiver, IEnumerable<IExprTransformResult> arguments, ICodeTransformEnvironment env)
             {
-                List<IInstruction> instructions = receiver.ToList(); 
+                List<IInstruction> instructions = receiver.Snoc(new EnsureCheckedMethodInstruction(receiver.Register, Method.Name)).ToList(); 
                 List<IRegister> argRegs = new List<IRegister>();
                 foreach ((IExprTransformResult, Language.IType) argpair in arguments.Zip(Method.Parameters.Entries.Select(ps => ((ISubstitutable<Language.IType>)ps.Type).Substitute(Substitutions)), (x, y) => (x, y)))
                 {

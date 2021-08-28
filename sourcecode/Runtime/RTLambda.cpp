@@ -4,6 +4,8 @@
 #include "CompileHelpers.h"
 #include "RTSignature.h"
 #include "RTVTable.h"
+#include "NomPartialApplication.h"
+#include "RTSTable.h"
 
 using namespace llvm;
 using namespace std;
@@ -19,14 +21,11 @@ namespace Nom
 			{
 				once = false;
 				ltype->setBody(
-					POINTERTYPE,								// NomLambda link
-					numtype(uint64_t),							// typeargcount in upper 32 bits, argcount in lower 32 bits
-					RTSignature::GetLLVMType()->getPointerTo(), //signature
-					POINTERTYPE,								// Function Pointer
-					POINTERTYPE,								// Dispatcher Pointer
-					numtype(size_t),							// number of preallocated type argument slots
-					numtype(uint64_t),							// cast ID for specialized vtable
-					RTVTable::GetLLVMType()->getPointerTo()		// specialized vtable
+					RTSTable::GetLLVMType(),											//common parts of STables
+					numtype(uint64_t),													// typeargcount in upper 32 bits, argcount in lower 32 bits
+					numtype(size_t),													// number of preallocated type argument slots
+					numtype(uint64_t),													// cast ID for specialized vtable
+					RTVTable::GetLLVMType()->getPointerTo()								// specialized vtable
 				);
 			}
 			return ltype;
@@ -37,11 +36,12 @@ namespace Nom
 			auto argc = MakeInt32((uint32_t)lambda->Body.GetArgumentCount());
 			auto targcshl = ConstantExpr::getShl(ConstantExpr::getZExt(targc, numtype(uint64_t)), MakeInt<uint64_t>(32));
 			auto combo = ConstantExpr::getAdd(targcshl, ConstantExpr::getZExt(argc, numtype(uint64_t)));
-			return ConstantStruct::get(GetLLVMType(), GetLLVMPointer(lambda), combo, signature, ConstantExpr::getPointerCast(fun, POINTERTYPE), ConstantExpr::getPointerCast(dispatcher, POINTERTYPE), MakeInt<size_t>(0), MakeInt<uint64_t>(0), ConstantPointerNull::get(RTVTable::GetLLVMType()->getPointerTo()));
+			return ConstantStruct::get(GetLLVMType(), RTSTable::GenerateConstant(signature, ConstantExpr::getPointerCast(fun, POINTERTYPE), dispatcher, MakeUInt(32, lambda->Body.GetDirectTypeParametersCount()), MakeUInt(32, lambda->Body.GetArgumentCount()), GetLLVMPointer(lambda)), combo, MakeInt<size_t>(0), MakeInt<uint64_t>(0), ConstantPointerNull::get(RTVTable::GetLLVMType()->getPointerTo()));
 		}
 		llvm::Value* RTLambda::GenerateReadIRPointer(NomBuilder& builder, llvm::Value* descriptor)
 		{
-			return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::NomLink), "lambdaIR");
+			return RTSTable::GenerateReadNomIRLink(builder, descriptor);
+			//return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::NomLink), "lambdaIR");
 		}
 		llvm::Value* RTLambda::GenerateReadPreallocatedSlots(NomBuilder& builder, llvm::Value* descriptor)
 		{
@@ -54,15 +54,18 @@ namespace Nom
 		}
 		llvm::Value* RTLambda::GenerateReadSignature(NomBuilder& builder, llvm::Value* descriptor)
 		{
-			return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::Signature), "signature");
+			return RTSTable::GenerateReadSignature(builder, descriptor);
+			//return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::Signature), "signature");
 		}
 		llvm::Value* RTLambda::GenerateReadDispatcherPointer(NomBuilder& builder, llvm::Value* descriptor)
 		{
-			return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::Dispatcher), "dispatcher");
+			return RTSTable::GenerateReadLambdaDispatcher(builder, descriptor);
+			//return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::Dispatcher), "dispatcher");
 		}
 		llvm::Value* RTLambda::GenerateReadFunctionPointer(NomBuilder& builder, llvm::Value* descriptor)
 		{
-			return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::Function), "function");
+			return RTSTable::GenerateReadLambdaMethod(builder, descriptor);
+			//return MakeLoad(builder, descriptor, RTLambda::GetLLVMType()->getPointerTo(), MakeInt32(RTLambdaFields::Function), "function");
 		}
 		llvm::Value* RTLambda::GenerateCheckArgCountsMatch(NomBuilder& builder, llvm::Value* descriptor, llvm::Value* typeArgCount, llvm::Value* argCount)
 		{

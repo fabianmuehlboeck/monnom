@@ -3,6 +3,7 @@
 #include "NomJIT.h"
 #include "NomJITLight.h"
 #include "CallingConvConf.h"
+#include "Metadata.h"
 
 using namespace llvm;
 using namespace std;
@@ -284,6 +285,48 @@ namespace Nom
 			return MakeStore(builder, val, builder->CreatePointerCast(ptr, asType), index, ordering);
 		}
 
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		{
+			auto storeInst = MakeStore(builder, mod, val, ptr, ordering);
+			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return storeInst;
+		}
+
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		{
+			auto storeInst = MakeStore(builder, val, ptr, ordering);
+			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return storeInst;
+		}
+
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
+		{
+			auto storeInst = MakeStore(builder, val, ptr, indices, ordering);
+			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return storeInst;
+		}
+
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
+		{
+			auto storeInst = MakeStore(builder, val, ptr, asType, indices, ordering);
+			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return storeInst;
+		}
+
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering)
+		{
+			auto storeInst = MakeStore(builder, val, ptr, index, ordering);
+			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return storeInst;
+		}
+
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::AtomicOrdering ordering)
+		{
+			auto storeInst = MakeStore(builder, val, ptr, asType, index, ordering);
+			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return storeInst;
+		}
+
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering)
 		{
 
@@ -350,6 +393,38 @@ namespace Nom
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
 			return MakeLoad(builder, builder->CreatePointerCast(ptr, asType), index, name, ordering);
+		}
+
+
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		{
+			auto inst = MakeLoad(builder, mod, ptr, ordering);
+			inst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return inst;
+		}
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
+		{
+			auto inst = MakeLoad(builder, ptr, name, ordering);
+			inst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return inst;
+		}
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
+		{
+			auto inst = MakeLoad(builder, ptr, indices, name, ordering);
+			inst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return inst;
+		}
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
+		{
+			auto inst = MakeLoad(builder, ptr, asType, indices, name, ordering);
+			inst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return inst;
+		}
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
+		{
+			auto inst = MakeLoad(builder, ptr, index, name, ordering);
+			inst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return inst;
 		}
 
 

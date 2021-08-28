@@ -4,3 +4,9 @@
 extern int NomLambdaOptimizationLevel;
 extern int IMTsize;
 extern bool PreferTypeArgumentsInVTables;
+
+extern bool RTConfig_CheckLambdaSignaturesAtCast;
+extern int RTConfig_NumberOfVarargsArguments;
+extern bool RTConfig_IgnoreEnsureMethod;
+extern bool RTConfig_RunUnncessesaryLambdaCallTagChecks;
+extern bool RTConfig_OmitLambdaCallTags;

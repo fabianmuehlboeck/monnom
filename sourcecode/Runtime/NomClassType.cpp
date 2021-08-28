@@ -99,7 +99,7 @@ namespace Nom
 			}
 			return fun;
 		}
-		bool NomClassType::ArgumentsSubtypes(const TypeList &left, const TypeList &right)
+		bool NomClassType::ArgumentsSubtypes(const TypeList &left, const TypeList &right, bool optimistic)
 		{
 			size_t size = left.size();
 			if (size != right.size())
@@ -109,13 +109,13 @@ namespace Nom
 			for (size_t i = size; i > 0;)
 			{
 				i--;
-				right[i]->IsSupertype(left[i]);
-				if (!left[i]->IsSupertype(right[i]))
+				right[i]->IsSupertype(left[i], optimistic);
+				if (!left[i]->IsSupertype(right[i], optimistic))
 				{
 					return false;
 				}
 				//i--;
-				if (!left[i]->IsSubtype(right[i]))
+				if (!left[i]->IsSubtype(right[i], optimistic))
 				{
 					return false;
 				}
@@ -133,7 +133,7 @@ namespace Nom
 
 		bool NomClassType::IsSubtype(NomTypeRef other, bool optimistic) const
 		{
-			return other->IsSupertype(this);
+			return other->IsSupertype(this, optimistic);
 		}
 		bool NomClassType::IsSubtype(NomBottomTypeRef other, bool optimistic) const
 		{
@@ -143,12 +143,12 @@ namespace Nom
 		{
 			if (Named == other->Named)
 			{
-				return ArgumentsSubtypes(Arguments, other->Arguments);
+				return ArgumentsSubtypes(Arguments, other->Arguments, optimistic);
 			}
 			NomSubstitutionContextList nscl(Arguments);
 			for (auto super : Named->GetSuperNameds(Arguments))
 			{
-				if (super->SubstituteSubtyping(&nscl)->IsSubtype(other))
+				if (super->SubstituteSubtyping(&nscl)->IsSubtype(other, optimistic))
 				{
 					return true;
 				}
@@ -165,11 +165,11 @@ namespace Nom
 		}
 		bool NomClassType::IsSubtype(NomTypeVarRef other, bool optimistic) const
 		{
-			return other->IsSupertype(this);
+			return other->IsSupertype(this, optimistic);
 		}
 		bool NomClassType::IsSupertype(NomTypeRef other, bool optimistic) const
 		{
-			return other->IsSubtype(this);
+			return other->IsSubtype(this, optimistic);
 		}
 		bool NomClassType::IsSupertype(NomBottomTypeRef other, bool optimistic) const
 		{
@@ -177,7 +177,7 @@ namespace Nom
 		}
 		bool NomClassType::IsSupertype(NomClassTypeRef other, bool optimistic) const
 		{
-			return other->IsSubtype(this);
+			return other->IsSubtype(this, optimistic);
 		}
 		bool NomClassType::IsSupertype(NomTopTypeRef other, bool optimistic) const
 		{
@@ -185,7 +185,7 @@ namespace Nom
 		}
 		bool NomClassType::IsSupertype(NomTypeVarRef other, bool optimistic) const
 		{
-			return other->IsSubtype(this);
+			return other->IsSubtype(this, optimistic);
 		}
 
 		NomTypeRef NomClassType::SubstituteSubtyping(const NomSubstitutionContext* context) const
@@ -354,6 +354,10 @@ namespace Nom
 		}
 		bool NomClassType::IsDisjoint(NomClassTypeRef other) const
 		{
+			if ((!this->Named->IsInterface()) || (!other->Named->IsInterface()))
+			{
+				return !(this->IsSubtype(other, true) || other->IsSubtype(this, true));
+			}
 			return false;
 		}
 		bool NomClassType::IsDisjoint(NomTopTypeRef other) const
@@ -409,6 +413,17 @@ namespace Nom
 			//	return TypeReferenceType::UnpackedBool;
 			//}
 			return TypeReferenceType::Reference; //llvm::StructType::create(LLVMCONTEXT)->getPointerTo();
+		}
+		bool NomClassType::ContainsVariableIndex(int index) const
+		{
+			for (auto& arg : Arguments)
+			{
+				if (arg->ContainsVariableIndex(index))
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 }

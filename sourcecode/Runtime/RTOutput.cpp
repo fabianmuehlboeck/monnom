@@ -32,6 +32,11 @@ namespace Nom
 
 			MakeBlockFailOutputBlock(builder, errorMessage, errorBlock);
 
+			if (origBlock != nullptr)
+			{
+				builder->SetInsertPoint(origBlock);
+			}
+
 			return errorBlock;
 		}
 		void RTOutput_Fail::MakeBlockFailOutputBlock(NomBuilder& builder, const char* errorMessage, llvm::BasicBlock* block)
@@ -39,11 +44,14 @@ namespace Nom
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			builder->SetInsertPoint(block);
 
-			Function* errorFun = GetLLVMElement(*origBlock ->getParent()->getParent());
+			Function* errorFun = GetLLVMElement(*block->getParent()->getParent());
 			builder->CreateCall(errorFun, GetLLVMPointer(errorMessage))->setCallingConv(errorFun->getCallingConv());
 			builder->CreateUnreachable();
 
-			builder->SetInsertPoint(origBlock);
+			if (origBlock != nullptr)
+			{
+				builder->SetInsertPoint(origBlock);
+			}
 		}
 		llvm::FunctionType* RTOutput_Name::GetFunctionType()
 		{
@@ -71,6 +79,7 @@ extern "C" DLLEXPORT void* NOM_RT_Fail(const char* errstr)
 	std::cout << "Aborting...\n";
 	std::cout << "\n";
 	std::cout.flush();
+	RT_debugout->flush();
 	RT_NOM_STATS_Print(3);
 	exit(1);
 	return nullptr;

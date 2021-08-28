@@ -87,7 +87,7 @@ namespace Nom
 		}
 		llvm::Value* RTClassType::GenerateReadClassDescriptorLink(NomBuilder& builder, llvm::Value* type)
 		{
-			return MakeLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTClassTypeFields::Class), "class");
+			return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTClassTypeFields::Class), "class");
 		}
 		llvm::Value* RTClassType::GetTypeArgumentsPtr(NomBuilder& builder, llvm::Value* type)
 		{

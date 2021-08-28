@@ -23,6 +23,10 @@
 #include "NomTypeParameter.h"
 #include "CallingConvConf.h"
 #include "RTCompileConfig.h"
+#include "RTVTable.h"
+#include "RefValueHeader.h"
+#include "EnsureDynamicMethodInstruction.h"
+#include "RTInterface.h"
 
 using namespace llvm;
 using namespace std;
@@ -40,6 +44,90 @@ namespace Nom
 			fun->setCallingConv(NOMCC);
 
 			NomBuilder builder;
+
+			Function* ensureMethodFun = Function::Create(GetMethodEnsureFunctionType(), linkage, "MONNOM_RT_ENSUREMETHOD_" + to_string(StructID), mod);
+			{
+				BasicBlock* ensureMethodStartBlock = BasicBlock::Create(LLVMCONTEXT, "start", ensureMethodFun);
+				BasicBlock* returnTrueBlock = BasicBlock::Create(LLVMCONTEXT, "returnTrue", ensureMethodFun);
+				BasicBlock* checkFieldsBlock = BasicBlock::Create(LLVMCONTEXT, "checkFields", ensureMethodFun);
+				BasicBlock* checkDictionaryEntriesBlock = BasicBlock::Create(LLVMCONTEXT, "checkDictionaryEntries", ensureMethodFun);
+				BasicBlock* ensureFieldHasInvokeBlock = BasicBlock::Create(LLVMCONTEXT, "ensureFieldHasInvoke", ensureMethodFun);
+				auto emArgs = ensureMethodFun->arg_begin();
+				Value* emReceiver = emArgs;
+				emArgs++;
+				Value* emMethodName = emArgs;
+				builder->SetInsertPoint(ensureMethodStartBlock);
+				BasicBlock* failBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Field value is not invokable!");
+				if (this->Methods.size() > 0)
+				{
+					auto methodIDSwitch = builder->CreateSwitch(emMethodName, checkFieldsBlock, this->Methods.size());
+					for (auto& meth : this->Methods)
+					{
+						methodIDSwitch->addCase(MakeIntLike(emMethodName, NomNameRepository::Instance().GetNameID(meth->GetName())), returnTrueBlock);
+					}
+				}
+				else
+				{
+					builder->CreateBr(checkFieldsBlock);
+				}
+
+				builder->SetInsertPoint(ensureFieldHasInvokeBlock);
+				auto fieldValuePHI = builder->CreatePHI(REFTYPE, this->Fields.size() + 1);
+				{
+					BasicBlock* classBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr;
+					Value* vTableVar = nullptr, * sTableVar = nullptr;
+					// we can do this right away (instead of checking for packed values) because we know a locked field cannot be a primitive value
+					RefValueHeader::GenerateVTableTagSwitch(builder, fieldValuePHI, &vTableVar, &sTableVar, &classBlock, &lambdaBlock, &structBlock, &partialAppBlock);
+					if (classBlock != nullptr)
+					{
+						builder->SetInsertPoint(classBlock);
+						auto signature = RTInterface::GenerateReadSignature(builder, vTableVar);
+						builder->CreateCondBr(builder->CreateIsNotNull(signature), returnTrueBlock, failBlock);
+					}
+					if (lambdaBlock != nullptr)
+					{
+						builder->SetInsertPoint(lambdaBlock);
+						builder->CreateBr(returnTrueBlock);
+					}
+					if (structBlock != nullptr)
+					{
+						builder->SetInsertPoint(structBlock);
+						auto signature = RTStruct::GenerateReadSignature(builder, sTableVar);
+						builder->CreateCondBr(builder->CreateIsNotNull(signature), returnTrueBlock, failBlock);
+					}
+					if (partialAppBlock != nullptr)
+					{
+						builder->SetInsertPoint(partialAppBlock);
+						builder->CreateBr(returnTrueBlock);
+					}
+				}
+
+				builder->SetInsertPoint(checkFieldsBlock);
+				if (this->Fields.size() > 0)
+				{
+					auto methodIDSwitch = builder->CreateSwitch(emMethodName, checkDictionaryEntriesBlock, this->Fields.size());
+					for (auto& field : this->Fields)
+					{
+						BasicBlock* checkFieldBlock = BasicBlock::Create(LLVMCONTEXT, "checkField", ensureMethodFun);
+						methodIDSwitch->addCase(MakeIntLike(emMethodName, NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), checkFieldBlock);
+
+						builder->SetInsertPoint(checkFieldBlock);
+						auto fieldValue = StructHeader::GenerateReadAndLockField(builder, emReceiver, field->Index, this->GetHasRawInvoke());
+						fieldValuePHI->addIncoming(fieldValue, builder->GetInsertBlock());
+						builder->CreateCondBr(builder->CreateIsNotNull(fieldValue), ensureFieldHasInvokeBlock, returnTrueBlock);
+					}
+				}
+				else
+				{
+					builder->CreateBr(checkDictionaryEntriesBlock);
+				}
+
+				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "UNIMPLEMENTED!", checkDictionaryEntriesBlock);
+
+				builder->SetInsertPoint(returnTrueBlock);
+				builder->CreateRet(MakeUInt(1, 1));
+			}
+
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 			builder->SetInsertPoint(startBlock);
 
@@ -59,7 +147,8 @@ namespace Nom
 			//	argBuf[i] = carg;
 			//}
 
-			auto constant = RTStruct::CreateConstant(this, GetDynamicFieldLookup(mod, linkage), GetDynamicFieldStore(mod, linkage), GetDynamicDispatcherLookup(mod, linkage)/*, GetLLVMPointer(&(dictionary->Dictionary))*/);
+			
+			auto constant = RTStruct::CreateConstant(this, GetDynamicFieldLookup(mod, linkage), GetDynamicFieldStore(mod, linkage), GetDynamicDispatcherLookup(mod, linkage), ensureMethodFun/*, GetLLVMPointer(&(dictionary->Dictionary))*/);
 			GlobalVariable* gv = new GlobalVariable(mod, constant->getType(), false, linkage, constant, "RT_NOM_STRUCTDESC_" + to_string(StructID));
 
 			StructInstantiationCompileEnv sice = StructInstantiationCompileEnv(regcount, fun, GetAllTypeParameters(), GetArgumentTypes(nullptr), this, EndArgRegisterCount);
@@ -274,7 +363,7 @@ namespace Nom
 					//}
 					//else
 					//{
-						writeValue = EnsurePacked(builder, writeValue);
+					writeValue = EnsurePacked(builder, writeValue);
 					//}
 					field->GenerateWrite(builder, &scce, NomValue(thisarg, thisType), NomValue(writeValue, field->GetType()));
 					builder->CreateRetVoid();
@@ -309,7 +398,7 @@ namespace Nom
 
 		llvm::FunctionType* NomStruct::GetDynamicDispatcherLookupType()
 		{
-			static llvm::FunctionType* funtype = FunctionType::get(GetDynamicDispatcherLookupResultType(), { REFTYPE, numtype(size_t), numtype(int32_t), numtype(int32_t) }, false);
+			static llvm::FunctionType* funtype = FunctionType::get(GetDynamicDispatcherLookupResultType(), { REFTYPE, numtype(size_t)/*, numtype(int32_t), numtype(int32_t)*/ }, false);
 			return funtype;
 		}
 		llvm::Function* NomStruct::GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
@@ -333,10 +422,10 @@ namespace Nom
 				llvm::Argument* thisarg = argiter;
 				argiter++;
 				llvm::Argument* namearg = argiter;
-				argiter++;
-				llvm::Argument* tacarg = argiter;
-				argiter++;
-				llvm::Argument* argcarg = argiter;
+				//argiter++;
+				//llvm::Argument* tacarg = argiter;
+				//argiter++;
+				//llvm::Argument* argcarg = argiter;
 
 				NomBuilder builder;
 
@@ -344,7 +433,7 @@ namespace Nom
 				BasicBlock* notfound = BasicBlock::Create(LLVMCONTEXT, "notFoundBlock", fun);
 				//BasicBlock* namenotfound = BasicBlock::Create(LLVMCONTEXT, "nameNotFoundBlock", fun);
 
-				unordered_map<size_t, unordered_map<uint32_t, unordered_map<uint32_t, vector<const NomCallable*>>>> overloadings;
+				unordered_map<size_t, vector<const NomCallable*>> overloadings;
 
 				for (NomStructMethod* nsm : Methods)
 				{
@@ -352,23 +441,11 @@ namespace Nom
 					auto match = overloadings.find(namekey);
 					if (match == overloadings.end())
 					{
-						overloadings[namekey] = unordered_map<uint32_t, unordered_map<uint32_t, vector<const NomCallable*>>>();
+						overloadings[namekey] = vector<const NomCallable*>();
 					}
 					uint32_t dtac = nsm->GetDirectTypeParametersCount();
 					auto& ole = overloadings[namekey];
-					auto tamatch = ole.find(dtac);
-					if (tamatch == ole.end())
-					{
-						ole[dtac] = unordered_map<uint32_t, vector<const NomCallable* >>();
-					}
-					auto& ole2 = ole[dtac];
-					uint32_t tpc = nsm->GetArgumentCount();
-					auto argmatch = ole2.find(tpc);
-					if (argmatch == ole2.end())
-					{
-						ole2[tpc] = vector<const NomCallable*>();
-					}
-					ole2[tpc].push_back(nsm);
+					ole.push_back(nsm);
 				}
 
 				builder->SetInsertPoint(start);
@@ -382,7 +459,7 @@ namespace Nom
 				builder->CreateRet(UndefValue::get(fun->getReturnType()));
 
 				//builder->SetInsertPoint(namenotfound);
-				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ &NomDynamicType::Instance(), NomIntClass::GetInstance()->GetType(), NomIntClass::GetInstance()->GetType(), NomIntClass::GetInstance()->GetType() }), /*thisType*/ nullptr);
+				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ &NomDynamicType::Instance(), NomIntClass::GetInstance()->GetType()/*, NomIntClass::GetInstance()->GetType(), NomIntClass::GetInstance()->GetType()*/ }), /*thisType*/ nullptr);
 				for (auto field : Fields)
 				{
 					std::string fieldName = field->GetName()->ToStdString();
@@ -390,7 +467,7 @@ namespace Nom
 					switch1->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
 					auto fieldValue = EnsurePacked(builder, field->GenerateRead(builder, &scce, NomValue(thisarg, thisType)));
-					auto fieldInvokeDispatcher = CallDispatchBestMethod::GenerateGetBestInvokeDispatcherDyn(builder, fieldValue, tacarg, argcarg);
+					auto fieldInvokeDispatcher = EnsureDynamicMethodInstruction::GenerateGetBestInvokeDispatcherDyn(builder, fieldValue/*, tacarg, argcarg*/);
 					auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), builder->CreateExtractValue(fieldInvokeDispatcher, { 0 }), { 0 });
 					retStruct = builder->CreateInsertValue(retStruct, fieldValue, { 1 });
 					builder->CreateRet(retStruct);
@@ -402,7 +479,7 @@ namespace Nom
 					BasicBlock* ob1 = BasicBlock::Create(LLVMCONTEXT, "methodname:" + *NomNameRepository::Instance().GetNameFromID(ole1.first), fun);
 					switch1->addCase(MakeInt<size_t>(ole1.first), ob1);
 					builder->SetInsertPoint(ob1);
-					SwitchInst* switch2 = builder->CreateSwitch(tacarg, notfound, ole1.second.size());
+					/*SwitchInst* switch2 = builder->CreateSwitch(tacarg, notfound, ole1.second.size());
 
 					for (auto& ole2 : ole1.second)
 					{
@@ -415,107 +492,22 @@ namespace Nom
 						{
 							BasicBlock* ob3 = BasicBlock::Create(LLVMCONTEXT, "argCount" + to_string(ole3.first), fun);
 							switch3->addCase(MakeInt<uint32_t>(ole3.first), ob3);
-							builder->SetInsertPoint(ob3);
+							builder->SetInsertPoint(ob3);*/
 
 							//Dynamic dispatching never changes through casting: methods do not become more accepting of arguments - if they already restrict arguments in some way,
 							//then that is grounds to reject a cast to more permissive arguments right away
 							//If basic methods are changed and not just interface table entries on casting, then the dispatchers for such classes should do a method table lookup
 							//instead of a direct statically bound call, but that should suffice
 
-							Function* dispatcher = NomPartialApplication::GetDispatcherEntry(mod, linkage, ole2.first, ole3.first, ole3.second, this, thisType);
+							Function* dispatcher = NomPartialApplication::GetDispatcherEntry(mod, linkage, ole1.second, this/*, thisType*/);
 							/*Function::Create(NomPartialApplication::GetDynamicDispatcherType(ole2.first, ole3.first), linkage, "", &mod);*/
 							//builder->CreateRet();
-							auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), llvm::ConstantExpr::getPointerCast(dispatcher, POINTERTYPE), { 0 });
+							auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), /*llvm::ConstantExpr::getPointerCast(*/dispatcher/*, POINTERTYPE)*/, { 0 });
 							retStruct = builder->CreateInsertValue(retStruct, thisarg, { 1 });
 							builder->CreateRet(retStruct);
-							//
-							//BasicBlock* dispblock = BasicBlock::Create(LLVMCONTEXT, "", dispatcher);
-							//builder->SetInsertPoint(dispblock);
-							//llvm::Value* targalloca;
-							//if (ole2.first > 0)
-							//{
-							//	targalloca = builder->CreateAlloca(RTSubtyping::TypeArgumentListStackType());
-							//	auto argfields = builder->CreateAlloca(TYPETYPE, MakeInt<uint32_t>(ole2.first));
-							//	MakeStore(builder, mod, ConstantPointerNull::get(RTSubtyping::TypeArgumentListStackType()->getPointerTo()), builder->CreateGEP(targalloca, { MakeInt32(0), MakeInt32(TypeArgumentListStackFields::Next) }));
-							//	MakeStore(builder, mod, argfields, builder->CreateGEP(targalloca, { MakeInt32(0), MakeInt32(TypeArgumentListStackFields::Types) }));
-							//	auto disparg = dispatcher->arg_begin();
-							//	for (uint32_t i = 0; i < ole2.first; i++, disparg++)
-							//	{
-							//		MakeStore(builder, mod, disparg, builder->CreateGEP(argfields, MakeInt32(i)));
-							//	}
-							//}
-							//else
-							//{
-							//	targalloca = llvm::ConstantPointerNull::get(RTSubtyping::TypeArgumentListStackType()->getPointerTo());
-							//}
-							//llvm::Value** methodargs = makealloca(llvm::Value*, ole2.first + 1 + ole3.first);
-							//llvm::Value** typeargtypes = makealloca(llvm::Value*, ole2.first);
-							//llvm::Value** valargtypes = makealloca(llvm::Value*, ole3.first); 
-							//auto disparg = dispatcher->arg_begin();
-							//for (uint32_t i = 0; i < ole2.first; i++, disparg++)
-							//{
-							//	typeargtypes[i] = disparg;
-							//	methodargs[i] = disparg;
-							//}
-							////we know the this-pointer is ok; that's where we got the dispatcher from in the first place
-							//methodargs[ole2.first] = disparg;
-							//disparg++;
-							//for (uint32_t i = 0; i < ole3.first; i++, disparg++)
-							//{
-							//	valargtypes[i] = ObjectHeader::CreateExtractType(builder, mod, disparg);
-							//	methodargs[i + ole2.first + 1] = disparg;
-							//}
-							//for (auto& meth : ole3.second)
-							//{
-							//	BasicBlock* nextMethodBlock = BasicBlock::Create(LLVMCONTEXT, "", dispatcher);
-							//	for (uint32_t i = 0; i < ole2.first; i++)
-							//	{
-							//		throw new std::exception(); //TODO: implement checking type argument constraints
-							//	}
-							//	auto methargtypes = meth->GetArgumentTypes();
-							//	for (uint32_t i = 0; i < ole3.first; i++)
-							//	{
-							//		llvm::Value* agg = RTSubtyping::CreateTypeSubtypingCheck(builder, mod, valargtypes[i], methargtypes[i]->GetLLVMElement(mod), ConstantPointerNull::get(RTSubtyping::TypeArgumentListStackType()->getPointerTo()), targalloca);
-							//		auto nextBlock = BasicBlock::Create(LLVMCONTEXT, "", dispatcher);
-							//		builder->CreateCondBr(agg, nextBlock, nextMethodBlock);
-							//		builder->SetInsertPoint(nextBlock);
-							//	}
-							//	auto fcargs = ArrayRef<llvm::Value*>(methodargs, ole2.first + 1 + ole3.first);
-							//	auto methcall = GenerateFunctionCall(builder, mod, meth->GetLLVMElement(mod), fcargs, true);
-							//	methcall->setTailCallKind(llvm::CallInst::TailCallKind::TCK_Tail);
-							//	auto mctype = methcall->getType();
-							//	llvm::Value* retval = methcall;
-							//	if (mctype->isIntegerTy(1))
-							//	{
-							//		retval = PackBool(builder, mod, methcall);
-							//	}
-							//	else if (mctype->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
-							//	{
-							//		retval = PackInt(builder, methcall);
-							//	}
-							//	else if (mctype->isFloatingPointTy())
-							//	{
-							//		retval = PackFloat(builder, methcall);
-							//	}
-							//	builder->CreateRet(retval);
-							//	builder->SetInsertPoint(nextMethodBlock);
-							//}
-							//static const char* failstr = "Could not find applicable method!";
-							//builder->CreateRet(builder->CreateCall(RTOutput_Fail::GetLLVMElement(mod), { GetLLVMPointer(failstr) }));
 
-							//llvm::raw_os_ostream out(std::cout);
-							//if (verifyFunction(*dispatcher, &out))
-							//{
-							//	out.flush();
-							//	std::cout << "Could not verify Dispatcher for method name ";
-							//	std::cout << ole3.second.at(0)->GetName();
-							//	fun->print(out);
-							//	out.flush();
-							//	std::cout.flush();
-							//	throw new std::exception();
-							//}
-						}
-					}
+					//	}
+					//}
 				}
 				llvm::raw_os_ostream out(std::cout);
 				if (verifyFunction(*fun, &out))
@@ -577,7 +569,7 @@ namespace Nom
 		}
 		bool NomStruct::GetHasRawInvoke() const
 		{
-			return NomLambdaOptimizationLevel>0;
+			return NomLambdaOptimizationLevel > 0;
 		}
 		llvm::FunctionType* NomStruct::GetLLVMFunctionType(const NomSubstitutionContext* context) const
 		{

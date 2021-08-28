@@ -37,7 +37,7 @@ namespace Nom
 			static llvm::StructType* GetLLVMType();
 			static llvm::StructType* GetConstantType(llvm::Type* interfaceTableType, llvm::Type* methodTableType);
 			//static llvm::StructType* GetLLVMType(int methodCount);
-			static llvm::Constant* CreateConstant(/*llvm::Module &mod, GlobalValue::LinkageTypes linkage, const Twine &name*/ llvm::GlobalVariable* gvar, llvm::StructType* gvartype, const NomInterface* irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Function* lookupDispatcher, /*llvm::Constant* dictPointer,*/ llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* interfaceTable);
+			static llvm::Constant* CreateConstant(/*llvm::Module &mod, GlobalValue::LinkageTypes linkage, const Twine &name*/ llvm::GlobalVariable* gvar, llvm::StructType* gvartype, const NomInterface* irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Function* lookupDispatcher, /*llvm::Constant* dictPointer,*/ llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* methodEnsureFunction, llvm::Constant* interfaceTable, llvm::Constant* signature);
 			static llvm::Constant* FindConstant(llvm::Module& mod, const llvm::StringRef name);
 			//static const llvm::StructLayout *GetLLVMLayout();
 			//static uint64_t NameOffset();

@@ -271,6 +271,24 @@ namespace Nom
 					FPM->add(createTailCallEliminationPass());
 					pmb.populateLTOPassManager(*MPM);
 
+					FPM->add(createLoopUnrollPass(2, false, false, -1, -1, -1, -1, -1, 2));
+					FPM->add(createLoopUnswitchPass());
+					FPM->add(createLICMPass());
+					FPM->add(createLoopUnrollPass(2, false, false, -1, -1, -1, -1, -1, 2));
+					FPM->add(createLoopUnswitchPass());
+					FPM->add(createLICMPass());
+					FPM->add(createInductiveRangeCheckEliminationPass());
+					FPM->add(createTailCallEliminationPass());
+
+					if (RTConfig_AdditionalOptPasses)
+					{
+						llvm::PassManagerBuilder pmb2;
+						pmb2.OptLevel = 2;
+						pmb2.populateFunctionPassManager(*FPM);
+						pmb2.populateModulePassManager(*MPM);
+						pmb2.populateLTOPassManager(*MPM);
+						FPM->add(createTailCallEliminationPass());
+					}
 					FPM->doInitialization();
 
 					// Run the optimizations over all functions in the module being added to

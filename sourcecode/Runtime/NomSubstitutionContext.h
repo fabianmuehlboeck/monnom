@@ -131,5 +131,23 @@ namespace Nom
 		};
 
 		using NomSubstitutionContextRef = const NomSubstitutionContext*;
+
+		class NomSingleSubstitutionContext : public NomSubstitutionContext
+		{
+		protected:
+			const NomTypeVarRef typeVar;
+			const NomTypeRef replacement;
+
+		public:
+			NomSingleSubstitutionContext(NomTypeVarRef typeVar, NomTypeRef replacement);
+
+			// Inherited via NomSubstitutionContext
+			virtual llvm::ArrayRef<NomTypeRef> GetTypeParameters() const override;
+
+			virtual size_t GetTypeArgumentCount() const override;
+
+			virtual NomTypeRef GetTypeVariable(int index) const override;
+
+		};
 	}
 }

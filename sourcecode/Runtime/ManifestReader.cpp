@@ -28,7 +28,7 @@ namespace Nom
 		{
 			xml_node libnode = doc.child("nomlibrary");
 			auto formatVersion = libnode.attribute("fversion");
-			if (!(formatVersion.empty() || formatVersion.as_int() == 1))
+			if (!(formatVersion.empty() || formatVersion.as_int() == 2))
 			{
 				throw new std::exception(); //newer format version than can be understood
 			}

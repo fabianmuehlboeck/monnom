@@ -37,7 +37,10 @@ namespace Nom
 
 			virtual bool IsInterface() const = 0;
 			virtual bool IsFunctional() const = 0;
+			virtual bool HasLambdaMethod() const = 0;
+			virtual bool HasNoMethods() const = 0;
 			virtual bool GetHasRawInvoke() const = 0;
+			virtual NomMethod* GetLambdaMethod() const = 0;
 
 			const std::string GetSymbolRep() const;
 

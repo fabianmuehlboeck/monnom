@@ -12,6 +12,7 @@
 #include "NomTypeDecls.h"
 #include <vector>
 #include <cstddef>
+#include <stack>
 #include "NomBuilder.h"
 
 namespace Nom
@@ -47,6 +48,9 @@ namespace Nom
 
 			virtual void PushArgument(NomValue arg) = 0;
 
+			virtual void PushDispatchPair(llvm::Value* dpair) = 0;
+			virtual llvm::Value* PopDispatchPair() = 0;
+
 			virtual void ClearArguments() = 0;
 
 			virtual int GetArgCount() = 0;
@@ -66,6 +70,7 @@ namespace Nom
 			const std::vector<PhiNode*>* phiNodes;
 			llvm::SmallVector<NomValue, 8u> Arguments;
 			llvm::SmallVector<NomTypeVarValue, 8u> TypeArguments;
+			std::stack<llvm::Value*> dispatcherPairs;
 			llvm::Value* localTypeArgArray = nullptr;
 			llvm::Value* envTypeArgArray = nullptr;
 		public:
@@ -78,6 +83,10 @@ namespace Nom
 				return registers[index];
 			}
 
+			ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<llvm::Value*> typeArgValues);
+
+			ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
+
 			ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
 
 			virtual ~ACompileEnv();
@@ -85,6 +94,9 @@ namespace Nom
 			virtual NomValue GetArgument(int i) override;
 
 			virtual void PushArgument(NomValue arg) override;
+			virtual void PushDispatchPair(llvm::Value* dpair) override;
+			virtual llvm::Value* PopDispatchPair() override;
+
 
 			virtual void ClearArguments() override;
 
@@ -176,10 +188,12 @@ namespace Nom
 		private:
 			const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs;
 			const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs;
-			llvm::Value* localTypeArr;
-			llvm::Value* instanceTypeArr;
+			llvm::Function* const function;
+			const int regularArgsBegin; 
+			const int funValueArgCount;
+			llvm::Value* const instanceTypeArrPtr;
 		public:
-			CastedValueCompileEnv(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Value* localTypeArr, llvm::Value* instanceTypeArr);
+			CastedValueCompileEnv(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, int regular_args_begin, int funValueArgCount, llvm::Value* instanceTypeArrPtr);
 
 			// Inherited via CompileEnv
 			virtual NomValue& operator[](const RegIndex index) override;
@@ -205,6 +219,12 @@ namespace Nom
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 
 
+
+
+			// Inherited via CompileEnv
+			virtual void PushDispatchPair(llvm::Value* dpair) override;
+
+			virtual llvm::Value* PopDispatchPair() override;
 
 		};
 	}

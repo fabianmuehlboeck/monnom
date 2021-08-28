@@ -17,6 +17,8 @@
 #include "BoolClass.h"
 #include "NomMaybeType.h"
 #include "RTClassType.h"
+#include <fstream>
+#include <iostream>
 
 namespace Nom
 {
@@ -84,8 +86,10 @@ namespace Nom
 			}
 			ObjectHeader::EnsureExternalReadWriteFieldFunctions(theModule.get());
 			std::vector<std::string> compiledFunctionNames;
+			std::basic_ofstream<char> pobof;
 			if (NomVerbose)
 			{
+				pobof=std::basic_ofstream<char>(NomPath + "//addresses.txt");
 				int funnamecount = 0;
 				std::cout << "\nModule compilation complete, adding to JIT...\n";
 				llvm::raw_os_ostream out(std::cout);
@@ -146,6 +150,7 @@ namespace Nom
 				if (NomVerbose)
 				{
 					std::cout << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getAddress()) << std::dec;
+					pobof << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getAddress()) << std::dec;
 				}
 			}
 			if (NomVerbose)
@@ -164,6 +169,8 @@ namespace Nom
 					std::cout << std::hex << std::move(symAddress);
 				}
 				std::cout << "\n";
+				pobof.flush();
+				pobof.close();
 			}
 
 			PreparedDictionary::LoadDictionaryContents();

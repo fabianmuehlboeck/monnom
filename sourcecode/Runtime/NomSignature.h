@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include "NomTypeDecls.h"
+#include "CompileEnv.h"
 
 namespace Nom
 {
@@ -13,8 +14,9 @@ namespace Nom
 		public:
 			NomTypeRef ReturnType;
 			std::vector<NomTypeRef> ArgumentTypes;
+			std::vector<NomTypeParameterRef> TypeArguments;
 			NomSignature();
-			NomSignature(const std::vector<NomTypeRef>& argTypes, const NomTypeRef returnType);
+			NomSignature(const std::vector<NomTypeParameterRef>&& typeArgs, const std::vector<NomTypeRef>&& argTypes, const NomTypeRef returnType);
 
 			~NomSignature();
 

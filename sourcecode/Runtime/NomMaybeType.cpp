@@ -239,6 +239,10 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
+		bool NomMaybeType::ContainsVariableIndex(int index) const
+		{
+			return PotentialType->ContainsVariableIndex(index);
+		}
 	}
 }
 

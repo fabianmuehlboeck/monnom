@@ -8,7 +8,7 @@ namespace Nom
 	namespace Runtime
 	{
 		class NomLambda;
-		enum class RTLambdaFields :unsigned char { NomLink = 0, ArgCounts = 1, Signature=2, Function = 3, Dispatcher = 4, PreallocatedSlots = 5, SpecializedVTableCastID = 6, SpecializedVTable = 7 };
+		enum class RTLambdaFields :unsigned char { STable = 0, ArgCounts = 1, PreallocatedSlots = 2, SpecializedVTableCastID = 3, SpecializedVTable = 4 };
 		class RTLambda : public ARTRep<RTLambda, RTLambdaFields>
 		{
 		public:

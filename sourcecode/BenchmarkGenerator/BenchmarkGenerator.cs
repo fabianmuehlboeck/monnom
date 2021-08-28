@@ -210,13 +210,13 @@ namespace Nom
                         psi.UseShellExecute = false;
                         psi.CreateNoWindow = true;
                         psi.RedirectStandardOutput = true;
-                        if (highPriority)
-                        {
-                            p.PriorityClass = ProcessPriorityClass.RealTime;
-                        }
                         using (StreamWriter sw = new StreamWriter(new FileStream(dir.FullName +"/out" + (i + 1).ToString() + ".txt", FileMode.Create, FileAccess.Write)))
                         {
                             p.Start();
+                            if (highPriority)
+                            {
+                                p.PriorityClass = ProcessPriorityClass.RealTime;
+                            }
                             p.WaitForExit();
 
                             sw.Write(p.StandardOutput.ReadToEnd());

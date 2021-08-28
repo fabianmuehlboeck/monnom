@@ -126,13 +126,14 @@ namespace Nom
 				auto uniquedHash = RTTypeHead::GenerateReadTypeHash(builder, uniquedTypeArg);
 				MakeStore(builder, uniquedHash, builder->CreateGEP(hashArr, typeArgIndexPHI));
 
-				foundDifference->addIncoming(builder->CreateOr(foundDifference, CreatePointerEq(builder, uniquedTypeArg, currentTypeArg)), builder->GetInsertBlock());
+				auto newFoundDifference = builder->CreateOr(foundDifference, builder->CreateNot(CreatePointerEq(builder, uniquedTypeArg, currentTypeArg)));
+				foundDifference->addIncoming(newFoundDifference, builder->GetInsertBlock());
 				typeArgIndexPHI->addIncoming(builder->CreateAdd(typeArgIndexPHI, MakeInt32(1)), builder->GetInsertBlock());
-				auto typeArgsDone = builder->CreateICmpEQ(typeArgIndexPHI, MakeInt32(0));
+				auto typeArgsDone = builder->CreateICmpEQ(typeArgIndexPHI, MakeInt32(-1));
 				builder->CreateCondBr(typeArgsDone, uniqueTypeArgsDoneBlock, uniqueTypeArgsLoopBlock);
 
 				builder->SetInsertPoint(uniqueTypeArgsDoneBlock);
-				builder->CreateCondBr(foundDifference, newInstanceBlock, idBlock);
+				builder->CreateCondBr(newFoundDifference, newInstanceBlock, idBlock);
 
 				builder->SetInsertPoint(newInstanceBlock);
 				static auto uniqueInstantiationFun = NomInterface::GetGetUniqueInstantiationFunction(mod);

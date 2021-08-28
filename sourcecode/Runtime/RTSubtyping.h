@@ -26,7 +26,7 @@ namespace Nom
 			static llvm::StructType* TypeArgumentListStackType();
 			static llvm::Value* CreateTypeSubtypingCheck(NomBuilder& builder, llvm::Module& mod, llvm::Value* left, llvm::Value* right, llvm::Value* leftsubstitutions, llvm::Value* rightsubstitutions);
 
-			static void CreateInlineSubtypingCheck(NomBuilder& builder, llvm::Value* leftTypeWithoutSubstitutions, NomTypeRef rightType, llvm::Value* rightSubstitutions, llvm::BasicBlock* successBlock, llvm::BasicBlock* failBlock, llvm::BasicBlock* errorBlock);
+			static void CreateInlineSubtypingCheck(NomBuilder& builder, llvm::Value* leftType, llvm::Value* leftSubsts, NomTypeRef rightType, llvm::Value* rightSubstitutions, llvm::BasicBlock* pessimisticBlock, llvm::BasicBlock* optimisticBlock, llvm::BasicBlock* failBlock);
 		};
 
 

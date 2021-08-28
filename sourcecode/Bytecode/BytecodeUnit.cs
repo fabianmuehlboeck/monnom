@@ -11,7 +11,7 @@ namespace Nom.Bytecode
 {
     public class BytecodeUnit : IConstantSource
     {
-        public static readonly uint BYTECODE_VERSION = 1;
+        public static readonly uint BYTECODE_VERSION = 2;
         public AssemblyUnit AssemblyUnit { get; }
         private List<ClassRep> classes = new List<ClassRep>();
         private List<InterfaceRep> interfaces = new List<InterfaceRep>();

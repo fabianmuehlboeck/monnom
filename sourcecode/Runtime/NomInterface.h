@@ -89,6 +89,9 @@ namespace Nom
 			virtual bool GetHasRawInvoke() const override;
 			virtual bool IsInterface() const override { return true; }
 			virtual bool IsFunctional() const override { return Methods.size() == 1 && Methods[0]->GetName().empty(); }
+			virtual bool HasLambdaMethod() const override;
+			virtual bool HasNoMethods() const override;
+			virtual NomMethod* GetLambdaMethod() const override;
 
 
 			static void Register(const NomString* name, NomInterface* iface)
@@ -146,6 +149,8 @@ namespace Nom
 			static llvm::FunctionType* GetInterfaceTableLookupType();
 			static llvm::FunctionType* GetGetUniqueInstantiationFunctionType();
 			static llvm::Function* GetGetUniqueInstantiationFunction(llvm::Module& mod);
+			virtual llvm::Constant* GetSignature(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
+			virtual llvm::Constant* GetCheckReturnTypeFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 		};
 
 		class NomInterfaceLoaded : public virtual NomInterface, public NomNamedLoaded

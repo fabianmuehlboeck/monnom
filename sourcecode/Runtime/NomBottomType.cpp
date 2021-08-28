@@ -147,5 +147,9 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
+		bool NomBottomType::ContainsVariableIndex(int index) const
+		{
+			return false;
+		}
 	}
 }

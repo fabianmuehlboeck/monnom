@@ -23,11 +23,26 @@ namespace Nom
 		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+
+
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Value* index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Value* index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 

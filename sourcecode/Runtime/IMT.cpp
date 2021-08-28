@@ -18,6 +18,7 @@
 #include <stdarg.h>
 #include "RawInvoke.h"
 #include "NomMethodKey.h"
+#include "RTCompileConfig.h"
 
 using namespace llvm;
 using namespace std;
@@ -27,20 +28,58 @@ namespace Nom
 	{
 		llvm::FunctionType* GetIMTCastFunctionType()
 		{
-			static auto ft = FunctionType::get(POINTERTYPE, { TYPETYPE->getPointerTo(), POINTERTYPE, POINTERTYPE, POINTERTYPE, POINTERTYPE }, false);
-			return ft;
+			//static auto ft = FunctionType::get(POINTERTYPE, { /*TYPETYPE->getPointerTo(),*/ POINTERTYPE, POINTERTYPE, POINTERTYPE, POINTERTYPE }, false);
+			//return ft;
+			return GetIMTFunctionType(); //to make sure this can be tail called
 		}
 
 		llvm::FunctionType* GetIMTFunctionType()
 		{
-			static auto ft = FunctionType::get(POINTERTYPE, { GetIMTCastFunctionType()->getPointerTo(), POINTERTYPE, POINTERTYPE, POINTERTYPE, POINTERTYPE }, false);
+			static FunctionType* ft;
+			static bool once = false;
+			if (!once)
+			{
+				auto argtypes = makealloca(Type*, 2 + RTConfig_NumberOfVarargsArguments);
+				argtypes[0] = POINTERTYPE; //GetIMTCastFunctionType()->getPointerTo();
+				argtypes[1] = POINTERTYPE;
+				for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i < RTConfig_NumberOfVarargsArguments; i++)
+				{
+					argtypes[i + 2] = POINTERTYPE;
+				}
+				ft = FunctionType::get(POINTERTYPE, ArrayRef<Type*>(argtypes, 2 + RTConfig_NumberOfVarargsArguments), false);
+				once = true;
+			}
+
+			return ft;
+		}
+
+		llvm::FunctionType* GetCheckReturnValueFunctionType()
+		{
+			//static auto ft = FunctionType::get(inttype(1), { GetIMTCastFunctionType()->getPointerTo(), TYPETYPE, POINTERTYPE, POINTERTYPE, POINTERTYPE, POINTERTYPE }, false);
+			//return ft;
+			static FunctionType* ft = nullptr;
+			static bool once = false;
+			if (!once)
+			{
+				auto argtypes = makealloca(Type*, 3 + RTConfig_NumberOfVarargsArguments);
+				argtypes[0] = POINTERTYPE; //method key
+				argtypes[1] = TYPETYPE->getPointerTo()->getPointerTo();
+				argtypes[2] = REFTYPE; //return value; always packed because it comes from struct dispatcher
+				for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i < RTConfig_NumberOfVarargsArguments; i++)
+				{
+					argtypes[i + 3] = POINTERTYPE;
+				}
+				ft = FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), ArrayRef<Type*>(argtypes, 3 + RTConfig_NumberOfVarargsArguments), false);
+				once = true;
+			}
+
 			return ft;
 		}
 
 		llvm::Function* GenerateRawInvokeWrap(llvm::Module* mod, llvm::GlobalValue::LinkageTypes linkage, const llvm::Twine name, const NomInterface* ifc, llvm::Function* callCode)
 		{
 			NomMethod* invokeMethod = ifc->Methods[0];
-			FunctionType * funtype = invokeMethod->GetRawInvokeLLVMFunctionType();
+			FunctionType* funtype = invokeMethod->GetRawInvokeLLVMFunctionType();
 
 			Function* fun = Function::Create(funtype, linkage, name, mod);
 			fun->setCallingConv(NOMCC);
@@ -65,7 +104,7 @@ namespace Nom
 					call->setCallingConv(NOMCC);
 					return call;
 				},
-				llvm::ArrayRef<llvm::Value*>(argarr,argcount));
+				llvm::ArrayRef<llvm::Value*>(argarr, argcount));
 
 			llvm::raw_os_ostream out(std::cout);
 			if (verifyFunction(*fun, &out))
@@ -80,6 +119,142 @@ namespace Nom
 		}
 
 		llvm::Function* GenerateIMT(Module* mod, GlobalValue::LinkageTypes linkage, const llvm::Twine name, SmallVector<pair<NomMethodKey*, Function*>, 8>& imtPairs)
+		{
+			FunctionType* funtype = GetIMTFunctionType();
+			Function* fun = Function::Create(funtype, linkage, name, mod);
+			fun->setCallingConv(NOMCC);
+			NomBuilder builder;
+
+
+			auto argiter = fun->arg_begin();
+			Argument* id_and_dynhandler = argiter;
+			argiter++;
+
+			Value** args = makealloca(Value*, 2 + RTConfig_NumberOfVarargsArguments);
+
+			args[0] = argiter;
+			argiter++;
+			args[1] = argiter;
+			argiter++;
+			for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i < RTConfig_NumberOfVarargsArguments; i++)
+			{
+				args[i + 2] = argiter;
+				argiter++;
+			}
+
+			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+			SmallVector<Value*, 8> argBuf;
+			builder->SetInsertPoint(startBlock);
+			if (imtPairs.size() == 0)
+			{
+				builder->CreateUnreachable();
+			}
+			else
+			{
+				auto givenKey = builder->CreatePtrToInt(id_and_dynhandler, INTTYPE, "key");
+
+				int cases = imtPairs.size();
+				BasicBlock* currentBlock;
+				BasicBlock* nextBlock = startBlock;
+				for (int i = 0; i < cases; i++)
+				{
+					currentBlock = nextBlock;
+					auto& pair = imtPairs[i];
+
+					if (i < cases - 1)
+					{
+						currentBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+						nextBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+
+						auto keyMatch = builder->CreateICmpEQ(givenKey, ConstantExpr::getPtrToInt(pair.first->GetLLVMElement(*mod), INTTYPE));
+						builder->CreateCondBr(keyMatch, currentBlock, nextBlock);
+
+					}
+
+					builder->SetInsertPoint(currentBlock);
+
+					argBuf.clear();
+
+					Function* callFun = pair.second;
+					int argpos = 0;
+
+					int argcount = callFun->arg_size();
+					const int maxDirectArgCount = RTConfig_NumberOfVarargsArguments + 1;
+					const int lastRegularArgIndex = RTConfig_NumberOfVarargsArguments - 1;
+					for (auto& argSpec : callFun->args())
+					{
+						if (argpos > lastRegularArgIndex && argcount > maxDirectArgCount)
+						{
+							argBuf.push_back(MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(args[RTConfig_NumberOfVarargsArguments], args[RTConfig_NumberOfVarargsArguments]->getType()->getPointerTo()), MakeInt32(argpos - RTConfig_NumberOfVarargsArguments))));
+						}
+						else
+						{
+							argBuf.push_back(args[argpos]);
+						}
+						if (argSpec.getType()->isPointerTy())
+						{
+							argBuf[argpos] = builder->CreatePointerCast(argBuf[argpos], argSpec.getType());
+						}
+						if (argSpec.getType()->isIntegerTy(INTTYPE->getIntegerBitWidth()))
+						{
+							argBuf[argpos] = builder->CreatePtrToInt(argBuf[argpos], INTTYPE);
+						}
+						else if (argSpec.getType()->isDoubleTy())
+						{
+							argBuf[argpos] = builder->CreateBitCast(builder->CreatePtrToInt(argBuf[argpos], INTTYPE), FLOATTYPE);
+						}
+						else if (argSpec.getType()->isIntegerTy(BOOLTYPE->getIntegerBitWidth()))
+						{
+							argBuf[argpos] = builder->CreatePtrToInt(argBuf[argpos], BOOLTYPE);
+						}
+						argpos++;
+					}
+					auto callResult = builder->CreateCall(callFun, argBuf);
+					callResult->setCallingConv(NOMCC);
+
+					llvm::Value* result = callResult;
+					if (result->getType()->isPointerTy())
+					{
+						if (result->getType() != POINTERTYPE)
+						{
+							result = builder->CreatePointerCast(callResult, POINTERTYPE);
+						}
+					}
+					else
+					{
+						if (result->getType()->isIntegerTy())
+						{
+							result = builder->CreateIntToPtr(result, POINTERTYPE);
+						}
+						else if (result->getType()->isDoubleTy())
+						{
+							result = builder->CreateIntToPtr(builder->CreateBitCast(result, INTTYPE), POINTERTYPE);
+						}
+						else
+						{
+							throw new std::exception();
+						}
+					}
+
+					builder->CreateRet(result);
+				}
+
+			}
+			llvm::raw_os_ostream out(std::cout);
+
+			if (verifyFunction(*fun, &out))
+			{
+				out.flush();
+				std::cout << "Could not verify IMT method!";
+				fun->print(out);
+				out.flush();
+				std::cout.flush();
+				throw name;
+			}
+			return fun;
+		}
+
+		llvm::Function* GenerateCheckReturnTypesFunction(Module* mod, GlobalValue::LinkageTypes linkage, const llvm::Twine name, SmallVector<tuple<NomMethodKey*, Function*, NomType*>, 8>& imtPairs)
 		{
 			FunctionType* funtype = GetIMTFunctionType();
 			Function* fun = Function::Create(funtype, linkage, name, mod);
@@ -125,7 +300,7 @@ namespace Nom
 						currentBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 						nextBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 
-						auto keyMatch = builder->CreateICmpEQ(givenKey, ConstantExpr::getPtrToInt(pair.first->GetLLVMElement(*mod), INTTYPE));
+						auto keyMatch = builder->CreateICmpEQ(givenKey, ConstantExpr::getPtrToInt(std::get<0>(pair)->GetLLVMElement(*mod), INTTYPE));
 						builder->CreateCondBr(keyMatch, currentBlock, nextBlock);
 
 					}
@@ -134,11 +309,11 @@ namespace Nom
 
 					argBuf.clear();
 
-					Function* callFun = pair.second;
+					Function* callFun = std::get<1>(pair);
 					int argpos = 0;
 
 					int argcount = callFun->arg_size();
-					for (auto &argSpec : callFun->args())
+					for (auto& argSpec : callFun->args())
 					{
 						if (argpos > 2 && argcount > 4)
 						{
@@ -168,7 +343,7 @@ namespace Nom
 					}
 					auto callResult = builder->CreateCall(callFun, argBuf);
 					callResult->setCallingConv(NOMCC);
-					
+
 					llvm::Value* result = callResult;
 					if (result->getType()->isPointerTy())
 					{
@@ -192,7 +367,7 @@ namespace Nom
 							throw new std::exception();
 						}
 					}
-					
+
 					builder->CreateRet(result);
 				}
 

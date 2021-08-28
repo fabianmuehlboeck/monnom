@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "RTCompileConfig.h"
+#include <iostream>
 
 extern std::string NomRuntimePath;
 extern int NomOptLevel;
@@ -18,6 +19,8 @@ extern std::vector<std::string> NomDebugFunctions;
 extern std::vector<std::string> NomApplicationArgs;
 extern bool NomRuntimeStopAtEnd;
 extern int NomWarmupRuns;
+extern bool RTConfig_AdditionalOptPasses;
+extern std::ostream * RT_debugout;
 
 namespace Nom
 {

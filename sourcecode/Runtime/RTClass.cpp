@@ -36,9 +36,9 @@ namespace Nom
 			return StructType::get(LLVMCONTEXT, { methodTableType, GetLLVMType() }, true);
 		}
 
-		llvm::Constant* RTClass::CreateConstant(llvm::GlobalVariable *gvar, llvm::StructType *gvartype, const NomInterface *irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Function* lookupDispatcher, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* interfaceTable)
+		llvm::Constant* RTClass::CreateConstant(llvm::GlobalVariable *gvar, llvm::StructType *gvartype, const NomInterface *irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Function* lookupDispatcher, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* methodEnsureFunction, llvm::Constant* interfaceTable, llvm::Constant* signature)
 		{
-			gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), interfaceTable, GetLLVMPointer(&irptr->runtimeInstantiations) ), ConstantExpr::getPointerCast(fieldRead,POINTERTYPE), ConstantExpr::getPointerCast(fieldWrite, POINTERTYPE), ConstantExpr::getPointerCast(lookupDispatcher, POINTERTYPE), fieldCount)));
+			gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), interfaceTable, checkReturnValueFunction, methodEnsureFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), ConstantExpr::getPointerCast(fieldRead,POINTERTYPE), ConstantExpr::getPointerCast(fieldWrite, POINTERTYPE), ConstantExpr::getPointerCast(lookupDispatcher, POINTERTYPE), fieldCount)));
 			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(1) }));
 		}
 		llvm::Constant* RTClass::FindConstant(llvm::Module& mod, const StringRef name)
@@ -77,9 +77,10 @@ namespace Nom
 		}
 
 
+
 		llvm::Value* RTClass::GenerateReadFieldCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTClassFields::FieldCount));
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTClassFields::FieldCount),"FieldCount", AtomicOrdering::NotAtomic);
 		}
 		llvm::Value* RTClass::GenerateReadSuperInstanceCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
@@ -104,10 +105,10 @@ namespace Nom
 		{
 			RTInterface::GenerateInitialization(builder, clsptr, /*vt_ifcoffset*/ vt_imtptr, vt_kind, vt_irdesc, ifc_flags, ifc_targcount, ifc_supercount, ifc_superentries);
 			llvm::Value* selfptr = builder->CreatePointerCast(clsptr, GetLLVMType()->getPointerTo());
-			MakeStore(builder, fieldlookup, selfptr, MakeInt32(RTClassFields::FieldLookup));
-			MakeStore(builder, fieldstore, selfptr, MakeInt32(RTClassFields::FieldStore));
-			MakeStore(builder, displookup, selfptr, MakeInt32(RTClassFields::DispatcherLookup));
-			MakeStore(builder, fieldcount, selfptr, MakeInt32(RTClassFields::FieldCount));
+			MakeInvariantStore(builder, fieldlookup, selfptr, MakeInt32(RTClassFields::FieldLookup));
+			MakeInvariantStore(builder, fieldstore, selfptr, MakeInt32(RTClassFields::FieldStore));
+			MakeInvariantStore(builder, displookup, selfptr, MakeInt32(RTClassFields::DispatcherLookup));
+			MakeInvariantStore(builder, fieldcount, selfptr, MakeInt32(RTClassFields::FieldCount));
 		}
 		//llvm::Value* RTClass::GenerateReadNumInterfaceTableEntries(NomBuilder& builder, llvm::Value* descriptorPtr)
 		//{

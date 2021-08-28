@@ -56,7 +56,7 @@ namespace Nom
 			virtual llvm::Function * createLLVMElement(llvm::Module & mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 
 			// Inherited via NomCallable
-			virtual NomTypeRef GetReturnType(const NomSubstitutionContext * context) const override;
+			virtual NomTypeRef GetReturnType(const NomSubstitutionContext * context = nullptr) const override;
 
 			virtual const NomClass* GetClass() const override
 			{

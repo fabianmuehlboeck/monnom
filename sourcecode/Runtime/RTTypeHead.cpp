@@ -5,6 +5,8 @@
 #include "NomType.h"
 #include "CompileHelpers.h"
 #include "RTOutput.h"
+#include "RTCast.h"
+#include "RTSubstStack.h"
 
 using namespace llvm;
 namespace Nom
@@ -36,9 +38,9 @@ namespace Nom
 		void RTTypeHead::CreateInitialization(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, TypeKind kind, llvm::Value* hash, llvm::Value* nomtypeptr)
 		{
 			ptr = builder->CreatePointerCast(ptr, GetLLVMType()->getPointerTo());
-			MakeStore(builder, mod, MakeInt((unsigned char)kind), builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
-			MakeStore(builder, mod, hash, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
-			MakeStore(builder, mod, nomtypeptr, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
+			MakeInvariantStore(builder, mod, MakeInt((unsigned char)kind), builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
+			MakeInvariantStore(builder, mod, hash, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
+			MakeInvariantStore(builder, mod, nomtypeptr, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
 		}
 
 		llvm::Constant* RTTypeHead::GetVariable(const int index)
@@ -64,12 +66,174 @@ namespace Nom
 
 		llvm::Value* RTTypeHead::GenerateReadTypeKind(NomBuilder& builder, llvm::Value* type)
 		{
-			return MakeLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::Kind), "typeKind");
+			return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::Kind), "typeKind");
 		}
 
 		llvm::Value* RTTypeHead::GenerateReadTypeHash(NomBuilder& builder, llvm::Value* type)
 		{
-			return MakeLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::Hash), "typeHash");
+			return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::Hash), "typeHash");
+		}
+
+		int RTTypeHead::GenerateTypeKindSwitchRecurse(NomBuilder& builder, llvm::Value* type, llvm::Value* substStack, llvm::Value** innerTypeVar, llvm::Value** innerSubstStackVar, llvm::BasicBlock** classTypeBlockVar, llvm::BasicBlock** topTypeBlockVar, llvm::BasicBlock** typeVarBlockVar, llvm::BasicBlock** bottomTypeBlockVar, llvm::BasicBlock** instanceTypeBlockVar, llvm::BasicBlock** dynamicTypeBlockVar, llvm::BasicBlock** maybeTypeBlockVar, llvm::BasicBlock *failBlock)
+		{
+			BasicBlock* origBlock = builder->GetInsertBlock();
+			Function* fun = origBlock->getParent();
+			BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "kindSwitchLoopHead", fun);
+			if (failBlock == nullptr)
+			{
+				failBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Unhandled type kind!");
+			}
+			builder->CreateBr(loopHeadBlock);
+
+			builder->SetInsertPoint(loopHeadBlock);
+			PHINode* typePHI = builder->CreatePHI(TYPETYPE, 2 + maybeTypeBlockVar==nullptr?1:0);
+			PHINode* substPHI = builder->CreatePHI(substStack->getType(), 2 + maybeTypeBlockVar == nullptr ? 1 : 0);
+			typePHI->addIncoming(type, origBlock);
+			substPHI->addIncoming(substStack, origBlock);
+
+			auto typeKind = GenerateReadTypeKind(builder, typePHI);
+			auto typeSwitch = builder->CreateSwitch(typeKind, failBlock, 9);
+
+			if (innerTypeVar != nullptr)
+			{
+				*innerTypeVar = typePHI;
+			}
+			if (innerSubstStackVar != nullptr)
+			{
+				*innerSubstStackVar = substPHI;
+			}
+
+			int cases = 0;
+			BasicBlock* classTypeBlock = nullptr, * topTypeBlock = nullptr, * typeVarBlock = nullptr, * bottomTypeBlock = nullptr, * instanceTypeBlock = nullptr, * partialAppTypeBlock = nullptr, * dynamicTypeBlock = nullptr, * maybeTypeBlock = nullptr;
+			BasicBlock* typeVarUnfoldBlock = BasicBlock::Create(LLVMCONTEXT, "typeVarUnfold", fun);
+			BasicBlock* typeVarSubstBlock = BasicBlock::Create(LLVMCONTEXT, "typeVarSubstitute", fun);
+
+			if (classTypeBlockVar != nullptr)
+			{
+				if (*classTypeBlockVar == nullptr)
+				{
+					classTypeBlock = BasicBlock::Create(LLVMCONTEXT, "classType", fun);
+					*classTypeBlockVar = classTypeBlock;
+					cases++;
+				}
+				else
+				{
+					classTypeBlock = *classTypeBlockVar;
+				}
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKClass), classTypeBlock);
+			}
+			if (topTypeBlockVar != nullptr)
+			{
+				if (*topTypeBlockVar == nullptr)
+				{
+					topTypeBlock = BasicBlock::Create(LLVMCONTEXT, "topType", fun);
+					*topTypeBlockVar = topTypeBlock;
+					cases++;
+				}
+				else
+				{
+					topTypeBlock = *topTypeBlockVar;
+				}
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKTop), topTypeBlock);
+			}
+
+			typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKVariable), typeVarUnfoldBlock);
+			builder->SetInsertPoint(typeVarUnfoldBlock);
+
+			if (typeVarBlockVar != nullptr)
+			{
+				if (*typeVarBlockVar == nullptr)
+				{
+					typeVarBlock = BasicBlock::Create(LLVMCONTEXT, "typeVar", fun);
+					*typeVarBlockVar = typeVarBlock;
+					cases++;
+				}
+				else
+				{
+					typeVarBlock = *typeVarBlockVar;
+				}
+			}
+			else
+			{
+				typeVarBlock = failBlock;
+			}
+
+			builder->CreateCondBr(builder->CreateIsNotNull(substPHI), typeVarSubstBlock, typeVarBlock);
+
+			builder->SetInsertPoint(typeVarSubstBlock);
+			Value* newSubst=nullptr;
+			auto newType = RTSubstStack::Pop(builder, substPHI, typePHI, &newSubst);
+			typePHI->addIncoming(newType, builder->GetInsertBlock());
+			substPHI->addIncoming(newSubst, builder->GetInsertBlock());
+			builder->CreateBr(loopHeadBlock);
+
+			if (bottomTypeBlockVar != nullptr)
+			{
+				if (*bottomTypeBlockVar == nullptr)
+				{
+					bottomTypeBlock = BasicBlock::Create(LLVMCONTEXT, "bottomType", fun);
+					*bottomTypeBlockVar = bottomTypeBlock;
+					cases++;
+				}
+				else
+				{
+					bottomTypeBlock = *bottomTypeBlockVar;
+				}
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKBottom), bottomTypeBlock);
+			}
+			if (instanceTypeBlockVar != nullptr)
+			{
+				if (*instanceTypeBlockVar == nullptr)
+				{
+					instanceTypeBlock = BasicBlock::Create(LLVMCONTEXT, "instanceType", fun);
+					*instanceTypeBlockVar = instanceTypeBlock;
+					cases++;
+				}
+				else
+				{
+					instanceTypeBlock = *instanceTypeBlockVar;
+				}
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKInstance), instanceTypeBlock);
+			}
+			if (dynamicTypeBlockVar != nullptr)
+			{
+				if (*dynamicTypeBlockVar == nullptr)
+				{
+					dynamicTypeBlock = BasicBlock::Create(LLVMCONTEXT, "dynamicType", fun);
+					*dynamicTypeBlockVar = dynamicTypeBlock;
+					cases++;
+				}
+				else
+				{
+					dynamicTypeBlock = *dynamicTypeBlockVar;
+				}
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKDynamic), dynamicTypeBlock);
+			}
+			if (maybeTypeBlockVar != nullptr)
+			{
+				if (*maybeTypeBlockVar == nullptr)
+				{
+					maybeTypeBlock = BasicBlock::Create(LLVMCONTEXT, "maybeType", fun);
+					*maybeTypeBlockVar = maybeTypeBlock;
+					cases++;
+				}
+				else
+				{
+					maybeTypeBlock = *maybeTypeBlockVar;
+				}
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKMaybe), maybeTypeBlock);
+			}
+			else
+			{
+				maybeTypeBlock = BasicBlock::Create(LLVMCONTEXT, "maybeType", fun);
+				builder->SetInsertPoint(maybeTypeBlock);
+				auto nextType = RTMaybeType::GenerateReadPotentialType(builder, typePHI);
+				typePHI->addIncoming(nextType, builder->GetInsertBlock());
+				substPHI->addIncoming(substPHI, builder->GetInsertBlock());
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKMaybe), maybeTypeBlock);
+				builder->CreateBr(loopHeadBlock);
+			}
+			return cases;
 		}
 
 		int RTTypeHead::GenerateTypeKindSwitch(NomBuilder& builder, llvm::Value* type, llvm::BasicBlock** classTypeBlock, llvm::BasicBlock** topTypeBlock, llvm::BasicBlock** typeVarBlock, llvm::BasicBlock** bottomTypeBlock, llvm::BasicBlock** instanceTypeBlock, llvm::BasicBlock** structTypeBlock, llvm::BasicBlock** partialAppTypeBlock, llvm::BasicBlock** dynamicTypeBlock, llvm::BasicBlock** maybeTypeBlock, llvm::BasicBlock* failBlock)
@@ -220,7 +384,7 @@ namespace Nom
 		{
 
 		}
-		RTTypeHead::RTTypeHead(const void* entry) : ARTRep<RTTypeHead, RTTypeHeadFields>(entry) 
+		RTTypeHead::RTTypeHead(const void* entry) : ARTRep<RTTypeHead, RTTypeHeadFields>(entry)
 		{
 
 		}

@@ -162,5 +162,9 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
+		bool NomDynamicType::ContainsVariableIndex(int index) const
+		{
+			return false;
+		}
 	}
 }

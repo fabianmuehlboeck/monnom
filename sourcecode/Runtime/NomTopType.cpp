@@ -23,7 +23,7 @@ namespace Nom
 
 		bool NomTopType::IsSubtype(NomTypeRef other, bool optimistic) const
 		{
-			return other->IsSupertype(this);
+			return other->IsSupertype(this, optimistic);
 		}
 		bool NomTopType::IsSubtype(NomBottomTypeRef other, bool optimistic) const
 		{
@@ -39,11 +39,11 @@ namespace Nom
 		}
 		bool NomTopType::IsSubtype(NomTypeVarRef other, bool optimistic) const
 		{
-			return other->IsSupertype(this);
+			return other->IsSupertype(this, optimistic);
 		}
 		bool NomTopType::IsSupertype(NomTypeRef other, bool optimistic) const
 		{
-			return other->IsSubtype(this);
+			return other->IsSubtype(this, optimistic);
 		}
 		bool NomTopType::IsSupertype(NomBottomTypeRef other, bool optimistic) const
 		{
@@ -99,7 +99,7 @@ namespace Nom
 		}
 		bool NomTopType::IsDisjoint(NomBottomTypeRef other) const
 		{
-			return false;
+			return true;
 		}
 		bool NomTopType::IsDisjoint(NomClassTypeRef other) const
 		{
@@ -145,6 +145,10 @@ namespace Nom
 		TypeReferenceType NomTopType::GetTypeReferenceType() const
 		{
 			return TypeReferenceType::Reference;
+		}
+		bool NomTopType::ContainsVariableIndex(int index) const
+		{
+			return false;
 		}
 	}
 }

@@ -19,6 +19,15 @@ namespace Nom.Bytecode
             ResultRegister = resultRegister;
         }
 
+        //public override ulong InstructionCount => base.InstructionCount + 1;
+        //public override void WriteByteCode(Stream ws)
+        //{
+        //    ws.WriteByte((byte)OpCode.EnsureDynamicMethod);
+        //    ws.WriteValue(MethodNameConstant.ConstantID);
+        //    ws.WriteValue(ReceiverRegister);
+        //    base.WriteByteCode(ws);
+        //}
+
         protected override void WriteArguments(Stream ws)
         {
             ws.WriteValue(ResultRegister);

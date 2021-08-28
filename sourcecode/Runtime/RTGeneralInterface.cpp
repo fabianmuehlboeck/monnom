@@ -9,6 +9,8 @@
 #include "Defs.h"
 #include "IMT.h"
 #include "RTCompileConfig.h"
+#include "RTVTable.h"
+#include "RTSignature.h"
 
 using namespace llvm;
 using namespace std;
@@ -54,6 +56,8 @@ namespace Nom
 			llvm::StructType* gvartype = StructType::get(LLVMCONTEXT, { GetLLVMType() }, true);
 			GlobalVariable* gvar = new GlobalVariable(mod, gvartype, true, linkage, nullptr, name);
 
+			llvm::Constant* checkReturnValueFun = irptr->GetCheckReturnTypeFunction(mod, linkage);
+
 			llvm::Constant* templateConstant = RTStructInterface::CreateGlobalConstant(mod, linkage, "NOM_RT_SI_" + name, irptr, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), instantiationDictionary, ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), false);
 			llvm::Constant* optimizedConstant = RTStructInterface::CreateGlobalConstant(mod, linkage, "NOM_RT_SIOPT_" + name, irptr, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), instantiationDictionary, ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), true);
 
@@ -65,7 +69,7 @@ namespace Nom
 				imtNullPtrs[i] = ConstantPointerNull::get(GetIMTFunctionType()->getPointerTo());
 			}
 
-			gvar->setInitializer(llvm::ConstantStruct::get(gvartype, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::IsInterface, typeArgCount, ConstantExpr::getSub(superTypesCount, MakeIntLike(superTypesCount,1)), ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1) })), ConstantArray::get(arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(imtNullPtrs, IMTsize)), instantiationDictionary), templateConstant, ConstantExpr::getAdd(templateOffset, llvmsizeof(RTStructInterface::GetLLVMType())), templateOffset, optimizedConstant)));
+			gvar->setInitializer(llvm::ConstantStruct::get(gvartype, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::IsInterface, typeArgCount, ConstantExpr::getSub(superTypesCount, MakeIntLike(superTypesCount,1)), ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1) })), ConstantArray::get(arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(imtNullPtrs, IMTsize)), checkReturnValueFun, ConstantPointerNull::get(GetMethodEnsureFunctionType()->getPointerTo()), instantiationDictionary, ConstantPointerNull::get(RTSignature::GetLLVMType()->getPointerTo())), templateConstant, ConstantExpr::getAdd(templateOffset, llvmsizeof(RTStructInterface::GetLLVMType())), templateOffset, optimizedConstant)));
 			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(0) }));
 		}
 		llvm::Constant* RTGeneralInterface::FindConstant(llvm::Module& mod, const StringRef name)

@@ -63,39 +63,40 @@ namespace Nom
 
 		llvm::Value* RTPartialApp::GenerateFindDispatcher(NomBuilder& builder, llvm::Value* partialAppDesc, uint32_t typeargcount, uint32_t argcount)
 		{
-			BasicBlock* incoming = builder->GetInsertBlock();
-			BasicBlock* loopHead = BasicBlock::Create(LLVMCONTEXT, "palookup_head", incoming->getParent());
-			BasicBlock* loopBody = BasicBlock::Create(LLVMCONTEXT, "palookup_body", incoming->getParent());
-			BasicBlock* foundBlock = BasicBlock::Create(LLVMCONTEXT, "palookup_found", incoming->getParent());
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "palookup_out", incoming->getParent());
+			throw new std::exception();
+			//BasicBlock* incoming = builder->GetInsertBlock();
+			//BasicBlock* loopHead = BasicBlock::Create(LLVMCONTEXT, "palookup_head", incoming->getParent());
+			//BasicBlock* loopBody = BasicBlock::Create(LLVMCONTEXT, "palookup_body", incoming->getParent());
+			//BasicBlock* foundBlock = BasicBlock::Create(LLVMCONTEXT, "palookup_found", incoming->getParent());
+			//BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "palookup_out", incoming->getParent());
 
-			auto padesc = builder->CreatePointerCast(partialAppDesc, GetLLVMType()->getPointerTo());
-			auto entryCount = builder->CreateTrunc(MakeLoad(builder, padesc, MakeInt32(RTPartialAppFields::NumEntries), "pa_entrycount"), numtype(uint32_t));
-			builder->CreateBr(loopHead);
+			//auto padesc = builder->CreatePointerCast(partialAppDesc, GetLLVMType()->getPointerTo());
+			//auto entryCount = builder->CreateTrunc(MakeLoad(builder, padesc, MakeInt32(RTPartialAppFields::NumEntries), "pa_entrycount"), numtype(uint32_t));
+			//builder->CreateBr(loopHead);
 
-			builder->SetInsertPoint(loopHead);
-			auto countPHI = builder->CreatePHI(numtype(uint32_t), 2);
-			countPHI->addIncoming(entryCount, incoming);
-			auto countGTzero = builder->CreateICmpUGT(countPHI, MakeInt<uint32_t>(0));
-			builder->CreateCondBr(countGTzero, loopBody, outBlock);
+			//builder->SetInsertPoint(loopHead);
+			//auto countPHI = builder->CreatePHI(numtype(uint32_t), 2);
+			//countPHI->addIncoming(entryCount, incoming);
+			//auto countGTzero = builder->CreateICmpUGT(countPHI, MakeInt<uint32_t>(0));
+			//builder->CreateCondBr(countGTzero, loopBody, outBlock);
 
-			builder->SetInsertPoint(loopBody);
-			auto countminusone = builder->CreateSub(countPHI, MakeInt<uint32_t>(1));
-			auto entryKey = MakeLoad(builder, padesc, { MakeInt32(RTPartialAppFields::Entries), countminusone, MakeInt32(RTPartialAppEntryFields::Key) });
-			auto entryKeyMatch = builder->CreateICmpEQ(entryKey, GetKeyConstant(typeargcount, argcount));
-			countPHI->addIncoming(countminusone, loopBody);
-			builder->CreateCondBr(entryKeyMatch, foundBlock, loopHead);
+			//builder->SetInsertPoint(loopBody);
+			//auto countminusone = builder->CreateSub(countPHI, MakeInt<uint32_t>(1));
+			//auto entryKey = MakeLoad(builder, padesc, { MakeInt32(RTPartialAppFields::Entries), countminusone, MakeInt32(RTPartialAppEntryFields::Key) });
+			//auto entryKeyMatch = builder->CreateICmpEQ(entryKey, GetKeyConstant(typeargcount, argcount));
+			//countPHI->addIncoming(countminusone, loopBody);
+			//builder->CreateCondBr(entryKeyMatch, foundBlock, loopHead);
 
-			builder->SetInsertPoint(foundBlock);
-			auto dispatcher = MakeLoad(builder, padesc, { MakeInt32(RTPartialAppFields::Entries), countminusone, MakeInt32(RTPartialAppEntryFields::Dispatcher) });
-			auto dispatcherCast = builder->CreatePointerCast(dispatcher, NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount)->getPointerTo());
-			builder->CreateBr(outBlock);
+			//builder->SetInsertPoint(foundBlock);
+			//auto dispatcher = MakeLoad(builder, padesc, { MakeInt32(RTPartialAppFields::Entries), countminusone, MakeInt32(RTPartialAppEntryFields::Dispatcher) });
+			//auto dispatcherCast = builder->CreatePointerCast(dispatcher, NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount)->getPointerTo());
+			//builder->CreateBr(outBlock);
 
-			builder->SetInsertPoint(outBlock);
-			auto outPHI = builder->CreatePHI(NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount)->getPointerTo(), 2);
-			outPHI->addIncoming(dispatcherCast, foundBlock);
-			outPHI->addIncoming(ConstantPointerNull::get(NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount)->getPointerTo()), loopHead);
-			return outPHI;
+			//builder->SetInsertPoint(outBlock);
+			//auto outPHI = builder->CreatePHI(NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount)->getPointerTo(), 2);
+			//outPHI->addIncoming(dispatcherCast, foundBlock);
+			//outPHI->addIncoming(ConstantPointerNull::get(NomPartialApplication::GetDynamicDispatcherType(typeargcount, argcount)->getPointerTo()), loopHead);
+			//return outPHI;
 		}
 
 		//llvm::Value* RTPartialApp::GenerateFindDispatcher(NomBuilder& builder, llvm::Module& mod, llvm::Value* descriptorPtr, llvm::ConstantInt* key)

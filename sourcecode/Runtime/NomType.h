@@ -57,6 +57,7 @@ namespace Nom
 			}*/
 
 			virtual bool ContainsVariables() const = 0;
+			virtual bool ContainsVariableIndex(int index) const = 0;
 			virtual llvm::Value * GenerateRTInstantiation(NomBuilder &builder, CompileEnv* env) const = 0;
 
 			virtual size_t GetHashCode() const = 0;

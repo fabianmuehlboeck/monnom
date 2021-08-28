@@ -150,5 +150,9 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
+		bool NomStructType::ContainsVariableIndex(int index) const
+		{
+			return false;
+		}
 	}
 }

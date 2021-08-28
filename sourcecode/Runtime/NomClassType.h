@@ -38,7 +38,7 @@ namespace Nom
 			static InitFunctionPointer GetCPPInitializerFunction();
 			static llvm::Function *GetInitializerFunction(llvm::Module &mod);
 
-			static bool ArgumentsSubtypes(const TypeList & left, const TypeList & right);
+			static bool ArgumentsSubtypes(const TypeList & left, const TypeList & right, bool optimistic=false);
 
 			const NomNamed * const Named;
 			const llvm::ArrayRef<NomTypeRef> Arguments;
@@ -114,7 +114,10 @@ namespace Nom
 
 			// Inherited via NomType
 			virtual TypeReferenceType GetTypeReferenceType() const override;
-};
+
+			// Inherited via NomType
+			virtual bool ContainsVariableIndex(int index) const override;
+		};
 	}
 }
 

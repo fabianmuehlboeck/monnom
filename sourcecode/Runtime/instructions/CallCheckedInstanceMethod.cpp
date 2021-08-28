@@ -35,11 +35,11 @@ namespace Nom
 
 			env->basicBlockTerminated = false;
 			NomSubstitutionContextMemberContext nscmc(env->Context);
-			
+
 			NomInstantiationRef<const NomMethod> method = NomConstants::GetMethod(Method)->GetMethod(&nscmc);
 
 			bool rawInvoke = false;
-			if ((!method.Elem->IsFinal())&&method.Elem->GetName().empty()&&NomLambdaOptimizationLevel>0)
+			if ((!method.Elem->IsFinal()) && method.Elem->GetName().empty() && NomLambdaOptimizationLevel > 0)
 			{
 				rawInvoke = true;
 			}
@@ -56,16 +56,16 @@ namespace Nom
 			{
 				additionalArgs += 1; //these are for calling the IMT method, no need for them when invoking directly
 			}
-			
+
 
 			auto substitutedSig = method.Elem->Signature(&nscl);
 
 
 
-			auto argarr = makealloca(Value *,method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() + 1 + additionalArgs+3);
+			auto argarr = makealloca(Value*, max(method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() + 1 + additionalArgs, (size_t)RTConfig_NumberOfVarargsArguments + 2));
 			argarr += additionalArgs;
 
-			for (int i = 0; i < 4; i++)
+			for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i <= RTConfig_NumberOfVarargsArguments; i++)
 			{
 				argarr[i] = ConstantPointerNull::get(REFTYPE);
 			}
@@ -83,11 +83,11 @@ namespace Nom
 				argarr[i + 1 + method.Elem->GetDirectTypeParametersCount()] = env->GetArgument(i);
 			}
 
-			FunctionType *ftype = method.Elem->GetLLVMFunctionType();
+			FunctionType* ftype = method.Elem->GetLLVMFunctionType();
 			bool uncertainty = true;
 
-			Type *pt;
-			Type *argt;
+			Type* pt;
+			Type* argt;
 			for (int i = env->GetArgCount(); i >= 0; i--)
 			{
 				if (i > 0 && i <= method.Elem->GetDirectTypeParametersCount())
@@ -135,7 +135,7 @@ namespace Nom
 				{
 					builder->CreateCall(GetIncFinalInstanceMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 				}
-				Function * fun = method.Elem->GetLLVMFunction(env->Module);
+				Function* fun = method.Elem->GetLLVMFunction(env->Module);
 				auto call = builder->CreateCall(fun, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() + 1));
 				call->setCallingConv(NOMCC);
 				RegisterValue(env, NomValue(call, method.Elem->GetReturnType(&nscl), true));
@@ -144,8 +144,8 @@ namespace Nom
 
 			NomClassTypeRef inttype = NomIntClass::GetInstance()->GetType();
 			NomClassTypeRef floattype = NomFloatClass::GetInstance()->GetType();
-			
-			Value *receiver = (*env)[Receiver];
+
+			Value* receiver = (*env)[Receiver];
 
 			if (rawInvoke)
 			{
@@ -154,27 +154,32 @@ namespace Nom
 					builder->CreateCall(GetIncTypedRawInvokes(*builder->GetInsertBlock()->getParent()->getParent()), {});
 				}
 				auto recNV = (*env)[Receiver];
-				llvm::Value* methodptr = builder->CreatePointerCast( RefValueHeader::GenerateReadRawInvoke(builder, recNV), method.Elem->GetRawInvokeLLVMFunctionType()->getPointerTo());
+				llvm::Value* methodptr = builder->CreatePointerCast(RefValueHeader::GenerateReadRawInvoke(builder, recNV), method.Elem->GetRawInvokeLLVMFunctionType()->getPointerTo());
 				argarr -= 1;
 				argarr[0] = MakeInt<size_t>(method.Elem->GetContainer()->GetID());
-				auto call = builder->CreateCall(method.Elem->GetRawInvokeLLVMFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + 1 + 1 + method.Elem->GetDirectTypeParametersCount()), "rawInvoke_"+method.Elem->GetContainer()->GetName()->ToStdString());
+				auto call = builder->CreateCall(method.Elem->GetRawInvokeLLVMFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + 1 + 1 + method.Elem->GetDirectTypeParametersCount()), "rawInvoke_" + method.Elem->GetContainer()->GetName()->ToStdString());
 				call->setCallingConv(NOMCC);
 				RegisterValue(env, NomValue(call, method.Elem->GetReturnType(&nscl), true));
 			}
 			else if (method.Elem->GetContainer()->IsInterface())
 			{
-				if (method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() > 3)
+				Value* invariantID = nullptr;
+				auto argsArrSize = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - RTConfig_NumberOfVarargsArguments;
+				if (method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() > RTConfig_NumberOfVarargsArguments)
 				{
 					if (NomCastStats)
 					{
 						builder->CreateCall(GetIncExtendedInterfaceMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 					}
-					llvm::Value* argsasarr = builder->CreateAlloca(POINTERTYPE, MakeInt32(method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() -2), "argarray");
-					for (int j = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() -1; j >= 2; j--)
+					llvm::Value* argsasarr = builder->CreateAlloca(POINTERTYPE, MakeInt32(argsArrSize), "argarray");
+
+					builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
+					for (int j = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - 1; j >= 2; j--)
 					{
 						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr, MakeInt32(j), "arginarray"));
 					}
-					argarr[3] = builder->CreatePointerCast(argsasarr, POINTERTYPE);
+					//invariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
+					argarr[RTConfig_NumberOfVarargsArguments] = builder->CreatePointerCast(argsasarr, POINTERTYPE);
 				}
 				else
 				{
@@ -183,16 +188,16 @@ namespace Nom
 						builder->CreateCall(GetIncInterfaceMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 					}
 				}
-				for (int j = 0; j < 4; j++)
+				for (int j = 0; j <= RTConfig_NumberOfVarargsArguments; j++)
 				{
 					argarr[j] = WrapAsPointer(builder, argarr[j]);
 				}
 				argarr -= 1;
-				argarr[0] = NomMethodKey::GetMethodKey(method.Elem)->GetLLVMElement(*env->Module);
+				argarr[0] = builder->CreatePointerCast(NomMethodKey::GetMethodKey(method.Elem)->GetLLVMElement(*env->Module), POINTERTYPE);
 
 				Value* methodptr = ObjectHeader::GetInterfaceMethodTableFunction(builder, env, Receiver, MakeInt32(method.Elem->GetIMTIndex()), lineno);
 
-				auto call = builder->CreateCall(GetIMTFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, 5));
+				auto call = builder->CreateCall(GetIMTFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, RTConfig_NumberOfVarargsArguments + 2));
 				call->setName("calling " + method.Elem->GetName());
 				call->setCallingConv(NOMCC);
 				auto rettype = method.Elem->GetLLVMFunctionType()->getReturnType();
@@ -206,7 +211,11 @@ namespace Nom
 					result = builder->CreateBitOrPointerCast(call, rettype);
 				}
 				RegisterValue(env, NomValue(result, method.Elem->GetReturnType(&nscl), true));
-
+				if (invariantID != nullptr)
+				{
+					builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), argarr[RTConfig_NumberOfVarargsArguments + 1] });
+					//builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), argarr[RTConfig_NumberOfVarargsArguments + 1] });
+				}
 			}
 			else
 			{

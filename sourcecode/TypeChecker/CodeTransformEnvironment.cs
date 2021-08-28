@@ -118,7 +118,7 @@ namespace Nom.TypeChecker
                 instructions.AddRange(actualArg);
                 argRegs.Add(actualArg.Register);
             }
-            var call = new CallStaticMethodCheckedInstruction(StaticMethod.GetAsTypedRef().Substitute(Environment.Transform<ITypeArgument>(t=>t)), argRegs, env.CreateRegister());
+            var call = new CallStaticMethodCheckedInstruction(StaticMethod.GetAsTypedRef().Substitute(Environment.Transform<ITypeArgument>(t => t)), argRegs, env.CreateRegister());
             instructions.Add(call);
             return new CallReceiverTransformResult(((ISubstitutable<Language.IType>)StaticMethod.ReturnType).Substitute<Language.IType>(Environment), call.Register, instructions);
         }
@@ -132,7 +132,7 @@ namespace Nom.TypeChecker
         public IParameterizedSpecRef<IConstructorSpec> Constructor { get; }
         public ICallReceiverTransformResult GenerateCall(IEnumerable<IExprTransformResult> arguments, ICodeTransformEnvironment env)
         {
-            List<IInstruction> instructions = new List<IInstruction>(); 
+            List<IInstruction> instructions = new List<IInstruction>();
             if (arguments.Count() != Constructor.Element.Parameters.Entries.Count())
             {
                 throw new InternalException("Generating call with wrong number of arguments");
@@ -482,7 +482,7 @@ namespace Nom.TypeChecker
             }
             if (constructors.Count == 1)
             {
-                return new UniqueConstructorCall(new ParameterizedSpecRef<IConstructorSpec>(constructors.Single(), cls.PArguments.Transform<Language.ITypeArgument>(t=>t))).InjectOptional();
+                return new UniqueConstructorCall(new ParameterizedSpecRef<IConstructorSpec>(constructors.Single(), cls.PArguments.Transform<Language.ITypeArgument>(t => t))).InjectOptional();
             }
             return new OverloadedConstructorCall(constructors, cls.PArguments).InjectOptional();
         }
@@ -649,21 +649,21 @@ namespace Nom.TypeChecker
                 return new ExpandoFieldReference(args.Item1, args.Item2).InjectOptional();
             };
 
-            public Func<Language.MaybeType, (Identifier, IExprTransformResult, ICodeTransformEnvironment), IOptional<IInstanceFieldReference>> VisitMaybeType => (type,args) =>
+            public Func<Language.MaybeType, (Identifier, IExprTransformResult, ICodeTransformEnvironment), IOptional<IInstanceFieldReference>> VisitMaybeType => (type, args) =>
                 Optional<IInstanceFieldReference>.Empty;
 
             public Func<Language.ProbablyType, (Identifier, IExprTransformResult, ICodeTransformEnvironment), IOptional<IInstanceFieldReference>> VisitProbablyType => (type, args) =>
             {
-                args.Item2= args.Item2.EnsureType(type.PotentialType, args.Item3);
+                args.Item2 = args.Item2.EnsureType(type.PotentialType, args.Item3);
                 return type.PotentialType.Visit(this, args);
             };
         }
 
-        
+
 
         public override IOptional<ICallableReference> GetMethod(IExprTransformResult value, IArgIdentifier<Identifier, Language.IType> method, IEnumerable<Language.IType> argTypes)
         {
-            return value.Type.GetInstanceMethodReference(method.Name.Name, method.Arguments, argTypes, Context).Bind(imr=>new InstantiatedCallableReference(imr, value));
+            return value.Type.GetInstanceMethodReference(method.Name.Name, method.Arguments, argTypes, Context).Bind(imr => new InstantiatedCallableReference(imr, value));
         }
         internal class MethodLookupContext
         {
@@ -691,12 +691,12 @@ namespace Nom.TypeChecker
             public string MethodName { get; }
 
             public IEnumerable<Language.IType> TypeArguments { get; }
-            
+
             public IInstanceMethodReference OptimisticVersion => this;
 
             public ICallReceiverTransformResult GenerateCall(IExprTransformResult receiver, IEnumerable<IExprTransformResult> arguments, ICodeTransformEnvironment env)
             {
-                List<IInstruction> instructions = arguments.Flatten().ToList();
+                List<IInstruction> instructions = (arguments.Flatten()).Cons(new EnsureDynamicMethodInstruction(receiver.Register, MethodName)).ToList();
                 var cemi = new CallExpandoMethodInstruction(receiver.Register, MethodName, TypeArguments, arguments.Select(arg => arg.Register), env.CreateRegister());
                 return new CallReceiverTransformResult(new Language.DynamicType(), cemi.Register, instructions.Snoc(cemi));
             }
@@ -717,7 +717,7 @@ namespace Nom.TypeChecker
 
             public ICallReceiverTransformResult GenerateCall(IExprTransformResult receiver, IEnumerable<IExprTransformResult> arguments, ICodeTransformEnvironment env)
             {
-                List<IInstruction> instructions = new List<IInstruction>(); 
+                List<IInstruction> instructions = new List<IInstruction>() { new EnsureCheckedMethodInstruction(receiver.Register, Method.Name) };
                 List<IRegister> argRegs = new List<IRegister>();
                 foreach ((IExprTransformResult, Language.IType) argpair in arguments.Zip(Method.Parameters.Entries.Select(ps => ((ISubstitutable<Language.IType>)ps.Type).Substitute(Substitutions)), (x, y) => (x, y)))
                 {
@@ -756,7 +756,7 @@ namespace Nom.TypeChecker
 
             public Func<TypeVariable, MethodLookupContext, IOptional<IInstanceMethodReference>> VisitTypeVariable => (type, context) => type.ParameterSpec.UpperBound.Visit(this, context);
 
-            public Func<Language.DynamicType, MethodLookupContext, IOptional<IInstanceMethodReference>> VisitDynamicType => (type, context) => throw new NotImplementedException(); 
+            public Func<Language.DynamicType, MethodLookupContext, IOptional<IInstanceMethodReference>> VisitDynamicType => (type, context) => throw new NotImplementedException();
 
             public Func<Language.MaybeType, MethodLookupContext, IOptional<IInstanceMethodReference>> VisitMaybeType => throw new NotImplementedException();
 
@@ -1135,7 +1135,7 @@ namespace Nom.TypeChecker
         {
             //NOTE: hopefully this doesn't break anything
             var btmv = base.TryGetTopmostVersion(var);
-            if(btmv.HasElem)
+            if (btmv.HasElem)
             {
                 return btmv;
             }
@@ -1328,7 +1328,7 @@ namespace Nom.TypeChecker
             }
             if (cspecs.Count() == 1)
             {
-                return new UniqueConstructorCall(new ParameterizedSpecRef<IConstructorSpec>(cspecs.Single(), Class.SuperClass.Elem.PArguments.Transform<Language.ITypeArgument>(t=>t))).InjectOptional();
+                return new UniqueConstructorCall(new ParameterizedSpecRef<IConstructorSpec>(cspecs.Single(), Class.SuperClass.Elem.PArguments.Transform<Language.ITypeArgument>(t => t))).InjectOptional();
             }
             cspecs = constructors.Where(cd => cd.Visibility >= Visibility.Protected && cd.Parameters.WouldAccept(Class.SuperClass.Elem.PArguments, argTypes, true));
             throw new NotImplementedException();
