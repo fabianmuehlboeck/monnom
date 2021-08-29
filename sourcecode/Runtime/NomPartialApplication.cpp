@@ -156,12 +156,12 @@ namespace Nom
 							if (i + typeArgCount < RTConfig_NumberOfVarargsArguments - (typeArgCount + argCount > RTConfig_NumberOfVarargsArguments ? 1 : 0))
 							{
 								auto nv = NomValue(builder->CreatePointerCast(restArgs[i + typeArgCount], REFTYPE), false);
-								valargs[i] = EnsureType(builder, env, nv, expectedArgType, meth->GetLLVMFunctionType()->getParamType(2 + i + typeArgCount));
+								valargs[i] = EnsureType(builder, env, nv, expectedArgType, meth->GetLLVMFunctionType()->getParamType(1 + i + typeArgCount));
 							}
 							else
 							{
 								auto nv = NomValue(MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[RTConfig_NumberOfVarargsArguments - RTConfig_NumberOfVarargsArguments], REFTYPE->getPointerTo()), MakeInt32(i + typeArgCount - (RTConfig_NumberOfVarargsArguments - 1)))), false);
-								valargs[i] = EnsureType(builder, env, nv, expectedArgType, meth->GetLLVMFunctionType()->getParamType(2 + i + typeArgCount));
+								valargs[i] = EnsureType(builder, env, nv, expectedArgType, meth->GetLLVMFunctionType()->getParamType(1 + i + typeArgCount));
 							}
 							methodargs[i + typeArgCount + 1] = valargs[i];
 						}
