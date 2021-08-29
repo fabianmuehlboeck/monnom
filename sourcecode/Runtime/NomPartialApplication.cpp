@@ -101,12 +101,12 @@ namespace Nom
 				dargs++;
 				Value* receiver = dargs;
 				dargs++;
-				Value* restArgs[3];
-				restArgs[0] = dargs;
-				dargs++;
-				restArgs[1] = dargs;
-				dargs++;
-				restArgs[2] = dargs;
+				Value** restArgs = makealloca(Value*, RTConfig_NumberOfVarargsArguments);
+				for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i < RTConfig_NumberOfVarargsArguments; i++)
+				{
+					restArgs[i] = dargs;
+					dargs++;
+				}
 
 				for (auto& meth : overloadings)
 				{
@@ -131,13 +131,13 @@ namespace Nom
 						targValueArr = makealloca(Value*, typeArgCount);
 						for (decltype(typeArgCount) i = 0; i < typeArgCount; i++)
 						{
-							if (i < 3 - (typeArgCount + argCount > 3 ? 1 : 0))
+							if (i < RTConfig_NumberOfVarargsArguments - (typeArgCount + argCount > RTConfig_NumberOfVarargsArguments ? 1 : 0))
 							{
 								targValueArr[i] = builder->CreatePointerCast(restArgs[i], TYPETYPE);
 							}
 							else
 							{
-								targValueArr[i] = MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[2], TYPETYPE->getPointerTo()), MakeInt32(i - 2)));
+								targValueArr[i] = MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[RTConfig_NumberOfVarargsArguments-1], TYPETYPE->getPointerTo()), MakeInt32(i - (RTConfig_NumberOfVarargsArguments - 1))));
 							}
 							methodargs[i + 1] = targValueArr[i];
 						}
@@ -153,14 +153,14 @@ namespace Nom
 						for (decltype(argCount) i = 0; i < argCount; i++)
 						{
 							auto expectedArgType = methargtypes[i];
-							if (i + typeArgCount < 3 - (typeArgCount + argCount > 3 ? 1 : 0))
+							if (i + typeArgCount < RTConfig_NumberOfVarargsArguments - (typeArgCount + argCount > RTConfig_NumberOfVarargsArguments ? 1 : 0))
 							{
 								auto nv = NomValue(builder->CreatePointerCast(restArgs[i + typeArgCount], REFTYPE), false);
 								valargs[i] = EnsureType(builder, env, nv, expectedArgType, meth->GetLLVMFunctionType()->getParamType(2 + i + typeArgCount));
 							}
 							else
 							{
-								auto nv = NomValue(MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[2], REFTYPE->getPointerTo()), MakeInt32(i + typeArgCount - 2))), false);
+								auto nv = NomValue(MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[RTConfig_NumberOfVarargsArguments - RTConfig_NumberOfVarargsArguments], REFTYPE->getPointerTo()), MakeInt32(i + typeArgCount - (RTConfig_NumberOfVarargsArguments - 1)))), false);
 								valargs[i] = EnsureType(builder, env, nv, expectedArgType, meth->GetLLVMFunctionType()->getParamType(2 + i + typeArgCount));
 							}
 							methodargs[i + typeArgCount + 1] = valargs[i];
