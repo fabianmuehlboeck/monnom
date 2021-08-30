@@ -24,7 +24,9 @@ namespace Nom
                 int optlevel = 3;
                 int warmups = 0;
                 bool byFile = false;
+                bool collectstats = false;
                 bool highPriority = false;
+                List<string> forwardargs = new List<string>();
                 for (int i = 0; i < args.Length; i++)
                 {
                     string argkey = "";
@@ -57,6 +59,12 @@ namespace Nom
                                 break;
                             case "warmups":
                                 argkey = "warmups";
+                                break;
+                            case "forward":
+                                argkey = "forward";
+                                break;
+                            case "collectstats":
+                                argkey = "collectstats";
                                 break;
                         }
                     }
@@ -147,7 +155,7 @@ namespace Nom
                             break;
                         case "warmups":
                             warmups = 1;
-                            if(i+1<args.Length)
+                            if (i + 1 < args.Length)
                             {
                                 warmups = int.Parse(args[i + 1]);
                                 i++;
@@ -158,6 +166,23 @@ namespace Nom
                             break;
                         case "nolambdaopt":
                             lambdaoptarg = " --nolambdaopt ";
+                            break;
+                        case "forward":
+                            i++;
+                            if (i < args.Length)
+                            {
+                                int argc = int.Parse(args[i]);
+                                i++;
+                                while (i < args.Length && argc > 0)
+                                {
+                                    argc--;
+                                    forwardargs.Add(args[i]);
+                                    i++;
+                                }
+                            }
+                            break;
+                        case "collectstats":
+                            collectstats = true;
                             break;
                     }
                 }
@@ -193,24 +218,38 @@ namespace Nom
                 Nom.Parser.Program parseprog = ParseProgram(proj.Files.Select(f => new FileInfo(di.FullName + "/" + f)));
                 Nom.TypeChecker.Program tcprog = TypeCheckProgram(parseprog, proj.Name, libraries);
                 var dirs = FullDevolution.Instance.Run(parseprog, tcprog, di, libraries, librariesManifests, proj, byFile);
-                //ProcessProgram(parseprog, di);
                 int dircount = dirs.Count();
-                for (int i = 0; i < (runcount < 0 ? Int32.MaxValue : runcount); i++)
+                for (int i = 0; i < (runcount < 0 ? Int32.MaxValue : runcount) + (collectstats ? 1 : 0); i++)
                 {
                     int dirid = 0;
                     foreach (var dir in dirs)
                     {
                         dirid++;
-                        Console.WriteLine("Run " + (i + 1).ToString() + (runcount > 0 ? "/" + runcount.ToString() : "") + ": " + dir.Name + "(" + dirid.ToString() + "/" + dircount.ToString() + ")");
+                        int runid = collectstats ? i : (i + 1);
+                        Console.WriteLine("Run " + (runid).ToString() + (runcount > 0 ? "/" + runcount.ToString() : "") + ": " + dir.Name + "(" + dirid.ToString() + "/" + dircount.ToString() + ")");
                         Process p = new Process();
                         ProcessStartInfo psi = p.StartInfo;
                         psi.FileName = "nom";
-                        psi.Arguments = "-p \"" + dir.FullName + "\" "+(warmups>0?"-w"+warmups.ToString()+" ":"")+"-o" + (optlevel.ToString()) + lambdaoptarg + " " + proj.Name;
+                        string argstr = "-p \"" + dir.FullName + "\" " + ((warmups > 0 && runid > 0) ? "-w" + warmups.ToString() + " " : "") + "-o" + (optlevel.ToString()) + lambdaoptarg + " ";
+                        if (runid == 0)
+                        {
+                            argstr += "-s ";
+                        }
+                        foreach (string str in forwardargs)
+                        {
+                            argstr += (str.Contains(' ') ? "\"" + str + "\"" : str) + " ";
+                        }
+                        psi.Arguments = argstr + proj.Name;
                         psi.WorkingDirectory = dir.FullName;
                         psi.UseShellExecute = false;
                         psi.CreateNoWindow = true;
                         psi.RedirectStandardOutput = true;
-                        using (StreamWriter sw = new StreamWriter(new FileStream(dir.FullName +"/out" + (i + 1).ToString() + ".txt", FileMode.Create, FileAccess.Write)))
+                        string outfilename = dir.FullName + "/out" + (i + 1).ToString() + ".txt";
+                        if (runid == 0)
+                        {
+                            outfilename = dir.FullName + "/stats.txt";
+                        }
+                        using (StreamWriter sw = new StreamWriter(new FileStream(outfilename, FileMode.Create, FileAccess.Write)))
                         {
                             p.Start();
                             if (highPriority)

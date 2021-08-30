@@ -27,7 +27,7 @@ namespace Nom
 		void EnsureCheckedMethodInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
 		{
 			auto methodName = NomConstants::GetString(MethodName)->GetText()->ToStdString();
-			if ((!RTConfig_IgnoreEnsureMethod)/*&&!methodName.empty()*/)
+			if (((!RTConfig_IgnoreEnsureMethod)&&!methodName.empty())|| RTConfig_AlwaysEnsureMethod)
 			{
 				BasicBlock* refValueBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 				auto receiver = (*env)[Receiver];

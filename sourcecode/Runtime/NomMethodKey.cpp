@@ -204,7 +204,7 @@ namespace Nom
 					argbuf[1] = typeArgRefStore;
 					argbuf[2] = structDispatcherCallInst;
 					auto rvcf = RTVTable::GenerateReadReturnValueCheckFunction(builder, iface);
-					builder->CreateCall(GetCheckReturnValueFunctionType(), rvcf, llvm::ArrayRef<Value*>(argbuf, 3 + RTConfig_NumberOfVarargsArguments));
+					builder->CreateCall(GetCheckReturnValueFunctionType(), rvcf, llvm::ArrayRef<Value*>(argbuf, 3 + RTConfig_NumberOfVarargsArguments))->setCallingConv(NOMCC);
 
 					builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 					builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });

@@ -31,15 +31,37 @@ namespace Nom
 			return rtct;
 		}
 
-		llvm::StructType* RTClass::GetConstantType(llvm::Type * interfaceTableType, llvm::Type * methodTableType)
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="offset">offset relative to 128 bit alignment (with min 64 bit alignment) in bytes (i.e. 0 or 8)</param>
+		/// <param name="methodTableType"></param>
+		/// <returns></returns>
+		llvm::StructType* RTClass::GetConstantType(size_t offset, llvm::Type * methodTableType)
 		{
-			return StructType::get(LLVMCONTEXT, { methodTableType, GetLLVMType() }, true);
+			auto baseOffset = NomJIT::Instance().getDataLayout().getTypeAllocSize(methodTableType)%16;
+			if (baseOffset == offset)
+			{
+				return StructType::get(LLVMCONTEXT, { methodTableType, GetLLVMType() }, true);
+			}
+			else
+			{
+				return StructType::get(LLVMCONTEXT, { inttype(64), methodTableType, GetLLVMType() }, true);
+			}
 		}
 
 		llvm::Constant* RTClass::CreateConstant(llvm::GlobalVariable *gvar, llvm::StructType *gvartype, const NomInterface *irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Function* lookupDispatcher, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* methodEnsureFunction, llvm::Constant* interfaceTable, llvm::Constant* signature)
 		{
-			gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), interfaceTable, checkReturnValueFunction, methodEnsureFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), ConstantExpr::getPointerCast(fieldRead,POINTERTYPE), ConstantExpr::getPointerCast(fieldWrite, POINTERTYPE), ConstantExpr::getPointerCast(lookupDispatcher, POINTERTYPE), fieldCount)));
-			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(1) }));
+			gvar->setAlignment(Align(128));
+			if (gvartype->getNumElements() == 2)
+			{
+				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), interfaceTable, checkReturnValueFunction, methodEnsureFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), ConstantExpr::getPointerCast(fieldRead, POINTERTYPE), ConstantExpr::getPointerCast(fieldWrite, POINTERTYPE), ConstantExpr::getPointerCast(lookupDispatcher, POINTERTYPE), fieldCount)));
+			}
+			else
+			{
+				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, MakeUInt(64,0), methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), interfaceTable, checkReturnValueFunction, methodEnsureFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), ConstantExpr::getPointerCast(fieldRead, POINTERTYPE), ConstantExpr::getPointerCast(fieldWrite, POINTERTYPE), ConstantExpr::getPointerCast(lookupDispatcher, POINTERTYPE), fieldCount)));
+			}
+			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements()-1) }));
 		}
 		llvm::Constant* RTClass::FindConstant(llvm::Module& mod, const StringRef name)
 		{
@@ -48,7 +70,7 @@ namespace Nom
 			{
 				return nullptr;
 			}
-			return ConstantExpr::getGetElementPtr(cnst->getValueType(), cnst, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(1) }));
+			return ConstantExpr::getGetElementPtr(cnst->getValueType(), cnst, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(cnst->getValueType()->getStructNumElements()-1) }));
 		}
 
 		llvm::Value* RTClass::GenerateReadKind(NomBuilder& builder, llvm::Value* descriptorPtr)

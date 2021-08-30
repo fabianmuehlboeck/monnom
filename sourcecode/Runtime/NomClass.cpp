@@ -253,7 +253,7 @@ namespace Nom
 			llvm::Constant* ret = RTClass::FindConstant(mod, nameref);
 			if (ret == nullptr)
 			{
-				auto gvartype = RTClass::GetConstantType(nullptr, GetMethodTableType(false));
+				auto gvartype = RTClass::GetConstantType(GetHasRawInvoke()?8:0, GetMethodTableType(false));
 				GlobalVariable* gvar = new GlobalVariable(mod, gvartype, true, linkage, nullptr, nameref);
 				ret = RTClass::CreateConstant( gvar, gvartype, this,
 					GetDynamicFieldLookup(mod, linkage),

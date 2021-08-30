@@ -20,7 +20,7 @@ namespace Nom.TypeChecker.StdLib
                 {
                     methods = new List<IMethodSpec>();
                     methods.Add(new MethodSpec("ToString", this, new TypeParametersSpec(new List<ITypeParameterSpec>()), new ParametersSpec(new List<IParameterSpec>()), String.Instance.ClassType));
-                    methods.Add(new MethodSpec("Compare", this, new TypeParametersSpec(new List<ITypeParameterSpec>()), new ParametersSpec(new List<IParameterSpec>() { new ParameterSpec("other", this.ClassType) }), Bool.Instance.ClassType));
+                    methods.Add(new MethodSpec("Compare", this, new TypeParametersSpec(new List<ITypeParameterSpec>()), new ParametersSpec(new List<IParameterSpec>() { new ParameterSpec("other", this.ClassType) }), Int.Instance.ClassType));
                 }
                 return methods;
             }

@@ -26,6 +26,7 @@ std::ostream * RT_debugout = &std::cout;
 bool RTConfig_CheckLambdaSignaturesAtCast = true;
 int RTConfig_NumberOfVarargsArguments = 2;
 bool RTConfig_IgnoreEnsureMethod = false;
+bool RTConfig_AlwaysEnsureMethod = false;
 bool RTConfig_RunUnncessesaryLambdaCallTagChecks = false;
 bool RTConfig_OmitLambdaCallTags = false;
 bool RTConfig_AdditionalOptPasses = false;
@@ -278,6 +279,38 @@ namespace Nom
 						else if (strncmp(args[argpos], "--omittypedensuremethod", 24) == 0)
 						{
 							RTConfig_IgnoreEnsureMethod = true;
+						}
+						else if (strncmp(args[argpos], "--alwaysensuremethod", 24) == 0)
+						{
+							RTConfig_AlwaysEnsureMethod = true;
+						}
+						else if (strncmp(args[argpos], "--additionalopts", 24) == 0)
+						{
+							RTConfig_AdditionalOptPasses = true;
+						}
+						else if (strncmp(args[argpos], "--omitlambdasigchecks", 24) == 0)
+						{
+							RTConfig_CheckLambdaSignaturesAtCast = false;
+						}
+						else if (strncmp(args[argpos], "--omitlambdacalltags", 24) == 0)
+						{
+							RTConfig_OmitLambdaCallTags = true;
+						}
+						else if (strncmp(args[argpos], "--alwayschecklambdacalltags", 32) == 0)
+						{
+							RTConfig_RunUnncessesaryLambdaCallTagChecks = true;
+						}
+						else if (strncmp(args[argpos], "--varargscount", 24) == 0)
+						{
+							argpos++;
+							if (argpos < argc)
+							{
+								RTConfig_NumberOfVarargsArguments = atoi(args[argpos]);
+								if (RTConfig_NumberOfVarargsArguments <= 0)
+								{
+									RTConfig_NumberOfVarargsArguments = 1;
+								}
+							}
 						}
 						else if (strncmp(args[argpos], "--debugout", 12) == 0)
 						{
