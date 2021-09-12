@@ -2,7 +2,7 @@
   "profiles": {
     "BenchmarkGenerator": {
       "commandName": "Project",
-      "commandLineArgs": "-p \"c:\\MonNomBenchmarks\\SieveShort\" -r 1 --project Sieve"
+      "commandLineArgs": "-p \"c:\\MonNomBenchmarks\\SortMono\" -r 1 --byfile --project Sort"
     }
   }
 }

@@ -5,7 +5,7 @@
 #include "../NomClass.h"
 #include "../NomClassType.h"
 #include "../NomLambda.h"
-#include "../NomStruct.h"
+#include "../NomRecord.h"
 #include <iostream>
 
 using namespace std;
@@ -42,8 +42,8 @@ namespace Nom
 					RegisterValue(env, field->GenerateRead(builder, env, (*env)[Receiver]));
 					break;
 				}
-				case NomConstantType::CTStruct: {
-					auto recstruct = ((NomStructConstant*)receiverConstant)->GetStruct();
+				case NomConstantType::CTRecord: {
+					auto recstruct = ((NomRecordConstant*)receiverConstant)->GetRecord();
 					auto field = recstruct->GetField(NomConstants::GetString(FieldName)->GetText());
 					RegisterValue(env, field->GenerateRead(builder, env, (*env)[Receiver]));
 					break;

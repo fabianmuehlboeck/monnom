@@ -8,22 +8,12 @@ namespace Nom
 	namespace Runtime
 	{
 		class NomLambda;
-		enum class RTLambdaFields :unsigned char { STable = 0, ArgCounts = 1, PreallocatedSlots = 2, SpecializedVTableCastID = 3, SpecializedVTable = 4 };
+		enum class RTLambdaFields :unsigned char { VTable = 0 };
 		class RTLambda : public ARTRep<RTLambda, RTLambdaFields>
 		{
 		public:
 			static llvm::StructType* GetLLVMType();
-			static llvm::Constant* CreateConstant(const NomLambda* lambda, int typeArgCount, int argCount, llvm::Constant* signature, llvm::Function* fun, llvm::Function* dispatcher);
-			static llvm::Value* GenerateReadIRPointer(NomBuilder& builder, llvm::Value* descriptor);
-			static llvm::Value* GenerateReadPreallocatedSlots(NomBuilder &builder, llvm::Value* descriptor);
-			static llvm::Instruction* GenerateWritePreallocatedSlots(NomBuilder& builder, llvm::Value* descriptor, llvm::Value* newValue);
-			static llvm::Value* GenerateReadSignature(NomBuilder& builder, llvm::Value* descriptor);
-			static llvm::Value* GenerateReadDispatcherPointer(NomBuilder &builder, llvm::Value* descriptor);
-			static llvm::Value* GenerateReadFunctionPointer(NomBuilder& builder, llvm::Value* descriptor);
-			static llvm::Value* GenerateCheckArgCountsMatch(NomBuilder &builder, llvm::Value* descriptor, llvm::Value* typeArgCount, llvm::Value* argCount);
-			static llvm::Value* GenerateReadSpecializedVTableCastID(NomBuilder& builder, llvm::Value* descriptor);
-			static llvm::Value* GenerateReadSpecializedVTable(NomBuilder& builder, llvm::Value* descriptor);
-			static void GenerateWriteSpecializedVTable(NomBuilder& builder, llvm::Value* descriptor, llvm::Value *type, llvm::Value *vtable);
+			static llvm::Constant* CreateConstant(const NomLambda* lambda, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable, llvm::Function* fieldRead, llvm::Function* fieldWrite);
 		};
 	}
 }

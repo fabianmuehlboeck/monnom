@@ -20,7 +20,12 @@ namespace Nom
 
 		void ReturnVoidInstruction::Compile(NomBuilder &builder, CompileEnv* env, int lineno)
 		{
-			builder->CreateRet(llvm::ConstantExpr::getPointerCast(NomVoidObject::GetInstance()->GetLLVMElement(*(env->Module)), REFTYPE));
+			auto rettype = builder->GetInsertBlock()->getParent()->getFunctionType()->getReturnType();
+			if (rettype != REFTYPE && rettype != POINTERTYPE)
+			{
+				throw new std::exception();
+			}
+			builder->CreateRet(llvm::ConstantExpr::getPointerCast(NomVoidObject::GetInstance()->GetLLVMElement(*(env->Module)), rettype));
 			env->basicBlockTerminated = true;
 		}
 		void ReturnVoidInstruction::Print(bool resolve)

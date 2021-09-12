@@ -1,5 +1,4 @@
 #include "RTTypeHead.h"
-#include "RTTypes.h"
 #include "NomJIT.h"
 #include "Context.h"
 #include "NomType.h"
@@ -7,6 +6,8 @@
 #include "RTOutput.h"
 #include "RTCast.h"
 #include "RTSubstStack.h"
+#include "RTMaybeType.h"
+#include "IMT.h"
 
 using namespace llvm;
 namespace Nom
@@ -24,23 +25,28 @@ namespace Nom
 				llvmtype->setBody(
 					numtype(TypeKind), //Kind
 					numtype(size_t),   //Hash
-					POINTERTYPE  //NomType
+					POINTERTYPE,	   //NomType
+					GetCastFunctionType()->getPointerTo()
 				);
 			}
 			return llvmtype;
 		}
 
-		llvm::Constant* RTTypeHead::GetConstant(TypeKind kind, llvm::Constant* hash, const NomType* type)
+		llvm::Constant* RTTypeHead::GetConstant(TypeKind kind, llvm::Constant* hash, const NomType* type,/* llvm::Constant* subtypingFun, llvm::Constant* typeEqFun, */llvm::Constant* castFun/*, llvm::Constant* dsjFun*/)
 		{
-			return llvm::ConstantStruct::get(GetLLVMType(), MakeInt((unsigned char)kind), hash, GetLLVMPointer(type));
+			return llvm::ConstantStruct::get(GetLLVMType(), MakeInt((unsigned char)kind), hash, GetLLVMPointer(type), castFun);
 		}
 
-		void RTTypeHead::CreateInitialization(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, TypeKind kind, llvm::Value* hash, llvm::Value* nomtypeptr)
+		void RTTypeHead::CreateInitialization(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, TypeKind kind, llvm::Value* hash, llvm::Value* nomtypeptr, /*llvm::Value* subtypingFun, llvm::Value* typeEqFun,*/ llvm::Value* castFun/*, llvm::Value* dsjFun*/)
 		{
 			ptr = builder->CreatePointerCast(ptr, GetLLVMType()->getPointerTo());
 			MakeInvariantStore(builder, mod, MakeInt((unsigned char)kind), builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
 			MakeInvariantStore(builder, mod, hash, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
 			MakeInvariantStore(builder, mod, nomtypeptr, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
+			//MakeInvariantStore(builder, mod, subtypingFun, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::SubtypingFun) }));
+			//MakeInvariantStore(builder, mod, typeEqFun, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::TypeEqFun) }));
+			MakeInvariantStore(builder, mod, castFun, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::CastFun) }));
+			//MakeInvariantStore(builder, mod, dsjFun, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTTypeHeadFields::IsDisjointFun) }));
 		}
 
 		llvm::Constant* RTTypeHead::GetVariable(const int index)
@@ -48,21 +54,6 @@ namespace Nom
 			return llvm::ConstantStruct::get(GetLLVMType(), MakeInt((unsigned char)TypeKind::TKVariable), MakeInt((intptr_t)index));
 		}
 
-
-		int32_t RTTypeHead::KindOffset()
-		{
-			static const int32_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTTypeHeadFields::Kind); return offset;
-		}
-
-		int32_t RTTypeHead::HashOffset()
-		{
-			static const int32_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTTypeHeadFields::Hash); return offset;
-		}
-
-		int32_t RTTypeHead::NomTypeOffset()
-		{
-			static const int32_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTTypeHeadFields::NomType); return offset;
-		}
 
 		llvm::Value* RTTypeHead::GenerateReadTypeKind(NomBuilder& builder, llvm::Value* type)
 		{
@@ -74,7 +65,30 @@ namespace Nom
 			return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::Hash), "typeHash");
 		}
 
-		int RTTypeHead::GenerateTypeKindSwitchRecurse(NomBuilder& builder, llvm::Value* type, llvm::Value* substStack, llvm::Value** innerTypeVar, llvm::Value** innerSubstStackVar, llvm::BasicBlock** classTypeBlockVar, llvm::BasicBlock** topTypeBlockVar, llvm::BasicBlock** typeVarBlockVar, llvm::BasicBlock** bottomTypeBlockVar, llvm::BasicBlock** instanceTypeBlockVar, llvm::BasicBlock** dynamicTypeBlockVar, llvm::BasicBlock** maybeTypeBlockVar, llvm::BasicBlock *failBlock)
+		llvm::Value* RTTypeHead::GenerateReadSubtypingFun(NomBuilder& builder, llvm::Value* type)
+		{
+			throw new std::exception();
+			//return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::SubtypingFun), "subtypingFun");
+		}
+
+		llvm::Value* RTTypeHead::GenerateReadTypeEqFun(NomBuilder& builder, llvm::Value* type)
+		{
+			throw new std::exception();
+			//return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::TypeEqFun), "typeEqFun");
+		}
+
+		llvm::Value* RTTypeHead::GenerateReadCastFun(NomBuilder& builder, llvm::Value* type)
+		{
+			return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::CastFun), "castfun");
+		}
+
+		llvm::Value* RTTypeHead::GenerateReadIsDisjointFun(NomBuilder& builder, llvm::Value* type)
+		{
+			throw new std::exception();
+			//return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTTypeHeadFields::IsDisjointFun), "isDisjointFun");
+		}
+
+		int RTTypeHead::GenerateTypeKindSwitchRecurse(NomBuilder& builder, llvm::Value* type, llvm::Value* substStack, llvm::Value** innerTypeVar, llvm::Value** innerSubstStackVar, llvm::BasicBlock** classTypeBlockVar, llvm::BasicBlock** topTypeBlockVar, llvm::BasicBlock** typeVarBlockVar, llvm::BasicBlock** bottomTypeBlockVar, llvm::BasicBlock** instanceTypeBlockVar, llvm::BasicBlock** dynamicTypeBlockVar, llvm::BasicBlock** maybeTypeBlockVar, llvm::BasicBlock* failBlock)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -86,7 +100,7 @@ namespace Nom
 			builder->CreateBr(loopHeadBlock);
 
 			builder->SetInsertPoint(loopHeadBlock);
-			PHINode* typePHI = builder->CreatePHI(TYPETYPE, 2 + maybeTypeBlockVar==nullptr?1:0);
+			PHINode* typePHI = builder->CreatePHI(TYPETYPE, 2 + maybeTypeBlockVar == nullptr ? 1 : 0);
 			PHINode* substPHI = builder->CreatePHI(substStack->getType(), 2 + maybeTypeBlockVar == nullptr ? 1 : 0);
 			typePHI->addIncoming(type, origBlock);
 			substPHI->addIncoming(substStack, origBlock);
@@ -161,7 +175,7 @@ namespace Nom
 			builder->CreateCondBr(builder->CreateIsNotNull(substPHI), typeVarSubstBlock, typeVarBlock);
 
 			builder->SetInsertPoint(typeVarSubstBlock);
-			Value* newSubst=nullptr;
+			Value* newSubst = nullptr;
 			auto newType = RTSubstStack::Pop(builder, substPHI, typePHI, &newSubst);
 			typePHI->addIncoming(newType, builder->GetInsertBlock());
 			substPHI->addIncoming(newSubst, builder->GetInsertBlock());
@@ -333,7 +347,7 @@ namespace Nom
 				{
 					_structTypeBlock = *structTypeBlock;
 				}
-				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKStruct), _structTypeBlock);
+				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKRecord), _structTypeBlock);
 			}
 			if (partialAppTypeBlock != nullptr)
 			{
@@ -387,6 +401,22 @@ namespace Nom
 		RTTypeHead::RTTypeHead(const void* entry) : ARTRep<RTTypeHead, RTTypeHeadFields>(entry)
 		{
 
+		}
+		llvm::FunctionType* GetSubtypingFunctionType()
+		{
+			return GetIMTFunctionType();
+		}
+		llvm::FunctionType* GetTypeEqFunctionType()
+		{
+			return GetIMTFunctionType();
+		}
+		llvm::FunctionType* GetCastFunctionType()
+		{
+			return GetIMTFunctionType();
+		}
+		llvm::FunctionType* GetIsDisjointFunctionType()
+		{
+			return GetIMTFunctionType();
 		}
 	}
 }

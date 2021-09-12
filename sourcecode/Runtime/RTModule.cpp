@@ -12,13 +12,14 @@
 #include "GlobalNameAddressLookupList.h"
 #include "RTConfig.h"
 #include "boehmgcinterface.h"
+#include "RTRecord.h"
 #include "RTLambda.h"
-#include "RTStruct.h"
 #include "BoolClass.h"
 #include "NomMaybeType.h"
 #include "RTClassType.h"
 #include <fstream>
 #include <iostream>
+#include "llvm/IR/Verifier.h"
 
 namespace Nom
 {
@@ -131,9 +132,27 @@ namespace Nom
 			std::vector<std::string> globalnames;
 			for (auto& glbl : theModule.get()->globals())
 			{
+				if (glbl.getParent() != theModule.get() || glbl.getLinkage() != GlobalValue::LinkageTypes::ExternalLinkage)
+				{
+					std::cout << glbl.getName().str();
+					std::cout.flush();
+					throw new std::exception();
+				}
 				if (!glbl.getName().empty())
 				{
 					globalnames.push_back(glbl.getName().str());
+				}
+			}
+			if (NomVerbose)
+			{
+				llvm::raw_os_ostream out(std::cout);
+				if (verifyModule(*theModule.get(), &out))
+				{
+					out.flush();
+					std::cout << "Could not verify module!";
+					out.flush();
+					std::cout.flush();
+					throw new std::exception();
 				}
 			}
 			if (jit.addModule(std::move(theModule)))
@@ -142,6 +161,10 @@ namespace Nom
 			}
 			for (auto &glbl : globalnames)
 			{
+				if (NomVerbose)
+				{
+					std::cout << "\n" << glbl;
+				}
 				auto evalSymbol = jit.lookup(glbl);
 				if (!evalSymbol)
 				{
@@ -173,41 +196,7 @@ namespace Nom
 				pobof.close();
 			}
 
-			PreparedDictionary::LoadDictionaryContents();
 			GetGlobalsForAddressLookup().clear();
-
-			auto structSpecializedVTableOffset = RTStruct::GetLLVMLayout()->getElementOffset((unsigned char)RTStructFields::SpecializedVTable);
-			auto structCastSiteIDOffset = RTStruct::GetLLVMLayout()->getElementOffset((unsigned char)RTStructFields::SpecializedVTableCastID);
-			auto structPreallocatedSlotsOFfset = RTStruct::GetLLVMLayout()->getElementOffset((unsigned char)RTStructFields::PreallocatedSlots);
-			auto structMinOffset = std::min({ structSpecializedVTableOffset, structCastSiteIDOffset, structPreallocatedSlotsOFfset });
-			auto structMaxOffset = std::max({ structSpecializedVTableOffset, structCastSiteIDOffset, structPreallocatedSlotsOFfset });
-			structClearAreaSize = structMaxOffset - structMinOffset + sizeof(intptr_t);
-
-			for (auto& sdn : structDescriptorNames)
-			{
-				auto symAddress = NomJIT::Instance().lookup(sdn)->getAddress();
-				auto addrValue = (std::move(symAddress));
-				auto addrPtr = (char*)addrValue;
-				structRecords().push_front(addrPtr + structMinOffset);
-				addrPtr += structSpecializedVTableOffset;
-				bgc_register_root(addrPtr, addrPtr + sizeof(intptr_t));
-			}
-
-			auto lambdaSpecializedVTableOffset = RTLambda::GetLLVMLayout()->getElementOffset((unsigned char)RTLambdaFields::SpecializedVTable);
-			auto lambdaCastSiteIDOffset = RTLambda::GetLLVMLayout()->getElementOffset((unsigned char)RTLambdaFields::SpecializedVTableCastID);
-			auto lambdaPreallocatedSlotsOFfset = RTLambda::GetLLVMLayout()->getElementOffset((unsigned char)RTLambdaFields::PreallocatedSlots);
-			auto lambdaMinOffset = std::min({ lambdaSpecializedVTableOffset, lambdaCastSiteIDOffset, lambdaPreallocatedSlotsOFfset });
-			auto lambdaMaxOffset = std::max({ lambdaSpecializedVTableOffset, lambdaCastSiteIDOffset, lambdaPreallocatedSlotsOFfset });
-			lambdaClearAreaSize = lambdaMaxOffset - lambdaMinOffset + sizeof(intptr_t);
-			for (auto& sdn : lambdaDescriptorNames)
-			{
-				auto symAddress = NomJIT::Instance().lookup(sdn)->getAddress();
-				auto addrValue = (std::move(symAddress));
-				auto addrPtr = (char*)addrValue;
-				lambdaRecords().push_front(addrPtr + lambdaMinOffset);
-				addrPtr += lambdaSpecializedVTableOffset;
-				bgc_register_root(addrPtr, addrPtr + sizeof(intptr_t));
-			}
 
 			GetVoidObject(); //make sure to call this once to initialize it
 		}

@@ -13,7 +13,7 @@
 #endif
 #endif
 
-enum class AllocationType { General, Object, Lambda, Struct, ClassType };
+enum class AllocationType { General, Object, Lambda, Record, ClassType };
 
 extern "C" DLLEXPORT void RT_NOM_STATS_IncCasts();
 extern "C" DLLEXPORT void RT_NOM_STATS_IncMonotonicCasts();

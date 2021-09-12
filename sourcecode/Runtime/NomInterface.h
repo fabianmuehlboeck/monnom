@@ -7,7 +7,6 @@
 #include <set>
 #include <unordered_map>
 #include "NomConstants.h"
-#include "NomDescriptor.h"
 #include <unordered_map>
 #include <mutex>
 
@@ -46,7 +45,7 @@ namespace Nom
 		class NomModule;
 		class NomMethodTableEntry;
 		class NomClassInternal;
-		class NomInterface : public virtual NomNamed , public NomDescriptor
+		class NomInterface : public virtual NomNamed
 		{
 		private:
 			mutable bool hasResolvedDependencies = false;
@@ -131,7 +130,6 @@ namespace Nom
 			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds(llvm::ArrayRef<NomTypeRef> args) const override;
 			virtual const llvm::ArrayRef<NomInstantiationRef<NomInterface>> GetSuperInterfaces(const NomSubstitutionContext *context=nullptr) const = 0;
 			void AddInstantiation(const NomInstantiationRef<NomInterface> instantiation) const;
-			virtual bool FindInstantiations(NomNamed* other, RecBufferTypeList& myArgs, InstantiationList& results) const override;
 			const std::unordered_map<const NomInterface*, TypeList>& GetInstantiations() const;
 
 			NomInstantiationRef<const NomMethod> GetMethod(const NomSubstitutionContext *context, NomStringRef methodName, const TypeList typeArgs, const TypeList argTypes) const;
@@ -139,19 +137,22 @@ namespace Nom
 			virtual llvm::Constant* GetMethodTable(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			virtual llvm::ArrayType* GetMethodTableType(bool generic = true) const;
 
-			virtual llvm::Constant* GetInterfaceTableLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
+			virtual int GetSuperClassCount() const override;
 
-			virtual llvm::GlobalVariable* GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
+			virtual llvm::Constant* GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const;
 			virtual llvm::ArrayType* GetSuperInstancesType(bool generic = true) const;
 
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
-			static llvm::FunctionType* GetInterfaceTableLookupType();
 			static llvm::FunctionType* GetGetUniqueInstantiationFunctionType();
 			static llvm::Function* GetGetUniqueInstantiationFunction(llvm::Module& mod);
 			virtual llvm::Constant* GetSignature(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			virtual llvm::Constant* GetCheckReturnTypeFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
-		};
+			virtual llvm::Constant* GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
+
+			// Inherited via NomNamed
+			virtual llvm::Constant* GetInterfaceDescriptor(llvm::Module& mod) const override;
+};
 
 		class NomInterfaceLoaded : public virtual NomInterface, public NomNamedLoaded
 		{
@@ -208,8 +209,6 @@ namespace Nom
 			}
 
 		};
-
-		llvm::StructType* InterfaceTableEntryType();
 
 		enum class SuperInstanceEntryFields : unsigned char {Class = 0, TypeArgs=1};
 		llvm::StructType* SuperInstanceEntryType();

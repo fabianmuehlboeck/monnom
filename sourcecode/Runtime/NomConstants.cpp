@@ -440,14 +440,14 @@ namespace Nom
 			return (NomLambdaConstant*)cnstnt;
 		}
 
-		NomStructConstant* NomConstants::GetStruct(const ConstantID constant)
+		NomRecordConstant* NomConstants::GetRecord(const ConstantID constant)
 		{
 			NomConstant* cnstnt = constants()[constant];
-			if (cnstnt->Type != NomConstantType::CTStruct)
+			if (cnstnt->Type != NomConstantType::CTRecord)
 			{
 				throw new std::exception();
 			}
-			return (NomStructConstant*)cnstnt;
+			return (NomRecordConstant*)cnstnt;
 		}
 
 		NomMethodConstant* NomConstants::GetMethod(const ConstantID constant)
@@ -641,7 +641,7 @@ namespace Nom
 			{
 				cid = GetConstantID();
 			}
-			constants()[cid] = (new NomStructConstant());
+			constants()[cid] = (new NomRecordConstant());
 			return cid;
 		}
 
@@ -905,17 +905,17 @@ namespace Nom
 		{
 			cout << "Dyn";
 		}
-		NomStruct* NomStructConstant::GetStruct() const
+		NomRecord* NomRecordConstant::GetRecord() const
 		{
 			return this->structure;
 		}
-		void NomStructConstant::SetStruct(NomStruct* structure) const
+		void NomRecordConstant::SetStruct(NomRecord* structure) const
 		{
 			this->structure = structure;
 		}
-		void NomStructConstant::Print(bool resolve)
+		void NomRecordConstant::Print(bool resolve)
 		{
-			cout << "Struct";
+			cout << "Record";
 		}
 		NomMaybeTypeRef NomMaybeTypeConstant::GetTypeRef(NomSubstitutionContextRef context) const
 		{

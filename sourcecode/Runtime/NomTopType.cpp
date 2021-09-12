@@ -6,7 +6,9 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "CompileHelpers.h"
 #include "NomMaybeType.h"
+#include "CallingConvConf.h"
 
+using namespace llvm;
 namespace Nom
 {
 	namespace Runtime
@@ -79,7 +81,17 @@ namespace Nom
 		}
 		llvm::Constant* NomTopType::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			return new llvm::GlobalVariable(mod, RTTypeHead::GetLLVMType(), true, linkage, RTTypeHead::GetConstant(TypeKind::TKTop, MakeInt(GetHashCode()), this), "RT_NOM_TopType");
+			Function* fun = Function::Create(GetCastFunctionType(), linkage, "MONNOM_RT_TYPECASTFUN_TOP", mod);
+			{
+				fun->setCallingConv(NOMCC);
+				BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+				NomBuilder builder;
+				builder->SetInsertPoint(startBlock);
+				auto argiter = fun->arg_begin();
+				argiter++;
+				builder->CreateRet(argiter);
+			}
+			return new llvm::GlobalVariable(mod, RTTypeHead::GetLLVMType(), true, linkage, RTTypeHead::GetConstant(TypeKind::TKTop, MakeInt(GetHashCode()), this, fun), "RT_NOM_TopType");
 		}
 		llvm::Constant* NomTopType::findLLVMElement(llvm::Module& mod) const
 		{

@@ -16,8 +16,14 @@
 #include "NomCallableVersion.h"
 #include "NomTypeDecls.h"
 #include "CallingConvConf.h"
-#include "NomStructType.h"
+#include "IMT.h"
 #include "NomTopType.h"
+#include "RTCompileConfig.h"
+#include "RTOutput.h"
+#include "CompileHelpers.h"
+#include "NomLambdaCallTag.h"
+#include "CallingConvConf.h"
+#include "Metadata.h"
 
 using namespace llvm;
 using namespace std;
@@ -45,10 +51,38 @@ namespace Nom
 		llvm::Function* NomLambda::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			std::string name = *GetSymbolName(); //"RT_NOM_Lambda_" + to_string(ID);
+			auto gvartype = StructType::get(LLVMCONTEXT, { inttype(64), RTLambda::GetLLVMType(), GetDynamicDispatchListEntryType() }, false);
+			GlobalVariable* gv = new GlobalVariable(mod, gvartype, true, linkage, nullptr, "RT_NOM_LAMBDADESC_" + to_string(this->ID));
+			gv->setAlignment(Align(256));
+			NomBuilder builder;
+
+			Function* invalidFieldReadFun = mod.getFunction("MONNOM_RT_LAMBDA_READ_FIELD");
+			if (invalidFieldReadFun == nullptr)
+			{
+				invalidFieldReadFun = Function::Create(GetFieldReadFunctionType(), linkage, "MONNOM_RT_LAMBDA_READ_FIELD", mod);
+				auto block = BasicBlock::Create(LLVMCONTEXT, "start", invalidFieldReadFun);
+				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Tried to access field of lambda value!", block);
+			}
+
+			Function* invalidFieldWriteFun = mod.getFunction("MONNOM_RT_LAMBDA_WRITE_FIELD");
+			if (invalidFieldWriteFun == nullptr)
+			{
+				invalidFieldWriteFun = Function::Create(GetFieldWriteFunctionType(), linkage, "MONNOM_RT_LAMBDA_WRITE_FIELD", mod);
+				auto block = BasicBlock::Create(LLVMCONTEXT, "start", invalidFieldWriteFun);
+				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Tried to write field of lambda value!", block);
+			}
+
+			Function* invalidIMTInvocation = mod.getFunction("MONNOM_RT_LAMBDA_IMT_ENTRY");
+			if (invalidIMTInvocation == nullptr)
+			{
+				invalidIMTInvocation = Function::Create(GetIMTFunctionType(), linkage, "MONNOM_RT_LAMBDA_IMT_ENTRY", mod);
+				auto block = BasicBlock::Create(LLVMCONTEXT, "start", invalidIMTInvocation);
+				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Tried to call named method on lambda value!", block);
+			}
+
 			Function* fun = Function::Create(GetLLVMFunctionType(), linkage, name, &mod);
 			fun->setCallingConv(NOMCC);
 
-			NomBuilder builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 			builder->SetInsertPoint(startBlock);
 
@@ -68,35 +102,23 @@ namespace Nom
 				argBuf[i] = carg;
 			}
 
-			auto checkedFun = Body.GetLLVMElement(mod);
-			Function* dispatcherFun; 
+			auto imtarr = makealloca(Constant*, IMTsize);
+			auto ddtarr = makealloca(Constant*, IMTsize);
 
-			bool specialDispatcherNeeded = true /*false*/;
-			//for (auto argT : Body.GetArgumentTypes(nullptr))
-			//{
-			//	if (!NomType::Anything->IsSubtype(argT))
-			//	{
-			//		specialDispatcherNeeded = true;
-			//	}
-			//}
-			if (specialDispatcherNeeded)
-			{
-				/*dispatcherFun = Function::Create(NomPartialApplication::GetDynamicDispatcherType(Body.GetDirectTypeParametersCount(), Body.GetArgumentCount()), linkage, "RT_NOM_LAMBDA_DD_" + name, &mod);
-				NomBuilder builder;
 
-				BasicBlock* entryBlock = BasicBlock::Create(LLVMCONTEXT, "", dispatcherFun);
-				builder->SetInsertPoint(entryBlock);*/
-				dispatcherFun = NomPartialApplication::GetDispatcherEntry(mod, linkage, /*Body.GetDirectTypeParametersCount(), Body.GetArgumentCount(),*/ &Body, this/*, &NomStructType::Instance()*/);
-			}
-			else
+
+			for (decltype(IMTsize) i = 0; i < IMTsize; i++)
 			{
-				dispatcherFun = Body.GetVersion(NomPartialApplication::GetDynamicDispatcherType(/*Body.GetDirectTypeParametersCount(), Body.GetArgumentCount()*/))->GetLLVMElement(mod);
+				imtarr[i] = invalidIMTInvocation;
+				ddtarr[i] = ConstantExpr::getGetElementPtr(gvartype, gv, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(2) }));
 			}
 
-			auto constant = RTLambda::CreateConstant(this, Body.GetDirectTypeParametersCount(), GetArgumentCount(), RTSignature::CreateGlobalConstant(mod, linkage, "RT_NOM_SIG_" + name, &this->Body), checkedFun, dispatcherFun);
-			GlobalVariable* gv = new GlobalVariable(mod, constant->getType(), false, linkage, constant, "RT_NOM_LAMBDADESC_" + to_string(this->ID));
+			auto emptyDDTE = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(0), MakeInt<size_t>(0), ConstantPointerNull::get(GetIMTFunctionType()->getPointerTo()));
 
-			LambdaHeader::GenerateConstructorCode(builder, ArrayRef<Value*>(typeArgBuf, targc), ArrayRef<Value*>(argBuf, argc), gv, this);
+			auto constant = RTLambda::CreateConstant(this, ConstantArray::get(arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(imtarr, IMTsize)), ConstantArray::get(arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(ddtarr, IMTsize)), invalidFieldReadFun, invalidFieldWriteFun);
+			gv->setInitializer(ConstantStruct::get(gvartype, { MakeUInt(64,0), constant, emptyDDTE }));
+
+			LambdaHeader::GenerateConstructorCode(builder, ArrayRef<Value*>(typeArgBuf, targc), ArrayRef<Value*>(argBuf, argc), ConstantExpr::getGetElementPtr(gvartype, gv, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1) })), this);
 
 			return fun;
 		}
@@ -120,14 +142,6 @@ namespace Nom
 		{
 			return &NomDynamicType::Instance();
 		}
-		//TypeList NomLambda::GetArgumentTypes(const NomSubstitutionContext* context) const
-		//{
-		//	return argTypes;
-		//}
-		//int NomLambda::GetArgumentCount() const
-		//{
-		//	return argTypes.size();
-		//}
 		const std::string* NomLambda::GetSymbolName() const
 		{
 			if (symname.empty())
@@ -228,10 +242,6 @@ namespace Nom
 			if (!preprocessed)
 			{
 				preprocessed = true;
-				//for (auto field : Fields)
-				//{
-				//	argTypes.push_back(field->GetType());
-				//}
 			}
 		}
 
@@ -239,12 +249,31 @@ namespace Nom
 
 		Function* NomLambdaBody::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			Function* fun = Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
+			Function* fun = Function::Create(GetIMTFunctionType(), linkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(NOMCC);
 
 			NomBuilder builder;
 
-			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "checkCallTag", fun);
+			BasicBlock* matchBlock = BasicBlock::Create(LLVMCONTEXT, "callTagMatch", fun);
+			BasicBlock* mismatchBlock = BasicBlock::Create(LLVMCONTEXT, "callTagMismatch", fun);
+
+			auto funparamcount = GetIMTFunctionType()->getNumParams();
+
+			auto argsarr = makealloca(Value*, funparamcount);
+
+			auto args = fun->arg_begin();
+			Value* callTag = args;
+			for (decltype(funparamcount) i = 0; i < funparamcount; i++, args++)
+			{
+				argsarr[i] = args;
+			}
+
+			builder->SetInsertPoint(startBlock);
+			auto targetCallTag = NomLambdaCallTag::GetCallTag(GetDirectTypeParametersCount(), GetArgumentCount())->GetLLVMElement(mod);
+			auto callTagMatch = builder->CreateICmpEQ(builder->CreatePtrToInt(callTag, targetCallTag->getType()), targetCallTag);
+			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { callTagMatch, MakeUInt(1, 1) });
+			builder->CreateCondBr(callTagMatch, matchBlock, mismatchBlock, GetLikelyFirstBranchMetadata());
 
 			LambdaCompileEnv lenv = LambdaCompileEnv(regcount, fun->getName(), fun, &phiNodes, GetDirectTypeParameters(), GetArgumentTypes(nullptr), this);
 
@@ -252,7 +281,7 @@ namespace Nom
 
 			InitializePhis(builder, fun, env);
 
-			builder->SetInsertPoint(startBlock);
+			builder->SetInsertPoint(matchBlock);
 
 			const std::vector<NomInstruction*>* instructions = GetInstructions();
 #ifdef INSTRUCTIONMESSAGES
@@ -266,9 +295,17 @@ namespace Nom
 				if (!env->basicBlockTerminated)
 				{
 					builder->CreateCall(dbgfun, { { GetLLVMPointer(this->GetSymbolName()->data()), MakeInt<int64_t>(i)} });
-				}
-#endif
 			}
+#endif
+		}
+
+			builder->SetInsertPoint(mismatchBlock);
+			argsarr[0] = builder->CreatePointerCast(fun,POINTERTYPE);
+			auto tailCall = builder->CreateCall(GetIMTFunctionType(), builder->CreatePointerCast(callTag, GetIMTFunctionType()->getPointerTo()), ArrayRef<Value*>(argsarr, funparamcount));
+			tailCall->setCallingConv(NOMCC);
+			tailCall->setTailCallKind(CallInst::TailCallKind::TCK_MustTail);
+			builder->CreateRet(tailCall);
+
 			llvm::raw_os_ostream out(std::cout);
 			//For some reason, verifyFunction is supposed to return false if there are no problems
 			if (verifyFunction(*fun, &out))
@@ -286,26 +323,5 @@ namespace Nom
 		{
 			return NomConstants::GetType(context, ReturnType);
 		}
-		//TypeList NomLambdaBody::GetArgumentTypes(const NomSubstitutionContext* context) const
-		//{
-		//	//return NomConstants::GetTypeList(ArgTypes)->GetTypeList(this);
-		//	if (context != nullptr && context->GetTypeArgumentCount() > 0)
-		//	{
-		//		return NomConstants::GetTypeList(ArgTypes)->GetTypeList(context);
-		//	}
-		//	else
-		//	{
-		//		if (argumentTypes.data() == nullptr)
-		//		{
-		//			NomSubstitutionContextMemberContext nscmc = NomSubstitutionContextMemberContext(this);
-		//			argumentTypes = NomConstants::GetTypeList(ArgTypes)->GetTypeList(&nscmc);
-		//		}
-		//		return argumentTypes;
-		//	}
-		//}
-		//int NomLambdaBody::GetArgumentCount() const
-		//{
-		//	return GetArgumentTypes().size();
-		//}
-	}
+}
 }

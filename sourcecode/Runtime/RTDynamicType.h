@@ -11,7 +11,7 @@ namespace Nom
 		{
 		public:
 			static llvm::StructType* GetLLVMType();
-			static llvm::Constant* CreateConstant();
+			static llvm::Constant* CreateConstant(llvm::Constant* castFun);
 		};
 	}
 }

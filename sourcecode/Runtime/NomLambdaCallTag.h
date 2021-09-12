@@ -1,23 +1,20 @@
 #pragma once
-#include "ARTRep.h"
 #include "AvailableExternally.h"
 #include "llvm/IR/Constant.h"
-#include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Module.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
-		enum class RTStructuralVTableFields :unsigned char { TypeArgs = 0, RTInterface = 1, OrigInterface = 2 };
-		class RTStructuralVTable : public AvailableExternally<llvm::Constant>
+		class NomLambdaCallTag : public AvailableExternally<llvm::Constant>
 		{
 		private:
-			RTStructuralVTable();
+			int typeArgCount;
+			int argCount;
+			NomLambdaCallTag(int typeArgCount, int argCount);
 		public:
-			static RTStructuralVTable& Instance();
-			static llvm::StructType* GetLLVMType();
-
+			static const NomLambdaCallTag* GetCallTag(int typeArgCount, int argCount);
+			~NomLambdaCallTag();
 			// Inherited via AvailableExternally
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;

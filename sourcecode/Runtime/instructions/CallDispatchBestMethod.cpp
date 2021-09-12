@@ -15,11 +15,11 @@
 #include <iostream>
 #include "../IntClass.h"
 #include "../FloatClass.h"
-#include "../RTStruct.h"
-#include "../StructHeader.h"
 #include "../CallingConvConf.h"
 #include "../BoolClass.h"
 #include "../CastStats.h"
+#include "../NomLambdaCallTag.h"
+#include "../IMT.h"
 
 using namespace llvm;
 using namespace std;
@@ -48,17 +48,16 @@ namespace Nom
 			auto dispatcherPair = env->PopDispatchPair();
 
 			size_t dispargcount = typeargcount + argcount;
-			Value** argbuf = makealloca(Value*, 3 + RTConfig_NumberOfVarargsArguments);
-			argbuf[0] = MakeInt32(typeargcount);
-			argbuf[1] = MakeInt32(argcount);
-			argbuf[2] = builder->CreateExtractValue(dispatcherPair, { 1 });
+			Value** argbuf = makealloca(Value*, 2 + RTConfig_NumberOfVarargsArguments);
+			argbuf[0] = NomLambdaCallTag::GetCallTag(typeargcount, argcount)->GetLLVMElement(*builder->GetInsertBlock()->getParent()->getParent());
+			argbuf[1] = builder->CreateExtractValue(dispatcherPair, { 1 });
 			for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i < RTConfig_NumberOfVarargsArguments; i++)
 			{
-				argbuf[i+3] = ConstantPointerNull::get(POINTERTYPE);
+				argbuf[i+2] = ConstantPointerNull::get(POINTERTYPE);
 			}
 			size_t argbufpos = 0;
 			Value* extArgArray = nullptr;
-			if (dispargcount > 3)
+			if (dispargcount > RTConfig_NumberOfVarargsArguments)
 			{
 				extArgArray = builder->CreateAlloca(POINTERTYPE, dispargcount - 2);
 				argbuf[RTConfig_NumberOfVarargsArguments + 2] = builder->CreatePointerCast(extArgArray, POINTERTYPE);
@@ -68,7 +67,7 @@ namespace Nom
 				Value* targ = builder->CreatePointerCast(typeargs[argbufpos]->GetLLVMElement(*(env->Module)), POINTERTYPE);
 				if (argbufpos < RTConfig_NumberOfVarargsArguments - (dispargcount <= RTConfig_NumberOfVarargsArguments ? 0 : 1))
 				{
-					argbuf[argbufpos + 3] = targ;
+					argbuf[argbufpos + 2] = targ;
 				}
 				else
 				{
@@ -81,7 +80,7 @@ namespace Nom
 				Value* arg = builder->CreatePointerCast(EnsurePacked(builder, env->GetArgument(argbufpos - typeargcount)), POINTERTYPE);
 				if (argbufpos < RTConfig_NumberOfVarargsArguments - (dispargcount <= RTConfig_NumberOfVarargsArguments ? 0 : 1))
 				{
-					argbuf[argbufpos + 3] = arg;
+					argbuf[argbufpos + 2] = arg;
 				}
 				else
 				{
@@ -90,7 +89,7 @@ namespace Nom
 				argbufpos++;
 			}
 
-			auto dispatcherCallInst = builder->CreateCall(NomPartialApplication::GetDynamicDispatcherType(/*typeargcount, env->GetArgCount()*/), builder->CreateExtractValue(dispatcherPair, { 0 }), llvm::ArrayRef<Value*>(argbuf, 3 + RTConfig_NumberOfVarargsArguments), methodName + "()");
+			auto dispatcherCallInst = builder->CreateCall(GetIMTFunctionType(), builder->CreateExtractValue(dispatcherPair, { 0 }), llvm::ArrayRef<Value*>(argbuf, 2 + RTConfig_NumberOfVarargsArguments), methodName + "()");
 			dispatcherCallInst->setCallingConv(NOMCC);
 			env->ClearArguments();
 			RegisterValue(env, NomValue(dispatcherCallInst, &NomDynamicType::Instance(), true));

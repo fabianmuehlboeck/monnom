@@ -25,8 +25,8 @@ namespace Nom
 		class NomMethod;
 		class NomStaticMethod;
 		class NomConstructor;
-		class NomStruct;
-		class NomStructMethod;
+		class NomRecord;
+		class NomRecordMethod;
 		class NomTypeParameter;
 		using NomTypeParameterRef = const NomTypeParameter*;
 		class CompileEnv
@@ -89,7 +89,7 @@ namespace Nom
 
 			ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
 
-			virtual ~ACompileEnv();
+			virtual ~ACompileEnv() override;
 
 			virtual NomValue GetArgument(int i) override;
 
@@ -107,8 +107,38 @@ namespace Nom
 			virtual size_t GetLocalTypeArgumentCount() override;
 			virtual llvm::Value* GetLocalTypeArgumentArray(NomBuilder& builder) override;
 		};
+		/// <summary>
+		/// An abstract compilation environment for functions with a full signatures
+		/// </summary>
+		class AFullArityCompileEnv : public ACompileEnv
+		{
+		public:
 
-		class InstanceMethodCompileEnv : public ACompileEnv
+			AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<llvm::Value*> typeArgValues);
+
+			AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
+
+			AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
+
+			virtual ~AFullArityCompileEnv() override;
+		};
+		/// <summary>
+		/// An abstract compilation environment, but for "varargs" functions
+		/// </summary>
+		class AVariableArityCompileEnv : public ACompileEnv
+		{
+		public:
+			virtual NomValue& operator[] (const RegIndex index) override;
+			AVariableArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<llvm::Value*> typeArgValues);
+
+			AVariableArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
+
+			AVariableArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
+
+			virtual ~AVariableArityCompileEnv() override;
+		};
+
+		class InstanceMethodCompileEnv : public AFullArityCompileEnv
 		{
 		public:
 			const NomMethod* const Method;
@@ -120,7 +150,7 @@ namespace Nom
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 		};
 
-		class StaticMethodCompileEnv : public ACompileEnv
+		class StaticMethodCompileEnv : public AFullArityCompileEnv
 		{
 		public:
 			const NomStaticMethod* const Method;
@@ -130,7 +160,7 @@ namespace Nom
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 		};
 
-		class ConstructorCompileEnv : public ACompileEnv
+		class ConstructorCompileEnv : public AFullArityCompileEnv
 		{
 		public:
 			const NomConstructor* const Method;
@@ -140,7 +170,7 @@ namespace Nom
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 		};
 
-		class LambdaCompileEnv : public ACompileEnv
+		class LambdaCompileEnv : public AVariableArityCompileEnv
 		{
 		public:
 			const NomLambdaBody* const Lambda;
@@ -151,21 +181,21 @@ namespace Nom
 		};
 
 
-		class StructMethodCompileEnv : public ACompileEnv
+		class StructMethodCompileEnv : public AFullArityCompileEnv
 		{
 		public:
-			const NomStructMethod* const Method;
-			StructMethodCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomStructMethod* method);
+			const NomRecordMethod* const Method;
+			StructMethodCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomRecordMethod* method);
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 		};
 
-		class StructInstantiationCompileEnv : public ACompileEnv
+		class StructInstantiationCompileEnv : public AFullArityCompileEnv
 		{
 		public:
-			const NomStruct* const Struct;
-			StructInstantiationCompileEnv(RegIndex regcount, llvm::Function* function, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomStruct* structure, RegIndex endargregcount);
+			const NomRecord* const Record;
+			StructInstantiationCompileEnv(RegIndex regcount, llvm::Function* function, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomRecord* structure, RegIndex endargregcount);
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
@@ -189,7 +219,7 @@ namespace Nom
 			const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs;
 			const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs;
 			llvm::Function* const function;
-			const int regularArgsBegin; 
+			const int regularArgsBegin;
 			const int funValueArgCount;
 			llvm::Value* const instanceTypeArrPtr;
 		public:

@@ -1,7 +1,6 @@
 #pragma once
 #include "RTClass.h"
 #include "NomClass.h"
-#include "RTTypes.h"
 
 namespace Nom
 {

@@ -12,7 +12,6 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "instructions/PhiNode.h"
 #include "StringClass.h"
-#include "InstructionMessages.h"
 #include "ObjectClass.h"
 #include "CallingConvConf.h"
 #include "instructions/CallConstructor.h"
@@ -26,30 +25,6 @@ namespace Nom
 		{
 
 		}
-		//TypeList NomConstructorLoaded::GetArgumentTypes(const NomSubstitutionContext* context) const {
-		//	/*return NomConstants::GetTypeList(argumentTypes)->GetTypeList(this);*/
-		//	if (context != nullptr && context->GetTypeArgumentCount() > 0)
-		//	{
-		//		return NomConstants::GetTypeList(argumentTypes)->GetTypeList(context);
-		//	}
-		//	else
-		//	{
-		//		if (argumentTypesBuf.data() == nullptr)
-		//		{
-		//			NomSubstitutionContextMemberContext nscmc = NomSubstitutionContextMemberContext(this);
-		//			argumentTypesBuf = NomConstants::GetTypeList(argumentTypes)->GetTypeList(&nscmc);
-		//		}
-		//		return argumentTypesBuf;
-		//	}
-		//}
-		//int NomConstructorLoaded::GetArgumentCount() const
-		//{
-		//	if (argumentTypesBuf.data() == nullptr)
-		//	{
-		//		return NomConstants::GetTypeList(this->argumentTypes)->GetSize();
-		//	}
-		//	return argumentTypesBuf.size();
-		//}
 		NomConstructorLoaded::NomConstructorLoaded(const NomClass * cls, const std::string &name, const std::string &qname, const ConstantID arguments, const RegIndex regcount, const ConstantID typeArgs, bool declOnly, bool cppWrapper) : NomConstructor(), NomCallableLoaded(name, cls, qname, regcount, typeArgs, arguments, declOnly, cppWrapper), /*argumentTypes(arguments),*/ returnTypeBuf(nullptr), Class(cls)
 		{
 		}
@@ -97,12 +72,6 @@ namespace Nom
 			NomClassTypeRef selfType;
 			if (Class->GetTypeParametersCount() > 0)
 			{
-				//size_t argcnt = Class->GetTypeArgumentCount();
-				//NomTypeRef* targs = (NomTypeRef*)malloc(sizeof(NomTypeRef) * argcnt);
-				//for (size_t i = 0; i < argcnt; i++)
-				//{
-				//	targs[i] = this->Class->GetTypeVariable(i);
-				//}
 				selfType = Class->GetType(Class->GetAllTypeVariables());
 			}
 			else
@@ -111,11 +80,6 @@ namespace Nom
 			}
 			ConstructorCompileEnv cenv = ConstructorCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), this->GetAllTypeParameters(), this->GetArgumentTypes(nullptr), selfType, this);
 			CompileEnv* env = &cenv;
-			//int i = 0;
-			//for (auto &Arg : Compiled->args())
-			//{
-			//	(*env)[i++] = &Arg;
-			//}
 
 
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, *GetSymbolName() + "$start", fun);
@@ -129,8 +93,6 @@ namespace Nom
 			{
 				ObjectHeader::GenerateWriteTypeArgument(builder,(*env)[0], offset + pos, env->GetTypeArgument(builder, pos));
 			}
-
-			//Class->GenerateTypeArgInitialization(builder, env, fun->arg_begin(), constructor.TypeArgs);
 
 			auto preinstructions = this->preInstructions;
 			for (auto instruction : preinstructions)
@@ -191,17 +153,6 @@ namespace Nom
 				}
 				return returnTypeBuf;
 			}
-			//if (this->GetTypeArgumentCount() > 0)
-			//{
-			//	NomTypeRef *argbuf = (NomTypeRef *)alloca(sizeof(NomTypeRef) * this->GetTypeArgumentCount());
-			//	for (size_t i = 0; i < this->GetTypeArgumentCount(); i++)
-			//	{
-			//		argbuf[i] = this->GetTypeVariable(i);
-			//		//argbuf[i * 2 + 1] = this->GetTypeVariable(i);
-			//	}
-			//	return this->Class->GetType(llvm::ArrayRef<NomTypeRef>(argbuf, this->GetTypeArgumentCount()));
-			//}
-			//return this->Class->GetType();
 		}
 
 		llvm::ArrayRef<NomTypeParameterRef> NomConstructorLoaded::GetArgumentTypeParameters() const

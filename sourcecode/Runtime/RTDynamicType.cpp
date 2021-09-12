@@ -14,9 +14,10 @@ namespace Nom
 			static llvm::StructType* stype = llvm::StructType::create(LLVMCONTEXT, { RTTypeHead::GetLLVMType() }, "NOM_RT_DynamicType");
 			return stype;
 		}
-		llvm::Constant* RTDynamicType::CreateConstant()
+
+		llvm::Constant* RTDynamicType::CreateConstant(llvm::Constant* castFun)
 		{
-			return ConstantStruct::get(GetLLVMType(), RTTypeHead::GetConstant(TypeKind::TKDynamic, MakeInt(NomDynamicType::Instance().GetHashCode()), &NomDynamicType::Instance()));
+			return ConstantStruct::get(GetLLVMType(), RTTypeHead::GetConstant(TypeKind::TKDynamic, MakeInt(NomDynamicType::Instance().GetHashCode()), &NomDynamicType::Instance(), castFun));
 		}
 	}
 }

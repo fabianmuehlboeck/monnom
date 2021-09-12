@@ -189,6 +189,72 @@ namespace Nom
 			}
 			return val;
 		}
+		llvm::Value* EnsurePackedUnpacked(NomBuilder& builder, llvm::Value* val, llvm::Type* type)
+		{
+			auto valType = val->getType();
+			if (valType == type)
+			{
+				return val;
+			}
+			if (valType == POINTERTYPE)
+			{
+				if (type == INTTYPE)
+				{
+					return builder->CreatePtrToInt(val, INTTYPE);
+				}
+				else if (type == FLOATTYPE)
+				{
+					return builder->CreateBitCast(builder->CreatePtrToInt(val, INTTYPE), FLOATTYPE);
+				}
+				else if (type == BOOLTYPE)
+				{
+					return builder->CreatePtrToInt(val, BOOLTYPE);
+				}
+				else if (type == TYPETYPE || type==REFTYPE)
+				{
+					return builder->CreatePointerCast(val, type);
+				}
+				else
+				{
+					throw new std::exception();
+				}
+			}
+			else if(type==POINTERTYPE)
+			{
+				return WrapAsPointer(builder, val);
+			}
+			else
+			{
+				if (valType == REFTYPE && type == INTTYPE)
+				{
+					return UnpackInt(builder, NomValue(val, NomIntClass::GetInstance()->GetType()));
+				}
+				else if (valType == REFTYPE && type == FLOATTYPE)
+				{
+					return UnpackFloat(builder, NomValue(val, NomFloatClass::GetInstance()->GetType()));
+				}
+				else if (valType == REFTYPE && type == BOOLTYPE)
+				{
+					return UnpackFloat(builder, NomValue(val, NomBoolClass::GetInstance()->GetType()));
+				}
+				else if (valType == INTTYPE && type == REFTYPE)
+				{
+					return PackInt(builder, val);
+				}
+				else if (valType == FLOATTYPE && type == REFTYPE)
+				{
+					return PackFloat(builder, val);
+				}
+				else if (valType == BOOLTYPE && type == REFTYPE)
+				{
+					return PackBool(builder, val);
+				}
+				else
+				{
+					throw new std::exception();
+				}
+			}
+		}
 
 		/// <summary>
 		/// Integer Packing Protocol:

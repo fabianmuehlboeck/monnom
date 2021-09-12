@@ -17,7 +17,7 @@
 #include "../IMT.h"
 #include "../RTCompileConfig.h"
 #include "../RefValueHeader.h"
-#include "../NomMethodKey.h"
+#include "../NomInterfaceCallTag.h"
 #include "../RTConfig.h"
 #include "../CastStats.h"
 
@@ -154,12 +154,30 @@ namespace Nom
 					builder->CreateCall(GetIncTypedRawInvokes(*builder->GetInsertBlock()->getParent()->getParent()), {});
 				}
 				auto recNV = (*env)[Receiver];
-				llvm::Value* methodptr = builder->CreatePointerCast(RefValueHeader::GenerateReadRawInvoke(builder, recNV), method.Elem->GetRawInvokeLLVMFunctionType()->getPointerTo());
+				llvm::Value* methodptr = builder->CreatePointerCast(RefValueHeader::GenerateReadRawInvoke(builder, recNV), GetIMTFunctionType()->getPointerTo());
+				auto argsArrSize = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - RTConfig_NumberOfVarargsArguments;
+				if (method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() > RTConfig_NumberOfVarargsArguments)
+				{
+					llvm::Value* argsasarr = builder->CreateAlloca(POINTERTYPE, MakeInt32(argsArrSize), "argarray");
+
+					builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
+					for (int j = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - 1; j >= 2; j--)
+					{
+						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr, MakeInt32(j), "arginarray"), AtomicOrdering::NotAtomic);
+					}
+					//invariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
+					argarr[RTConfig_NumberOfVarargsArguments] = builder->CreatePointerCast(argsasarr, POINTERTYPE);
+				}
+				for (int j = 0; j <= RTConfig_NumberOfVarargsArguments; j++)
+				{
+					argarr[j] = WrapAsPointer(builder, argarr[j]);
+				}
 				argarr -= 1;
-				argarr[0] = MakeInt<size_t>(method.Elem->GetContainer()->GetID());
-				auto call = builder->CreateCall(method.Elem->GetRawInvokeLLVMFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + 1 + 1 + method.Elem->GetDirectTypeParametersCount()), "rawInvoke_" + method.Elem->GetContainer()->GetName()->ToStdString());
+				argarr[0] = builder->CreatePointerCast(NomInterfaceCallTag::GetMethodKey(method.Elem)->GetLLVMElement(*env->Module), POINTERTYPE);
+				auto call = builder->CreateCall(GetIMTFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, 2 + RTConfig_NumberOfVarargsArguments), "rawInvoke_" + method.Elem->GetContainer()->GetName()->ToStdString());
 				call->setCallingConv(NOMCC);
-				RegisterValue(env, NomValue(call, method.Elem->GetReturnType(&nscl), true));
+				auto result = EnsurePackedUnpacked(builder, call, method.Elem->GetLLVMFunctionType()->getReturnType());
+				RegisterValue(env, NomValue(result, method.Elem->GetReturnType(&nscl), true));
 			}
 			else if (method.Elem->GetContainer()->IsInterface())
 			{
@@ -176,7 +194,7 @@ namespace Nom
 					builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
 					for (int j = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - 1; j >= 2; j--)
 					{
-						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr, MakeInt32(j), "arginarray"));
+						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr, MakeInt32(j), "arginarray"), AtomicOrdering::NotAtomic);
 					}
 					//invariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
 					argarr[RTConfig_NumberOfVarargsArguments] = builder->CreatePointerCast(argsasarr, POINTERTYPE);
@@ -193,7 +211,7 @@ namespace Nom
 					argarr[j] = WrapAsPointer(builder, argarr[j]);
 				}
 				argarr -= 1;
-				argarr[0] = builder->CreatePointerCast(NomMethodKey::GetMethodKey(method.Elem)->GetLLVMElement(*env->Module), POINTERTYPE);
+				argarr[0] = builder->CreatePointerCast(NomInterfaceCallTag::GetMethodKey(method.Elem)->GetLLVMElement(*env->Module), POINTERTYPE);
 
 				Value* methodptr = ObjectHeader::GetInterfaceMethodTableFunction(builder, env, Receiver, MakeInt32(method.Elem->GetIMTIndex()), lineno);
 

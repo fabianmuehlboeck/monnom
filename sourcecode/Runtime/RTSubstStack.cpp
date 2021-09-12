@@ -13,14 +13,6 @@ namespace Nom
 		{
 			return RTSubtyping::TypeArgumentListStackType();
 		}
-		//RTSubstStackValue RTSubstStack::Push(NomBuilder& builder, llvm::Value* substStack, llvm::Value* typelist)
-		//{
-		//	return RTSubstStackValue(builder, typelist, substStack)
-		//	auto newStack = builder->CreateAlloca(GetLLVMType(), MakeInt32(1), "substStack");
-		//	MakeInvariantStore(builder, substStack, newStack, MakeInt32(TypeArgumentListStackFields::Next));
-		//	MakeInvariantStore(builder, typelist, newStack, MakeInt32(TypeArgumentListStackFields::Types));
-		//	return newStack;
-		//}
 		llvm::Value* RTSubstStack::Pop(NomBuilder& builder, llvm::Value* substStack, llvm::Value* typeVar, llvm::Value** newStack)
 		{
 			if (newStack != nullptr)

@@ -12,8 +12,8 @@
 #include "NomLambda.h"
 #include "LambdaHeader.h"
 #include "RTOutput.h"
-#include "StructHeader.h"
-#include "RTStruct.h"
+#include "RecordHeader.h"
+#include "RTRecord.h"
 #include "RefValueHeader.h"
 #include "RTVTable.h"
 #include "RTCast.h"
@@ -21,6 +21,7 @@
 #include "FloatClass.h"
 #include "CallingConvConf.h"
 #include "NomTopType.h"
+#include "IMT.h"
 
 using namespace llvm;
 using namespace std;
@@ -165,42 +166,15 @@ namespace Nom
 			{
 				builder->SetInsertPoint(refValueBlock);
 				BasicBlock* realVtableBlock = nullptr, * pureLambdaBlock = nullptr, * pureStructBlock = nullptr, * purePartialAppBlock = nullptr;
-				Value* vtableVar, *sTableVar;
-				RefValueHeader::GenerateVTableTagSwitch(builder, receiver, &vtableVar, &sTableVar, &realVtableBlock, &pureLambdaBlock, &pureStructBlock, &purePartialAppBlock);
+				Value* vtableVar = nullptr;
+				RefValueHeader::GenerateRefValueKindSwitch(builder, receiver, &vtableVar, &realVtableBlock, &pureLambdaBlock, &pureStructBlock, &purePartialAppBlock);
 
 				if (realVtableBlock != nullptr)
 				{
-					//BasicBlock* classObjectBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr, * multiCastBlock = nullptr;
 					builder->SetInsertPoint(realVtableBlock);
-					//RTVTable::GenerateVTableKindSwitch(builder, vtableVar, &classObjectBlock, &lambdaBlock, &structBlock, &partialAppBlock, &multiCastBlock);
-
-					//if (classObjectBlock != nullptr)
-					//{
-					//	builder->SetInsertPoint(classObjectBlock);
-						auto fieldStoreFun = RTClass::GenerateReadFieldStore(builder, vtableVar);
-						builder->CreateCall(NomClass::GetDynamicFieldStoreType(), fieldStoreFun, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), EnsurePacked(builder, value) })->setCallingConv(NOMCC);
-						builder->CreateBr(outBlock);
-					//}
-					//if (lambdaBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Lambdas have no dictionary fields to write to!", lambdaBlock);
-					//}
-					//if (structBlock != nullptr)
-					//{
-					//	builder->SetInsertPoint(structBlock);
-					//	auto structDesc = StructHeader::GenerateReadStructDescriptor(builder, receiver);
-					//	auto fieldStoreFun = RTStruct::GenerateReadFieldStore(builder, structDesc);
-					//	builder->CreateCall(NomStruct::GetDynamicFieldStoreType(), fieldStoreFun, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), EnsurePacked(builder, value) })->setCallingConv(NOMCC);
-					//	builder->CreateBr(outBlock);
-					//}
-					//if (partialAppBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Partial Applications have no dictionary fields to write to!", partialAppBlock);
-					//}
-					//if (multiCastBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Dictionary field write not implemented for multi-casted values!", multiCastBlock);
-					//}
+					auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtableVar);
+					builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver,  EnsurePacked(builder, value) })->setCallingConv(NOMCC);
+					builder->CreateBr(outBlock);
 				}
 
 				if (pureLambdaBlock != nullptr)
@@ -210,9 +184,9 @@ namespace Nom
 				if (pureStructBlock != nullptr)
 				{
 					builder->SetInsertPoint(pureStructBlock);
-					auto structDesc = sTableVar;
-					auto fieldStoreFun = RTStruct::GenerateReadFieldStore(builder, structDesc);
-					builder->CreateCall(NomStruct::GetDynamicFieldStoreType(), fieldStoreFun, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), EnsurePacked(builder, value) })->setCallingConv(NOMCC);
+					auto vtable = vtableVar;
+					auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtable);
+					builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver, EnsurePacked(builder, value) })->setCallingConv(NOMCC);
 					builder->CreateBr(outBlock);
 				}
 				if (purePartialAppBlock != nullptr)
@@ -268,34 +242,34 @@ namespace Nom
 		{
 			throw new std::exception();
 		}
-		NomStructField::NomStructField(NomStruct* structure, const ConstantID name, const ConstantID type, bool isReadOnly, const int index, RegIndex valueRegister) : readonly(isReadOnly), Name(name), Type(type), Structure(structure), Index(index), ValueRegister(valueRegister)
+		NomRecordField::NomRecordField(NomRecord* structure, const ConstantID name, const ConstantID type, bool isReadOnly, const int index, RegIndex valueRegister) : readonly(isReadOnly), Name(name), Type(type), Structure(structure), Index(index), ValueRegister(valueRegister)
 		{
 		}
-		NomStructField::~NomStructField()
+		NomRecordField::~NomRecordField()
 		{
 		}
-		NomTypeRef NomStructField::GetType() const
+		NomTypeRef NomRecordField::GetType() const
 		{
 			NomSubstitutionContextMemberContext nscmc(Structure);
 			return NomConstants::GetType(&nscmc, Type);
 		}
-		NomStringRef NomStructField::GetName() const
+		NomStringRef NomRecordField::GetName() const
 		{
 			return NomConstants::GetString(Name)->GetText();
 		}
-		NomValue NomStructField::GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const
+		NomValue NomRecordField::GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const
 		{
-			llvm::Value* retval = StructHeader::GenerateReadField(builder, receiver, Index, this->Structure->GetHasRawInvoke()); //loadinst;
+			llvm::Value* retval = RecordHeader::GenerateReadField(builder, receiver, Index, this->Structure->GetHasRawInvoke()); //loadinst;
 			return NomValue(retval, GetType());
 		}
-		void NomStructField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
+		void NomRecordField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
 		{
 			if (!value.GetNomType()->IsSubtype(this->GetType()))
 			{
 				value = CastInstruction::MakeCast(builder, env, value, this->GetType());
 			}
 			value = EnsurePacked(builder, value);
-			StructHeader::GenerateWriteField(builder, receiver, Index, value, Structure->GetHasRawInvoke());
+			RecordHeader::GenerateWriteField(builder, receiver, Index, value, Structure->GetHasRawInvoke());
 			return;
 		}
 	}

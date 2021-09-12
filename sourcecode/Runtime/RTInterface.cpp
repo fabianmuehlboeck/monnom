@@ -4,6 +4,8 @@
 #include "NomInterface.h"
 #include "CompileHelpers.h"
 #include "RTSignature.h"
+#include "IMT.h"
+#include "RTTypeHead.h"
 
 using namespace llvm;
 using namespace std;
@@ -18,52 +20,56 @@ namespace Nom
 			if (once)
 			{
 				once = false;
-				rtit->setBody({ RTVTable::GetLLVMType(),			//interface table
-					numtype(RTInterfaceFlags),						//flags
-					inttype(32),									//type arg count
-					numtype(size_t),								//super instances count
-					SuperInstanceEntryType()->getPointerTo(),		//super instances
-					GetMethodEnsureFunctionType()->getPointerTo(),  //method ensure function, untyped version
-					POINTERTYPE,									//pointer to type instantiations dictionary
-					RTSignature::GetLLVMType()->getPointerTo()		//signature of lambda method if present, otherwise null
+				rtit->setBody({ POINTERTYPE,							//Pointer to IR representation
+					numtype(RTInterfaceFlags),							//flags
+					inttype(32),										//type arg count
+					numtype(size_t),									//super instances count
+					numtype(size_t),									//superclass count
+					numtype(size_t),									//superinterface count
+					SuperInstanceEntryType()->getPointerTo(),			//superclasses
+					SuperInstanceEntryType()->getPointerTo(),			//superinterfaces
+					GetCheckReturnValueFunctionType()->getPointerTo(),  //method ensure function, untyped version
+					POINTERTYPE,										//pointer to type instantiations dictionary
+					RTSignature::GetLLVMType()->getPointerTo(),			//signature of lambda method if present, otherwise null
+					GetCastFunctionType()->getPointerTo()				//cast function for run-time class-type instantiations
 					});
 			}
 			return rtit;
 		}
-		llvm::Constant* RTInterface::CreateConstant(const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* interfaceMethodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* methodEnsureFunction, llvm::Constant* instantiationDictionary, llvm::Constant* signature)
+
+		llvm::Constant* RTInterface::CreateConstant(const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superClassCount, llvm::Constant* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* checkReturnValueFunction, llvm::Constant* instantiationDictionary, llvm::Constant* signature, llvm::Constant* castFunction)
 		{
-			return CreateConstant(RTDescriptorKind::Class, irptr, flags, typeArgCount, superTypesCount, superTypeEntries, interfaceMethodTable, checkReturnValueFunction, methodEnsureFunction, instantiationDictionary, signature);
-		}
-			
-		llvm::Constant* RTInterface::CreateConstant(RTDescriptorKind kind, const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* interfaceMethodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* methodEnsureFunction, llvm::Constant* instantiationDictionary, llvm::Constant * signature)
-		{
-			return ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(kind, irptr, interfaceMethodTable, checkReturnValueFunction), MakeInt<RTInterfaceFlags>(flags), EnsureIntegerSize(typeArgCount, 32), EnsureIntegerSize(superTypesCount, bitsin(size_t)), superTypeEntries, methodEnsureFunction, instantiationDictionary, signature);
+			auto STEs = ConstantExpr::getPointerCast(superTypeEntries, SuperInstanceEntryType()->getPointerTo());
+			return ConstantStruct::get(GetLLVMType(), GetLLVMPointer(irptr), MakeInt<RTInterfaceFlags>(flags), EnsureIntegerSize(typeArgCount, 32), EnsureIntegerSize(ConstantExpr::getAdd(superClassCount, superInterfaceCount), bitsin(size_t)), EnsureIntegerSize(superClassCount, bitsin(size_t)), EnsureIntegerSize(superInterfaceCount, bitsin(size_t)), STEs, ConstantExpr::getGetElementPtr(SuperInstanceEntryType(), STEs, ArrayRef<Constant*>({ superClassCount })), checkReturnValueFunction, instantiationDictionary, (signature == nullptr ? ConstantPointerNull::get(RTSignature::GetLLVMType()->getPointerTo()) : signature), castFunction);
 		}
 
-		llvm::Value* RTInterface::GenerateReadKind(NomBuilder& builder, llvm::Value* descriptorPtr)
-		{
-			return RTVTable::GenerateReadKind(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTInterfaceFields::RTVTable) }));
-		}
 		llvm::Value* RTInterface::GenerateReadSignature(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
 			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::Signature), "Signature", AtomicOrdering::NotAtomic);
 		}
-
-		llvm::Value* RTInterface::GenerateReadNomIRLink(NomBuilder& builder, llvm::Value* descriptorPtr)
+		llvm::Value* RTInterface::GenerateReadReturnValueCheckFunction(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return RTVTable::GenerateReadNomIRLink(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTInterfaceFields::RTVTable) }));
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::ReturnValueCheckFunction), "ReturnValueCheckFunction", AtomicOrdering::NotAtomic);
 		}
 		llvm::Value* RTInterface::GenerateReadSuperInstanceCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
 			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperTypesCount), "SuperTypesCount", AtomicOrdering::NotAtomic);
 		}
+		llvm::Value* RTInterface::GenerateReadSuperClassCount(NomBuilder& builder, llvm::Value* descriptorPtr)
+		{
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperClassCount), "SuperClassCount", AtomicOrdering::NotAtomic);
+		}
+		llvm::Value* RTInterface::GenerateReadSuperInterfaceCount(NomBuilder& builder, llvm::Value* descriptorPtr)
+		{
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperInterfaceCount), "SuperInterfaceCount", AtomicOrdering::NotAtomic);
+		}
 		llvm::Value* RTInterface::GenerateReadSuperInstances(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperTypes),"SuperTypes", AtomicOrdering::NotAtomic);
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperTypes), "SuperTypes", AtomicOrdering::NotAtomic);
 		}
-		llvm::Value* RTInterface::GenerateReadMethodTableEntry(NomBuilder& builder, llvm::Value* vtablePtr, llvm::Value* offset)
+		llvm::Value* RTInterface::GenerateReadSuperInterfaces(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return RTVTable::GenerateReadMethodTableEntry(builder, builder->CreateGEP(builder->CreatePointerCast(vtablePtr, GetLLVMPointerType()), { MakeInt32(0), MakeInt32(RTInterfaceFields::RTVTable) }), offset);
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperInterfaces), "SuperInterfaces", AtomicOrdering::NotAtomic);
 		}
 		llvm::Value* RTInterface::GenerateReadTypeArgCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
@@ -73,18 +79,13 @@ namespace Nom
 		{
 			return MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTInterfaceFields::Flags) }), "InterfaceFlags", AtomicOrdering::NotAtomic);
 		}
-		llvm::Value* RTInterface::GenerateReadMethodEnsure(NomBuilder& builder, llvm::Value* descriptorPtr)
+		llvm::Value* RTInterface::GenerateReadIRPtr(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTInterfaceFields::MethodEnsureFunction) }), "EnsureMethodFunction", AtomicOrdering::NotAtomic);
+			return MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTInterfaceFields::IRPtr) }), "InterfaceFlags", AtomicOrdering::NotAtomic);
 		}
-		void RTInterface::GenerateInitialization(NomBuilder& builder, llvm::Value* ifcptr, llvm::Value* /*vt_ifcoffset*/ vt_imtptr, llvm::Value* vt_kind, llvm::Value* vt_irdesc, llvm::Value* flags, llvm::Value* targcount, llvm::Value* supercount, llvm::Value* superentries)
+		llvm::Value* RTInterface::GenerateReadCastFunction(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			RTVTable::GenerateInitialization(builder, ifcptr, /*vt_ifcoffset*/ vt_imtptr, vt_kind, vt_irdesc);
-			llvm::Value* selfptr = builder->CreatePointerCast(ifcptr, GetLLVMType()->getPointerTo());
-			MakeInvariantStore(builder, flags, selfptr, MakeInt32(RTInterfaceFields::Flags));
-			MakeInvariantStore(builder, targcount, selfptr, MakeInt32(RTInterfaceFields::TypeArgCount));
-			MakeInvariantStore(builder, supercount, selfptr, MakeInt32(RTInterfaceFields::SuperTypesCount));
-			MakeInvariantStore(builder, superentries, selfptr, MakeInt32(RTInterfaceFields::SuperTypes));
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::CastFunction), "CastFunction", AtomicOrdering::NotAtomic);
 		}
 	}
 }

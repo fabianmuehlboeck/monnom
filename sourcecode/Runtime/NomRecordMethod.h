@@ -5,17 +5,17 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		class NomStruct;
+		class NomRecord;
 		class NomInstruction;
-		class NomStructMethod : public NomCallableLoaded
+		class NomRecordMethod : public NomCallableLoaded
 		{
 		public:
-			const NomStruct* Container;
+			const NomRecord* Container;
 			//ConstantID ArgumentTypes;
 			ConstantID ReturnType;
 
-			NomStructMethod(const NomStruct* container, std::string& name, std::string& qname, ConstantID typeParameters, ConstantID returnType, ConstantID argTypes, RegIndex regcount);
-			virtual ~NomStructMethod() override = default;
+			NomRecordMethod(const NomRecord* container, std::string& name, std::string& qname, ConstantID typeParameters, ConstantID returnType, ConstantID argTypes, RegIndex regcount);
+			virtual ~NomRecordMethod() override = default;
 			// Inherited via NomCallable
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual NomTypeRef GetReturnType(const NomSubstitutionContext* context) const override;

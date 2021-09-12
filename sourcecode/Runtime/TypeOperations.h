@@ -22,6 +22,8 @@ namespace Nom
 
 		llvm::Value* WrapAsPointer(NomBuilder& builder, llvm::Value* val);
 
+		llvm::Value* EnsurePackedUnpacked(NomBuilder& builder, llvm::Value* val, llvm::Type* type);
+
 		llvm::Value* PackInt(NomBuilder& builder, llvm::Value* intval);
 		llvm::Value* UnpackInt(NomBuilder& builder, NomValue value);
 		NomValue UnpackPosMaskedInt(NomBuilder& builder, llvm::Value* refAsInt);

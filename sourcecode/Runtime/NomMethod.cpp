@@ -10,7 +10,6 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include <iostream>
 #include "StringClass.h"
-#include "InstructionMessages.h"
 #include "NomSubstitutionContext.h"
 #include "CallingConvConf.h"
 #include "RTConfig.h"
@@ -26,13 +25,6 @@ namespace Nom
 		{
 
 		}
-
-		//const NomType * const GetReturnType() const {
-		//	return NomConstants::GetType(returnType);
-		//}
-		//const TypeList GetArgumentTypes() const {
-		//	return NomConstants::GetTypeList(argTypes)->GetTypeList();
-		//}
 
 		int NomMethod::GetIMTIndex() const
 		{
@@ -64,7 +56,7 @@ namespace Nom
 			{
 				return false;
 			}
-			if (GetTypeParametersCount() != other->GetTypeParametersCount())
+			if (GetDirectTypeParametersCount() != other->GetDirectTypeParametersCount())
 			{
 				return false;
 			}

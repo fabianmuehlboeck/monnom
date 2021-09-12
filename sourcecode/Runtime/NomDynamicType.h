@@ -1,4 +1,5 @@
 #pragma once
+#include "Defs.h"
 #include "NomType.h"
 
 namespace Nom
@@ -8,11 +9,15 @@ namespace Nom
 		class NomDynamicType : public NomType
 		{
 		private:
-			NomDynamicType();
+			NomDynamicType(TypeKind kind);
+			TypeKind kind;
 		public:
 			virtual ~NomDynamicType() override = default;
 
 			static NomDynamicType& Instance();
+			static NomDynamicType& LambdaInstance();
+			static NomDynamicType& PartialAppInstance();
+			static NomDynamicType& RecordInstance();
 			// Inherited via NomType
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;

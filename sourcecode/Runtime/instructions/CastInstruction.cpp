@@ -7,6 +7,7 @@
 #include "../CompileHelpers.h"
 #include "../RTCast.h"
 #include <iostream>
+#include "../Metadata.h"
 
 using namespace llvm;
 using namespace std;
@@ -35,7 +36,8 @@ namespace Nom
 			BasicBlock* success = BasicBlock::Create(LLVMCONTEXT, "castSuccess", fun);
 			BasicBlock* fail = BasicBlock::Create(LLVMCONTEXT, "castFail", fun);
 			auto castResult = RTCast::GenerateCast(builder, env, val, type);
-			builder->CreateCondBr(castResult, success, fail);
+			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
+			builder->CreateCondBr(castResult, success, fail, GetLikelyFirstBranchMetadata());
 
 			builder->SetInsertPoint(fail);
 			static const char* cast_errorMessage = "Cast failed";

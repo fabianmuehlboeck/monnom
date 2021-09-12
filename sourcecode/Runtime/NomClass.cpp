@@ -37,9 +37,11 @@
 #include "CallingConvConf.h"
 #include "IMT.h"
 #include "RTCompileConfig.h"
-#include "RawInvoke.h"
-#include "NomMethodKey.h"
+#include "NomInterfaceCallTag.h"
 #include "EnsureDynamicMethodInstruction.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "NomLambdaCallTag.h"
+#include "Metadata.h"
 
 namespace Nom
 {
@@ -78,8 +80,8 @@ namespace Nom
 			return lambda;
 		}
 
-		NomStruct* NomClassLoaded::AddStruct(const ConstantID structID, ConstantID closureTypeParams, RegIndex regcount, RegIndex endargregcount, ConstantID initializerArgTypes) {
-			NomStruct* structure = new NomStruct(structID, nullptr, closureTypeParams, regcount, endargregcount, initializerArgTypes);
+		NomRecord* NomClassLoaded::AddStruct(const ConstantID structID, ConstantID closureTypeParams, RegIndex regcount, RegIndex endargregcount, ConstantID initializerArgTypes) {
+			NomRecord* structure = new NomRecord(structID, nullptr, closureTypeParams, regcount, endargregcount, initializerArgTypes);
 			NomClass::AddStruct(structure);
 			return structure;
 		}
@@ -201,34 +203,63 @@ namespace Nom
 			throw new std::exception();
 		}
 
-		llvm::GlobalVariable* NomClass::GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Constant* NomClass::GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const
 		{
-			llvm::Twine t = "NOM_ST_";
-			llvm::SmallVector<char, 64> buf;
-			llvm::StringRef nameref = t.concat(this->GetName()->ToStdString()).toStringRef(buf);
-			llvm::GlobalVariable* ret = mod.getGlobalVariable(nameref, false);
-			if (ret == nullptr)
+			auto instantiations = GetInstantiations();
+			auto instaCount = instantiations.size();
+			auto entryArr = makealloca(Constant*, instaCount);
+			auto fieldArr = makealloca(Constant*, instaCount + 1);
+			auto typeArr = makealloca(Type*, instaCount + 1);
+			auto orderedInstas = makealloca(const NomInterface*, instaCount);
+			typeArr[0] = arrtype(SuperInstanceEntryType(), instaCount);
+			int pos = GetSuperClassCount();
+			auto curSuper = GetSuperClass();
+			while (curSuper.HasElem())
 			{
-				ret = new llvm::GlobalVariable(mod, GetSuperInstancesType(false), true, linkage, nullptr, nameref);
-				llvm::Constant** entries = makealloca(llvm::Constant*, GetInstantiations().size());
-				size_t entrynum = 0;
-				for (auto &instantiation : GetInstantiations())
+				pos--;
+				auto instantiation = instantiations[curSuper.Elem];
+				size_t instasize = instantiation.size();
+				typeArr[pos + 1] = arrtype(TYPETYPE, instasize);
+				llvm::Constant** instaArgBuf = makealloca(llvm::Constant*, instasize);
+				for (size_t i = 0; i < instasize; i++)
+				{
+					instaArgBuf[instasize - (i + 1)] = instantiation[i]->GetLLVMElement(mod);
+				}
+				fieldArr[pos + 1] = ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize));
+				orderedInstas[pos] = curSuper.Elem;
+			}
+			pos = GetSuperClassCount();
+			for (auto& instantiation : instantiations)
+			{
+				if (instantiation.first->IsInterface())
 				{
 					size_t instasize = instantiation.second.size();
-					llvm::GlobalVariable* instaArgs = new GlobalVariable(mod, arrtype(TYPETYPE, instasize), true, linkage, nullptr);
-					//auto insta = instantiation.first->GetType(instantiation.second);
-					entries[entrynum] = ConstantStruct::get(SuperInstanceEntryType(), ConstantExpr::getPointerCast(instantiation.first->GetLLVMElement(mod), RTInterface::GetLLVMType()->getPointerTo()), ConstantExpr::getGetElementPtr(arrtype(TYPETYPE, instasize), instaArgs, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(instasize) }))); //insta->GetLLVMElement(mod);
-					entrynum++;
+					typeArr[pos + 1] = arrtype(TYPETYPE, instasize);
 					llvm::Constant** instaArgBuf = makealloca(llvm::Constant*, instasize);
 					for (size_t i = 0; i < instasize; i++)
 					{
-						instaArgBuf[instasize-(i+1)] = instantiation.second[i]->GetLLVMElement(mod);
+						instaArgBuf[instasize - (i + 1)] = instantiation.second[i]->GetLLVMElement(mod);
 					}
-					instaArgs->setInitializer(ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize)));
+					fieldArr[pos + 1] = ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize));
+					orderedInstas[pos] = instantiation.first;
 				}
-				ret->setInitializer(llvm::ConstantArray::get(GetSuperInstancesType(false), llvm::ArrayRef<llvm::Constant*>(entries, entrynum)));
+				pos++;
 			}
-			return ret;
+			if (stetype->isOpaque())
+			{
+				stetype->setBody(ArrayRef<Type*>(typeArr, instaCount + 1), false);
+			}
+			while (pos > 0)
+			{
+				pos--;
+				auto instantiation = instantiations[orderedInstas[pos]];
+				size_t instasize = instantiation.size();
+				entryArr[pos] = ConstantStruct::get(SuperInstanceEntryType(),
+					ConstantExpr::getPointerCast(orderedInstas[pos]->GetLLVMElement(mod), RTInterface::GetLLVMType()->getPointerTo()),
+					ConstantExpr::getGetElementPtr(gvar->getValueType(), gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(gvar->getValueType()->getStructNumElements() - 1), MakeInt32(pos + 1), MakeInt32(instasize) })));
+			}
+			fieldArr[0] = ConstantArray::get(arrtype(SuperInstanceEntryType(), instaCount), ArrayRef<Constant*>(entryArr, instaCount));
+			return ConstantStruct::get(stetype, ArrayRef<Constant*>(fieldArr, instaCount + 1));
 		}
 
 		llvm::ArrayType* NomClass::GetSuperInstancesType(bool generic) const
@@ -237,6 +268,17 @@ namespace Nom
 		}
 
 
+		int NomClass::GetSuperClassCount() const
+		{
+			size_t superClassCount = 0;
+			auto currentSuper = this->GetSuperClass();
+			while (currentSuper.HasElem())
+			{
+				superClassCount++;
+				currentSuper = currentSuper.Elem->GetSuperClass();
+			}
+			return superClassCount;
+		}
 
 		llvm::Constant* NomClass::findLLVMElement(llvm::Module& mod) const {
 			llvm::Twine t = "NOM_CD_";
@@ -253,71 +295,35 @@ namespace Nom
 			llvm::Constant* ret = RTClass::FindConstant(mod, nameref);
 			if (ret == nullptr)
 			{
-				auto gvartype = RTClass::GetConstantType(GetHasRawInvoke()?8:0, GetMethodTableType(false));
+				StructType* clsStructType = StructType::create(LLVMCONTEXT, "MONNOM_CLSDD_" + *this->GetSymbolName());
+				StructType* clsSupersStructType = StructType::create(LLVMCONTEXT, "MONNOM_CLSSUPERS_" + *this->GetSymbolName());
+				auto gvartype = RTClass::GetConstantType(GetHasRawInvoke() ? 24 : 16, GetMethodTableType(false), clsStructType, clsSupersStructType);
 				GlobalVariable* gvar = new GlobalVariable(mod, gvartype, true, linkage, nullptr, nameref);
-				ret = RTClass::CreateConstant( gvar, gvartype, this,
+				auto superClassCount = GetSuperClassCount();
+				ret = RTClass::CreateConstant(gvar, gvartype, this,
 					GetDynamicFieldLookup(mod, linkage),
 					GetDynamicFieldStore(mod, linkage),
-					GetDynamicDispatcherLookup(mod, linkage),
+					GetDynamicDispatcherLookup(mod, linkage, clsStructType),
 					MakeInt(GetFieldCount()),
 					MakeInt(this->GetTypeParametersCount()),
-					MakeInt(GetInstantiations().size()),
-					GetSuperInstances(mod, linkage),
+					MakeInt(superClassCount),
+					MakeInt(GetInstantiations().size() - superClassCount),
+					GetSuperInstances(mod, linkage, gvar, clsSupersStructType),
 					GetMethodTable(mod, linkage),
 					ConstantPointerNull::get(GetCheckReturnValueFunctionType()->getPointerTo()),
-					GetMethodEnsureFunction(mod, linkage),
 					GetInterfaceTableLookup(mod, linkage),
-					GetSignature(mod,linkage));
+					GetSignature(mod, linkage),
+					GetCastFunction(mod, linkage));
 				new GlobalVariable(mod, ret->getType(), true, linkage, ret, "NOM_CDREF_" + this->GetName()->ToStdString());
 
 				RegisterGlobalForAddressLookup(nameref.str());
 
-				if (linkage == GlobalValue::LinkageTypes::ExternalLinkage)
-				{
-					GenerateDictionaryEntries(mod);
-				}
 				if (GetHasRawInvoke())
 				{
 					GetRawInvokeFunction(mod, linkage);
 				}
 			}
 			return ret;
-		}
-
-		llvm::Function* NomClass::GetMethodEnsureFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
-		{
-			Function* fun = Function::Create(GetMethodEnsureFunctionType(), linkage, "MONNOM_RT_METHODENSURE_" + this->GetName()->ToStdString(), mod);
-			NomBuilder builder;
-
-			auto args = fun->arg_begin();
-			Value* receiver = args;
-			args++;
-			Value* methodName = args;
-
-			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "start", fun);
-			BasicBlock* falseBlock = BasicBlock::Create(LLVMCONTEXT, "methodDoesNotExist", fun);
-			builder->SetInsertPoint(startBlock);
-
-			if (this->Methods.size() > 0)
-			{
-				BasicBlock* trueBlock = BasicBlock::Create(LLVMCONTEXT, "methodExists", fun);
-				auto nameSwitch = builder->CreateSwitch(methodName, falseBlock, this->Methods.size());
-				for (auto& meth : this->Methods)
-				{
-					nameSwitch->addCase(MakeIntLike(methodName,NomNameRepository::Instance().GetNameID(meth->GetName())), trueBlock);
-				}
-				builder->SetInsertPoint(trueBlock);
-				builder->CreateRet(MakeUInt(1, 1));
-			}
-			else
-			{
-				builder->CreateBr(falseBlock);
-			}
-
-			builder->SetInsertPoint(falseBlock);
-			builder->CreateRet(MakeUInt(1, 0));
-
-			return fun;
 		}
 
 		size_t NomClass::GetTypeArgOffset() const
@@ -331,84 +337,6 @@ namespace Nom
 			return offset;
 		}
 
-		size_t NomClass::GenerateTypeArgInitialization(NomBuilder& builder, CompileEnv* env, llvm::Value* newObj, TypeList args) const
-		{
-			size_t offset = 0;
-			auto sclass = GetSuperClass();
-			NomSubstitutionContextList nscl(args);
-			if (sclass.HasElem())
-			{
-				auto instantiation = sclass;
-				const NomType** types = makealloca(const NomType*, instantiation.TypeArgs.size());
-				int i = 0;
-				for (auto targ : instantiation.TypeArgs)
-				{
-					types[i++] = targ->SubstituteSubtyping(&nscl);
-				}
-				offset = instantiation.Elem->GenerateTypeArgInitialization(builder, env, newObj, TypeList(types, instantiation.TypeArgs.size()));
-			}
-			for (NomTypeRef type : args)
-			{
-				ObjectHeader::GenerateWriteTypeArgument(builder, newObj, offset, type->GenerateRTInstantiation(builder, env));
-				offset++;
-			}
-			return offset;
-		}
-
-		llvm::FunctionType* NomClass::GetExpandoReaderType()
-		{
-			static llvm::FunctionType* ft = FunctionType::get(REFTYPE, { REFTYPE, numtype(size_t) }, false);
-			return ft;
-		}
-
-		llvm::Function* NomClass::GetExpandoReaderFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
-		{
-			std::string ername = "NOM_RT_ER_" + *this->GetSymbolName();
-			llvm::Function* fun = mod.getFunction(ername);
-			if (fun == nullptr)
-			{
-				fun = Function::Create(GetExpandoReaderType(), linkage, ername, &mod);
-				fun->setCallingConv(NOMCC);
-
-				llvm::Argument* thisArg = fun->arg_begin();
-				llvm::Value* nameIndex = thisArg + 1;
-
-				NomBuilder builder;
-
-				BasicBlock* start = BasicBlock::Create(LLVMCONTEXT, "", fun);
-				BasicBlock* notfound = BasicBlock::Create(LLVMCONTEXT, "", fun);
-
-				builder->SetInsertPoint(start);
-				SwitchInst* nameSwitch = builder->CreateSwitch(nameIndex, notfound, this->Fields.size());
-
-				builder->SetInsertPoint(notfound);
-				static const char* msg = "Could not find field!";
-				builder->CreateRet(builder->CreateCall(RTOutput_Fail::GetLLVMElement(mod), { GetLLVMPointer(msg) }));
-
-				for (auto field : Fields)
-				{
-					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
-
-					builder->SetInsertPoint(fieldBlock);
-					auto load = MakeLoad(builder, mod, builder->CreateGEP(thisArg, { MakeInt32(0), MakeInt32((unsigned char)ObjectHeaderFields::Fields), MakeInt32((-(field->Index)) - 1) }));
-					builder->CreateRet(load);
-					nameSwitch->addCase(MakeInt(NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), fieldBlock);
-				}
-				llvm::raw_os_ostream out(std::cout);
-				if (verifyFunction(*fun, &out))
-				{
-					out.flush();
-					std::cout << "Could not verify " << ername << "!";
-					fun->print(out);
-					out.flush();
-					std::cout.flush();
-					throw new std::exception();
-				}
-
-				return fun;
-			}
-			return fun;
-		}
 
 		llvm::Function* NomClass::GetRawInvokeFunction(llvm::Module& mod) const
 		{
@@ -437,120 +365,151 @@ namespace Nom
 				return nullptr;
 			}
 
+			llvm::SmallPtrSet<const NomInterface*, 16> supers;
+			vector<const NomInterface*> worklist;
+			auto curClass = this;
+			while (curClass != nullptr)
+			{
+				supers.insert(curClass);
+				worklist.push_back(curClass);
+				curClass = curClass->GetSuperClass().Elem;
+			}
+			while (worklist.size() > 0)
+			{
+				auto current = worklist.back();
+				worklist.pop_back();
+				for (auto& super : current->GetSuperInterfaces())
+				{
+					if (supers.insert(super.Elem).second)
+					{
+						worklist.push_back(super.Elem);
+					}
+				}
+			}
+
+			llvm::SmallVector<const NomMethod*, 16> methods;
+			for (auto super : supers)
+			{
+				for (auto& meth : super->Methods)
+				{
+					if (method->Overrides(meth))
+					{
+						methods.push_back(meth);
+					}
+				}
+			}
 
 			std::string name = "RT_NOM_RAWINVOKE_" + this->GetName()->ToStdString();
-			FunctionType* mainFunType = method->GetRawInvokeLLVMFunctionType(nullptr);
-			llvm::Function* fun = Function::Create(mainFunType, linkage, name, mod);
+			llvm::Function* fun = Function::Create(GetIMTFunctionType(), linkage, name, mod);
 			fun->setCallingConv(NOMCC);
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "start", fun);
 
 			NomBuilder builder;
 			builder->SetInsertPoint(startBlock);
 
-			auto argcount = mainFunType->getNumParams();
-			Value** argarr = makealloca(Value*, argcount);
-			auto args = fun->arg_begin();
-			//Argument* iidArg = args;
-
-			for (decltype(argcount) i = 0; i < argcount; i++)
+			auto argiter = fun->arg_begin();
+			auto callTag = argiter;
+			argiter++;
+			auto varargs = makealloca(Value*, RTConfig_NumberOfVarargsArguments + 1);
+			for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i <= RTConfig_NumberOfVarargsArguments; i++)
 			{
-				argarr[i] = args;
-				args++;
+				varargs[i] = argiter;
+				argiter++;
 			}
 
-			GenerateRawInvoke(builder, this, method, 
-				[](NomBuilder& b, const NomMethod* meth, llvm::ArrayRef<llvm::Value*> cargs) 
-				{
-					auto call = b->CreateCall(meth->GetLLVMElement(*b->GetInsertBlock()->getParent()->getParent()), cargs);
-					call->setCallingConv(NOMCC);
-					return call;
-				}, 
-				llvm::ArrayRef<llvm::Value*>(argarr, argcount));
+			for (auto& meth : methods)
+			{
+				BasicBlock* callBlock = BasicBlock::Create(LLVMCONTEXT, meth->GetName(), fun);
+				BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
 
+				auto methodCallTag = NomInterfaceCallTag::GetMethodKey(meth);
+
+				auto callTagMatch = builder->CreateICmpEQ(builder->CreatePtrToInt(callTag, numtype(intptr_t)), ConstantExpr::getPtrToInt(methodCallTag->GetLLVMElement(mod), numtype(intptr_t)), "callTagMatch");
+				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { callTagMatch, MakeUInt(1,1) });
+				builder->CreateCondBr(callTagMatch, callBlock, nextBlock, GetLikelyFirstBranchMetadata());
+				builder->SetInsertPoint(callBlock);
+
+				auto calledFunctionType = meth->GetLLVMFunctionType();
+				auto implFunctionType = method->GetLLVMFunctionType();
+				auto paramCount = implFunctionType->getNumParams();
+				auto argsarr = makealloca(Value*, paramCount);
+
+				for (decltype(paramCount) j = 0; j < paramCount; j++)
+				{
+					Value* curArg = nullptr;
+					if (j < RTConfig_NumberOfVarargsArguments || RTConfig_NumberOfVarargsArguments + 1 == paramCount)
+					{
+						curArg = varargs[j];
+					}
+					else
+					{
+						curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+					}
+					auto calledType = calledFunctionType->getParamType(j);
+					auto expectedType = implFunctionType->getParamType(j);
+					curArg = EnsurePackedUnpacked(builder, curArg, calledType);
+					curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
+					argsarr[j] = curArg;
+				}
+				auto callResult = builder->CreateCall(implFunctionType, method->GetLLVMElement(mod), ArrayRef<Value*>(argsarr, paramCount), method->GetQName());
+				callResult->setCallingConv(NOMCC);
+				auto actualResult = EnsurePackedUnpacked(builder, EnsurePackedUnpacked(builder, callResult, calledFunctionType->getReturnType()), POINTERTYPE);
+				builder->CreateRet(actualResult);
+
+				builder->SetInsertPoint(nextBlock);
+			}
+			{
+				BasicBlock* callBlock = BasicBlock::Create(LLVMCONTEXT, method->GetName(), fun);
+				BasicBlock* failBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invoked object with wrong arity!");
+				auto lambdaCallTag = NomLambdaCallTag::GetCallTag(method->GetDirectTypeParametersCount(), method->GetArgumentCount());
+				auto callTagMatch = builder->CreateICmpEQ(builder->CreatePtrToInt(callTag, numtype(intptr_t)), ConstantExpr::getPtrToInt(lambdaCallTag->GetLLVMElement(mod), numtype(intptr_t)), "callTagMatch");
+				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { callTagMatch, MakeUInt(1,1) });
+				builder->CreateCondBr(callTagMatch, callBlock, failBlock, GetLikelyFirstBranchMetadata());
+
+				builder->SetInsertPoint(callBlock);
+				auto implFunctionType = method->GetLLVMFunctionType();
+				auto paramCount = implFunctionType->getNumParams();
+				auto argsarr = makealloca(Value*, paramCount);
+
+				for (decltype(paramCount) j = 0; j < paramCount; j++)
+				{
+					Value* curArg = nullptr;
+					if (j < RTConfig_NumberOfVarargsArguments || RTConfig_NumberOfVarargsArguments + 1 == paramCount)
+					{
+						curArg = varargs[j];
+					}
+					else
+					{
+						curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+					}
+					auto expectedType = implFunctionType->getParamType(j);
+					curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
+					curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
+					argsarr[j] = curArg;
+				}
+				auto callResult = builder->CreateCall(implFunctionType, method->GetLLVMElement(mod), ArrayRef<Value*>(argsarr, paramCount), method->GetQName());
+				callResult->setCallingConv(NOMCC);
+				auto actualResult = EnsurePackedUnpacked(builder, EnsurePackedUnpacked(builder, callResult, REFTYPE), POINTERTYPE);
+				builder->CreateRet(actualResult);
+
+			}
 
 			llvm::raw_os_ostream out(std::cout);
 			if (verifyFunction(*fun, &out))
 			{
-				std::cout << "Could not verify raw-invoke method!";
+				out.flush();
+				std::cout << "Could not verify class raw-invoke function";
+				std::cout << this->GetName()->ToStdString();
 				fun->print(out);
 				out.flush();
 				std::cout.flush();
-				throw name;
+				throw new std::exception();
 			}
+
 			return fun;
 		}
 
 
-
-		void NomClass::GenerateDictionaryEntries(llvm::Module& mod) const
-		{
-			llvm::GlobalVariable* gvar = mod.getGlobalVariable(dictionary->SymbolName);
-			auto targcount = this->GetTypeParametersCount();
-			NomTypeRef* selfArgsBuf = makealloca(NomTypeRef, targcount);
-			for (decltype(targcount) i = 0; i < targcount; i++)
-			{
-				selfArgsBuf[i] = this->GetTypeParameter(i)->GetVariable();
-			}
-			auto thisType = this->GetType(TypeList(selfArgsBuf, targcount));
-			if (gvar == nullptr)
-			{
-				vector<Constant*> constants;
-				for (NomTypedField* field : AllFields)
-				{
-					auto cnstnt = new GlobalVariable(mod, RTDescriptorDictionaryEntry::GetLLVMType(), true, GlobalValue::LinkageTypes::InternalLinkage, RTDescriptorDictionaryEntry::CreateConstant(RTDescriptorDictionaryEntryKind::Field, field->IsReadOnly(), field->GetVisibility(), field->GetType()->GetLLVMElement(mod), field->Index, field->GetType()->IsSubtype(NomIntClass::GetInstance()->GetType(), false), field->GetType()->IsSubtype(NomFloatClass::GetInstance()->GetType(), false)));
-					constants.push_back(cnstnt);
-					DICTKEYTYPE dictKey = NomNameRepository::Instance().GetNameID(NomConstants::GetString(field->Name)->GetText()->ToStdString());
-					dictionary->AddEntryKey(dictKey);
-				}
-
-				unordered_map<size_t, vector<const NomCallable*>> overloadings;
-
-
-				for (NomMethodTableEntry* mte : MethodTable)
-				{
-					auto namekey = NomNameRepository::Instance().GetNameID(mte->Method->GetName());
-					auto match = overloadings.find(namekey);
-					if (match == overloadings.end())
-					{
-						overloadings[namekey] = vector<const NomCallable*>();
-					}
-					bool found = false;
-					for (auto ole : overloadings[namekey])
-					{
-						if (ole == mte->Method)
-						{
-							found = true;
-						}
-					}
-					if (!found)
-					{
-						overloadings[namekey].push_back(mte->Method);
-					}
-				}
-
-				for (auto& ovlpair : overloadings)
-				{
-					std::string symname = *this->GetSymbolName() + "$" + ovlpair.second.at(0)->GetName();
-					NomPartialApplication* npa = new NomPartialApplication(symname, ovlpair.second, this, thisType);
-
-					auto cnstnt = new GlobalVariable(mod, RTDescriptorDictionaryEntry::GetLLVMType(), true, GlobalValue::LinkageTypes::InternalLinkage, RTDescriptorDictionaryEntry::CreateConstant(RTDescriptorDictionaryEntryKind::PartialApp, true, Visibility::Public, npa->GetLLVMElement(mod), 0, false, false));
-					constants.push_back(cnstnt);
-					dictionary->AddEntryKey(ovlpair.first);
-
-				}
-
-				llvm::ArrayType* type = arrtype(RTDescriptorDictionaryEntry::GetLLVMPointerType(), constants.size());
-				gvar = new llvm::GlobalVariable(mod, type, true, GlobalValue::LinkageTypes::ExternalLinkage, ConstantArray::get(type, constants), dictionary->SymbolName);
-				dictionary->EnsurePreparation();
-			}
-		}
-
-
-		llvm::FunctionType* NomClass::GetDynamicFieldLookupType()
-		{
-			static llvm::FunctionType* funtype = FunctionType::get(REFTYPE, { REFTYPE, numtype(size_t) }, false);
-			return funtype;
-		}
 		llvm::Function* NomClass::GetDynamicFieldLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			auto thisType = this->GetType(GetAllTypeVariables());
@@ -558,14 +517,14 @@ namespace Nom
 			llvm::Function* fun = mod.getFunction(ddlname.data());
 			if (fun == nullptr)
 			{
-				llvm::FunctionType* funtype = GetDynamicFieldLookupType();
+				llvm::FunctionType* funtype = GetFieldReadFunctionType();
 				fun = llvm::Function::Create(funtype, linkage, ddlname.data(), &mod);
 				fun->setCallingConv(NOMCC);
 
 				auto argiter = fun->arg_begin();
-				llvm::Argument* thisarg = argiter;
-				argiter++;
 				llvm::Argument* namearg = argiter;
+				argiter++;
+				llvm::Argument* thisarg = argiter;
 
 				NomBuilder builder;
 
@@ -576,6 +535,7 @@ namespace Nom
 				auto nameSwitch = builder->CreateSwitch(namearg, notfound, this->AllFields.size());
 
 				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType() }), thisType);
+				scce[0] = thisarg;
 
 				for (auto field : AllFields)
 				{
@@ -603,11 +563,6 @@ namespace Nom
 			return fun;
 		}
 
-		llvm::FunctionType* NomClass::GetDynamicFieldStoreType()
-		{
-			static llvm::FunctionType* funtype = FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { REFTYPE, numtype(size_t), REFTYPE }, false);
-			return funtype;
-		}
 
 		llvm::Function* NomClass::GetDynamicFieldStore(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
@@ -616,14 +571,14 @@ namespace Nom
 			llvm::Function* fun = mod.getFunction(ddlname.data());
 			if (fun == nullptr)
 			{
-				llvm::FunctionType* funtype = GetDynamicFieldStoreType();
+				llvm::FunctionType* funtype = GetFieldWriteFunctionType();
 				fun = llvm::Function::Create(funtype, linkage, ddlname.data(), &mod);
 				fun->setCallingConv(NOMCC);
 
 				auto argiter = fun->arg_begin();
-				llvm::Argument* thisarg = argiter;
-				argiter++;
 				llvm::Argument* namearg = argiter;
+				argiter++;
+				llvm::Argument* thisarg = argiter;
 				argiter++;
 				llvm::Value* newValue = argiter;
 
@@ -637,6 +592,7 @@ namespace Nom
 				auto nameSwitch = builder->CreateSwitch(namearg, notfound, this->AllFields.size());
 
 				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType(), &NomDynamicType::Instance() }), thisType);
+				scce[0] = thisarg;
 
 				for (auto field : AllFields)
 				{
@@ -645,7 +601,9 @@ namespace Nom
 					BasicBlock* fieldWriteBlock = BasicBlock::Create(LLVMCONTEXT, "fieldWrite:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					builder->CreateCondBr(RTCast::GenerateCast(builder, &scce, newValue, field->GetType()), fieldWriteBlock, errorBlock);
+					auto castResult = RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
+					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
+					builder->CreateCondBr(castResult, fieldWriteBlock, errorBlock, GetLikelyFirstBranchMetadata());
 
 					builder->SetInsertPoint(fieldWriteBlock);
 					auto writeValue = newValue;
@@ -701,203 +659,300 @@ namespace Nom
 			return fun;
 		}
 
-		llvm::StructType* NomClass::GetDynamicDispatcherLookupResultType()
-		{
-			static llvm::StructType* st = StructType::create(LLVMCONTEXT, { NomPartialApplication::GetDynamicDispatcherType()->getPointerTo(), REFTYPE }, "DynamicDispatcherResultPair");
-			return st;
-		}
-
-		llvm::FunctionType* NomClass::GetDynamicDispatcherLookupType()
-		{
-			static llvm::FunctionType* funtype = FunctionType::get(GetDynamicDispatcherLookupResultType(), { REFTYPE, numtype(size_t)/*, numtype(int32_t), numtype(int32_t)*/ }, false);
-			return funtype;
-		}
-
 		llvm::FunctionType* NomClass::GetInterfaceTableLookupType()
 		{
 			return GetIMTFunctionType();
 		}
-		
-		llvm::Constant* NomClass::GetInterfaceTableLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
-		{
-			Constant** imtFuns = makealloca(Constant*, IMTsize);
-			SmallVector<pair<NomMethodKey*, Function*>, 8> imtPairs;
 
-			for (int i = 0; i < IMTsize; i++)
+		llvm::Constant* NomClass::GetInterfaceDescriptor(llvm::Module& mod) const
+		{
+			return RTClass::GetInterfaceReference(GetLLVMElement(mod));
+		}
+
+		llvm::Constant* NomClass::GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		{
+			return nullptr;
+		}
+
+		llvm::Constant* NomClass::GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::StructType* stype) const
+		{
+			auto thisType = this->GetType(GetAllTypeVariables());
+			auto rettype = arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize);
+			auto retarr = makealloca(Constant*, IMTsize);
+			auto typesarr = makealloca(Type*, IMTsize);
+
+			for (decltype(IMTsize) i = 0; i < IMTsize; i++)
 			{
-				imtPairs.clear();
-				for (auto ifc : GetSuperInterfaces())
+				llvm::SmallVector<const NomMethod*, 16> methods;
+				llvm::SmallVector<const NomTypedField*, 16> fields;
+				for (auto& mte : MethodTable)
 				{
-					for (auto meth : ifc.Elem->Methods)
+					if (NomNameRepository::Instance().GetNameID(mte->Method->GetName()) % IMTsize == i)
 					{
-						if (meth->GetIMTIndex() == i)
+						bool found = false;
+						for (auto& meth : methods)
 						{
-							NomMethodKey* nmk = NomMethodKey::GetMethodKey(meth);
-							bool found = false;
-							for (auto& pair : imtPairs)
+							if (meth->GetName()._Equal(mte->Method->GetName()))
 							{
-								if (pair.first == nmk)
-								{
-									found = true;
-									break;
-								}
+								found = true;
+								break;
 							}
-							if (!found)
-							{
-								imtPairs.emplace_back(nmk, MethodTable[InterfaceTableEntries.at(ifc.Elem->GetID()) + meth->GetOffset()]->CallableVersion->GetLLVMElement(mod));
-							}
+						}
+						if (!found)
+						{
+							methods.push_back(mte->Method);
 						}
 					}
 				}
 
-				std::string ddlname = "NOM_RT_ITL_" + *this->GetSymbolName() + '_' + std::to_string(i);
-				llvm::Function* fun = mod.getFunction(ddlname.data());
-				if (fun == nullptr)
-				{
-					fun = GenerateIMT(&mod, linkage, ddlname, imtPairs);
-				}
-				imtFuns[i] = fun;
-			}
-
-			return llvm::ConstantArray::get(arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(imtFuns, IMTsize));
-
-		}
-
-		llvm::Function* NomClass::GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
-		{
-			auto thisType = this->GetType(GetAllTypeVariables());
-			std::string ddlname = "NOM_RT_DD_" + *this->GetSymbolName();
-			llvm::Function* fun = mod.getFunction(ddlname.data());
-			if (fun == nullptr)
-			{
-				llvm::FunctionType* funtype = GetDynamicDispatcherLookupType();
-				fun = llvm::Function::Create(funtype, linkage, ddlname.data(), &mod);
-				fun->setCallingConv(NOMCC);
-
-				auto argiter = fun->arg_begin();
-				llvm::Argument* thisarg = argiter;
-				argiter++;
-				llvm::Argument* namearg = argiter;
-				//argiter++;
-				//llvm::Argument* tacarg = argiter;
-				//argiter++;
-				//llvm::Argument* argcarg = argiter;
-
-				NomBuilder builder;
-
-				BasicBlock* start = BasicBlock::Create(LLVMCONTEXT, "", fun);
-				BasicBlock* notfound = BasicBlock::Create(LLVMCONTEXT, "notFoundBlock", fun);
-
-				unordered_map<size_t, vector<const NomCallable*>> overloadings;
-
-				for (NomMethodTableEntry* mte : MethodTable)
-				{
-					auto namekey = NomNameRepository::Instance().GetNameID(mte->Method->GetName());
-					auto match = overloadings.find(namekey);
-					if (match == overloadings.end())
-					{
-						overloadings[namekey] = vector<const NomCallable*>();
-					}
-					//uint32_t dtac = mte->Method->GetDirectTypeParametersCount();
-					auto& ole = overloadings[namekey];
-					/*auto tamatch = ole.find(dtac);
-					if (tamatch == ole.end())
-					{
-						ole[dtac] = unordered_map<uint32_t, vector<const NomCallable* >>();
-					}
-					auto& ole2 = ole[dtac];
-					uint32_t tpc = mte->Method->GetArgumentCount();
-					auto argmatch = ole2.find(tpc);
-					if (argmatch == ole2.end())
-					{
-						ole2[tpc] = vector<const NomCallable*>();
-					}*/
-					ole.push_back(mte->Method);
-				}
-
-				builder->SetInsertPoint(start);
-				SwitchInst* switch1 = builder->CreateSwitch(namearg, notfound, overloadings.size() + AllFields.size());
-
-				builder->SetInsertPoint(notfound);
-				static const char* emptystr = "";
-				static const char* lookupfailstr = "Could not find any methods with matching name, type argument count, and argument count: ";
-				builder->CreateCall(RTOutput_Name::GetLLVMElement(mod), { GetLLVMPointer(lookupfailstr), namearg });
-				builder->CreateCall(RTOutput_Fail::GetLLVMElement(mod), { GetLLVMPointer(emptystr) });
-				builder->CreateRet(UndefValue::get(fun->getReturnType()));
-
-				//builder->SetInsertPoint(namenotfound);
-				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ /*&NomDynamicType::Instance(),*/ NomIntClass::GetInstance()->GetType()/*, NomIntClass::GetInstance()->GetType(), NomIntClass::GetInstance()->GetType()*/ }), thisType);
 				for (auto field : AllFields)
 				{
-					std::string fieldName = field->GetName()->ToStdString();
-					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "fieldInvoke:" + fieldName, fun);
-					switch1->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
-					builder->SetInsertPoint(fieldBlock);
-					auto fieldValue = EnsurePacked(builder, field->GenerateRead(builder, &scce, NomValue(thisarg, thisType)));
-					auto fieldInvokeDispatcher = EnsureDynamicMethodInstruction::GenerateGetBestInvokeDispatcherDyn(builder, fieldValue/*, tacarg, argcarg*/);
-					auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), builder->CreateExtractValue(fieldInvokeDispatcher, { 0 }), { 0 });
-					retStruct = builder->CreateInsertValue(retStruct, fieldValue, { 1 });
-					builder->CreateRet(retStruct);
-				}
-
-
-				for (auto& ole1 : overloadings)
-				{
-					BasicBlock* ob1 = BasicBlock::Create(LLVMCONTEXT, "methodname:" + *NomNameRepository::Instance().GetNameFromID(ole1.first), fun);
-					switch1->addCase(MakeInt<size_t>(ole1.first), ob1);
-					builder->SetInsertPoint(ob1);
-					/*SwitchInst* switch2 = builder->CreateSwitch(tacarg, notfound, ole1.second.size());
-
-					for (auto& ole2 : ole1.second)
+					if (field->GetType()->GetLLVMType() == REFTYPE && NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString()) % IMTsize == i)
 					{
-						BasicBlock* ob2 = BasicBlock::Create(LLVMCONTEXT, "typeArgCount:" + to_string(ole2.first), fun);
-						switch2->addCase(MakeInt<uint32_t>(ole2.first), ob2);
-						builder->SetInsertPoint(ob2);
-						SwitchInst* switch3 = builder->CreateSwitch(argcarg, notfound, ole2.second.size());
-
-						for (auto& ole3 : ole2.second)
-						{
-							BasicBlock* ob3 = BasicBlock::Create(LLVMCONTEXT, "argCount" + to_string(ole3.first), fun);
-							switch3->addCase(MakeInt<uint32_t>(ole3.first), ob3);
-							builder->SetInsertPoint(ob3);*/
-
-							//Dynamic dispatching never changes through casting: methods do not become more accepting of arguments - if they already restrict arguments in some way,
-							//then that is grounds to reject a cast to more permissive arguments right away
-							//If basic methods are changed and not just interface table entries on casting, then the dispatchers for such classes should do a method table lookup
-							//instead of a direct statically bound call, but that should suffice
-
-							Function* dispatcher = NomPartialApplication::GetDispatcherEntry(mod, linkage, /*ole2.first, ole3.first, */ole1.second, this/*, thisType*/);
-							auto retStruct = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()),/* llvm::ConstantExpr::getPointerCast(*/dispatcher/*, POINTERTYPE)*/, { 0 });
-							retStruct = builder->CreateInsertValue(retStruct, thisarg, { 1 });
-							builder->CreateRet(retStruct);
-
-					//	}
-					//}
+						fields.push_back(field);
+					}
 				}
+
+				auto entrycount = methods.size() + fields.size() + 1;
+				auto entries = makealloca(Constant*, entrycount);
+
+				int entryID = 0;
+				for (auto& meth : methods)
+				{
+					auto fun = Function::Create(GetIMTFunctionType(), linkage, "NOMMON_RT_DD_" + *meth->GetSymbolName(), mod);
+					fun->setCallingConv(NOMCC);
+
+					NomBuilder builder;
+
+					BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+					BasicBlock* doCallBlock = BasicBlock::Create(LLVMCONTEXT, "callOK", fun);
+					std::string* errormsg = new std::string("Called method " + meth->GetName() + " with invalid number of arguments!");
+					std::string* typeerrormsg = new std::string("Invalid argument arguments!");
+					builder->SetInsertPoint(startBlock);
+					BasicBlock* wrongArgumentCountBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, errormsg->c_str());
+					BasicBlock* invalidArgumentBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, typeerrormsg->c_str());
+
+					auto argiter = fun->arg_begin();
+					auto callTag = argiter;
+					argiter++;
+					auto varargs = makealloca(Value*, RTConfig_NumberOfVarargsArguments + 1);
+					for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i <= RTConfig_NumberOfVarargsArguments; i++)
+					{
+						varargs[i] = argiter;
+						argiter++;
+					}
+
+					auto callTagMatch = CreatePointerEq(builder, callTag, NomLambdaCallTag::GetCallTag(meth->GetDirectTypeParametersCount(), meth->GetArgumentCount())->GetLLVMElement(mod));
+					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { callTagMatch, MakeUInt(1,1) });
+					builder->CreateCondBr(callTagMatch, doCallBlock, wrongArgumentCountBlock, GetLikelyFirstBranchMetadata());
+
+					builder->SetInsertPoint(doCallBlock);
+					auto implFunctionType = meth->GetLLVMFunctionType();
+					auto paramCount = implFunctionType->getNumParams();
+					auto argsarr = makealloca(Value*, paramCount);
+
+					NomSubstitutionContextMemberContext nscmc(meth);
+					CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, ObjectHeader::GeneratePointerToTypeArguments(builder, varargs[0]));
+					for (decltype(paramCount) j = 0; j < paramCount; j++)
+					{
+						Value* curArg = nullptr;
+						if (j < RTConfig_NumberOfVarargsArguments || RTConfig_NumberOfVarargsArguments + 1 == paramCount)
+						{
+							curArg = varargs[j];
+						}
+						else
+						{
+							curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+						}
+						auto expectedType = implFunctionType->getParamType(j);
+						curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
+						BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
+						auto castSuccess = RTCast::GenerateCast(builder, &cvce, curArg, meth->GetArgumentTypes(&nscmc)[j]);
+						builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castSuccess, MakeUInt(1,1) });
+						builder->CreateCondBr(castSuccess, nextBlock, invalidArgumentBlock, GetLikelyFirstBranchMetadata());
+						builder->SetInsertPoint(nextBlock);
+						curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
+						argsarr[j] = curArg;
+					}
+					auto callResult = builder->CreateCall(implFunctionType, meth->GetLLVMElement(mod), ArrayRef<Value*>(argsarr, paramCount), meth->GetQName());
+					callResult->setCallingConv(NOMCC);
+					auto actualResult = EnsurePackedUnpacked(builder, EnsurePackedUnpacked(builder, callResult, REFTYPE), POINTERTYPE);
+					builder->CreateRet(actualResult);
+
+
+					llvm::raw_os_ostream out(std::cout);
+					if (verifyFunction(*fun, &out))
+					{
+						out.flush();
+						std::cout << "Could not verify dynamic dispatch function";
+						std::cout << meth->GetName();
+						fun->print(out);
+						out.flush();
+						std::cout.flush();
+						throw new std::exception();
+					}
+
+					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(meth->GetName())), MakeInt<size_t>(0), fun);
+					entryID++;
+				}
+				for (auto& field : fields)
+				{
+					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), MakeInt<size_t>(1), ConstantExpr::getIntToPtr(MakeInt<size_t>(((size_t)(field->Index + (GetHasRawInvoke() ? 1 : 0))) << 32), GetIMTFunctionType()->getPointerTo()));
+					entryID++;
+				}
+				entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(0), MakeInt<size_t>(0), ConstantPointerNull::get(GetIMTFunctionType()->getPointerTo()));
+				retarr[i] = ConstantArray::get(arrtype(GetDynamicDispatchListEntryType(), entryID + 1), ArrayRef<Constant*>(entries, entryID + 1));
+				typesarr[i] = retarr[i]->getType();
+			}
+			if (stype->isOpaque())
+			{
+				stype->setBody(ArrayRef<Type*>(typesarr, IMTsize), false);
+			}
+			return ConstantStruct::get(stype, ArrayRef<Constant*>(retarr, IMTsize));
+		}
+		llvm::Constant* NomClass::GetInterfaceTableLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		{
+			auto rettype = arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize);
+			auto retarr = makealloca(Constant*, IMTsize);
+
+			llvm::SmallPtrSet<const NomInterface*, 16> supers;
+			vector<const NomInterface*> worklist;
+			auto curClass = this;
+			while (curClass != nullptr)
+			{
+				for (auto& super : curClass->GetSuperInterfaces())
+				{
+					if (supers.insert(super.Elem).second)
+					{
+						worklist.push_back(super.Elem);
+					}
+				}
+				curClass = curClass->GetSuperClass().Elem;
+			}
+			while (worklist.size() > 0)
+			{
+				auto current = worklist.back();
+				worklist.pop_back();
+				for (auto& super : current->GetSuperInterfaces())
+				{
+					if (supers.insert(super.Elem).second)
+					{
+						worklist.push_back(super.Elem);
+					}
+				}
+			}
+
+			for (decltype(IMTsize) i = 0; i < IMTsize; i++)
+			{
+				llvm::SmallVector<const NomMethod*, 16> methods;
+				for (auto super : supers)
+				{
+					for (auto& meth : super->Methods)
+					{
+						if (meth->GetContainer() == super && meth->GetIMTIndex() == i)
+						{
+							methods.push_back(meth);
+						}
+					}
+				}
+
+				auto fun = Function::Create(GetIMTFunctionType(), linkage, "MONNOM_RT_IMT_" + *GetSymbolName() + "_" + std::to_string(i), mod);
+				fun->setCallingConv(NOMCC);
+				BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+				NomBuilder builder;
+				builder->SetInsertPoint(startBlock);
+
+				auto argiter = fun->arg_begin();
+				auto callTag = argiter;
+				argiter++;
+				auto varargs = makealloca(Value*, RTConfig_NumberOfVarargsArguments + 1);
+				for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i <= RTConfig_NumberOfVarargsArguments; i++)
+				{
+					varargs[i] = argiter;
+					argiter++;
+				}
+
+				for (auto& meth : methods)
+				{
+					BasicBlock* nextBlock = builder->GetInsertBlock();
+					if (methods.size() > 1 || RTConfig_RunUnncessesaryCallTagChecks)
+					{
+						BasicBlock* callBlock = BasicBlock::Create(LLVMCONTEXT, meth->GetName(), fun);
+						nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
+
+						auto methodCallTag = NomInterfaceCallTag::GetMethodKey(meth);
+
+						auto callTagMatch = builder->CreateICmpEQ(builder->CreatePtrToInt(callTag, numtype(intptr_t)), ConstantExpr::getPtrToInt(methodCallTag->GetLLVMElement(mod), numtype(intptr_t)), "callTagMatch");
+						builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { callTagMatch, MakeUInt(1,1) });
+						builder->CreateCondBr(callTagMatch, callBlock, nextBlock, GetLikelyFirstBranchMetadata());
+						builder->SetInsertPoint(callBlock);
+					}
+
+					bool found = false;
+					for (auto& mte : MethodTable)
+					{
+						if (mte->Method->Overrides(meth))
+						{
+							auto calledFunctionType = meth->GetLLVMFunctionType();
+							auto implFunctionType = mte->Method->GetLLVMFunctionType();
+							auto paramCount = implFunctionType->getNumParams();
+							auto argsarr = makealloca(Value*, paramCount);
+
+							for (decltype(paramCount) j = 0; j < paramCount; j++)
+							{
+								Value* curArg = nullptr;
+								if (j < RTConfig_NumberOfVarargsArguments || RTConfig_NumberOfVarargsArguments + 1 == paramCount)
+								{
+									curArg = varargs[j];
+								}
+								else
+								{
+									curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+								}
+								auto calledType = calledFunctionType->getParamType(j);
+								auto expectedType = implFunctionType->getParamType(j);
+								curArg = EnsurePackedUnpacked(builder, curArg, calledType);
+								curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
+								argsarr[j] = curArg;
+							}
+							auto callResult = builder->CreateCall(implFunctionType, mte->Method->GetLLVMElement(mod), ArrayRef<Value*>(argsarr, paramCount), mte->Method->GetQName());
+							callResult->setCallingConv(NOMCC);
+							auto actualResult = EnsurePackedUnpacked(builder, EnsurePackedUnpacked(builder, callResult, calledFunctionType->getReturnType()), POINTERTYPE);
+							builder->CreateRet(actualResult);
+							found = true;
+							break;
+						}
+					}
+					if (!found)
+					{
+						throw new std::exception();
+					}
+
+					builder->SetInsertPoint(nextBlock);
+				}
+				if (methods.size() != 1 && !RTConfig_RunUnncessesaryCallTagChecks)
+				{
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "RUNTIME ERROR: Called invalid IMT method!", builder->GetInsertBlock());
+				}
+
 				llvm::raw_os_ostream out(std::cout);
 				if (verifyFunction(*fun, &out))
 				{
 					out.flush();
-					std::cout << "Could not verify dispatcher lookup for class ";
+					std::cout << "Could not verify class IMT function";
 					std::cout << this->GetName()->ToStdString();
 					fun->print(out);
 					out.flush();
 					std::cout.flush();
 					throw new std::exception();
 				}
+
+				retarr[i] = fun;
 			}
-			return fun;
+
+			return ConstantArray::get(rettype, ArrayRef<Constant*>(retarr, IMTsize));
 		}
 
-		bool NomClass::FindInstantiations(NomNamed* other, RecBufferTypeList& myArgs, InstantiationList& results) const
-		{
-			if (NomInterface::FindInstantiations(other, myArgs, results))
-			{
-				return true;
-			}
-			this->GetSuperClass();
-			return false;
-		}
 
 		const NomInstantiationRef<NomClass> NomClassLoaded::GetSuperClass(const NomSubstitutionContext* context) const
 		{
@@ -971,11 +1026,11 @@ namespace Nom
 				AllMethods.push_back(meth);
 			}
 			auto superinsts = GetSuperInterfaces();
-			for (int sii = 0; sii<superinsts.size(); sii++)
+			for (int sii = 0; sii < superinsts.size(); sii++)
 			{
 				const NomInstantiationRef<NomInterface>& super = superinsts[sii];
 				super.Elem->PreprocessInheritance();
-				for (auto &inst : super.Elem->GetInstantiations())
+				for (auto& inst : super.Elem->GetInstantiations())
 				{
 					AddInstantiation(NomInstantiationRef<NomInterface>(inst.first, inst.second));
 				}
@@ -998,7 +1053,7 @@ namespace Nom
 				}
 			}
 			auto superClassRef = GetSuperClass();
-			for (auto &sinst : superClassRef.Elem->GetInstantiations())
+			for (auto& sinst : superClassRef.Elem->GetInstantiations())
 			{
 				AddInstantiation(NomInstantiationRef<NomInterface>(sinst.first, sinst.second));
 			}
@@ -1059,7 +1114,6 @@ namespace Nom
 					mthis->MethodTable.push_back(new NomMethodTableEntry(meth, meth->GetLLVMFunctionType(), meth->GetOffset()));
 				}
 			}
-			auto iteType = InterfaceTableEntryType();
 			auto supers = GetSuperInterfaces();
 			for (auto super : supers)
 			{

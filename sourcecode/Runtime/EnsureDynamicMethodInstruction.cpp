@@ -18,6 +18,8 @@
 #include "CastStats.h"
 #include "RTLambda.h"
 #include "LambdaHeader.h"
+#include "IMT.h"
+#include "Metadata.h"
 
 using namespace std;
 using namespace llvm;
@@ -33,7 +35,7 @@ namespace Nom
 		}
 
 
-		llvm::Value* EnsureDynamicMethodInstruction::GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, NomValue receiver/*, llvm::Value* typeargcount, llvm::Value* argcount*/)
+		llvm::Value* EnsureDynamicMethodInstruction::GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, NomValue receiver)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -53,156 +55,34 @@ namespace Nom
 			if (mergeBlocks > 1)
 			{
 				builder->SetInsertPoint(mergeBlock);
-				mergePHI = builder->CreatePHI(NomClass::GetDynamicDispatcherLookupResultType(), mergeBlocks);
+				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), mergeBlocks);
 				returnVal = mergePHI;
 			}
 
 			if (refValueBlock != nullptr)
 			{
-				BasicBlock* classBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr;
 				builder->SetInsertPoint(refValueBlock);
-				Value* vtable = nullptr;
-				Value* sTable = nullptr;
-				int mergeBlocks2 = RefValueHeader::GenerateVTableTagSwitch(builder, receiver, &vtable, &sTable, &classBlock, &lambdaBlock, &structBlock, &partialAppBlock);
+				BasicBlock* packPairBlock = BasicBlock::Create(LLVMCONTEXT, "packRawInvokeDispatcherPair", fun);
+				BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Given value is not invokable!");
+				auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+				auto hasRawInvoke = RTVTable::GenerateHasRawInvoke(builder, vtable);
+				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasRawInvoke, MakeUInt(1,1) });
+				builder->CreateCondBr(hasRawInvoke, packPairBlock, errorBlock, GetLikelyFirstBranchMetadata());
 
-				BasicBlock* mergeBlock2 = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge2", fun);
-				PHINode* mergePHI2 = nullptr;
-				Value* returnVal2 = nullptr;
-				builder->SetInsertPoint(mergeBlock2);
-				if (mergeBlocks2 > 1)
-				{
-					mergePHI2 = builder->CreatePHI(NomClass::GetDynamicDispatcherLookupResultType(), mergeBlocks2);
-					returnVal2 = mergePHI2;
-				}
-				builder->CreateBr(mergeBlock);
-
-				if (classBlock != nullptr)
-				{
-					builder->SetInsertPoint(classBlock);
-					//BasicBlock* classObjectBlock = nullptr, * vtlambdaBlock = nullptr, * vtstructBlock = nullptr, * vtpartialAppBlock = nullptr, * multiCastBlock = nullptr;
-
-					//int mergeBlocks3 = RTVTable::GenerateVTableKindSwitch(builder, vtable, &classObjectBlock, &vtlambdaBlock, &vtstructBlock, &vtpartialAppBlock, &multiCastBlock);
-
-					//BasicBlock* mergeBlock3 = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge3", fun);
-					//PHINode* mergePHI3 = nullptr;
-					//Value* returnVal3 = nullptr;
-					//builder->SetInsertPoint(mergeBlock3);
-					//if (mergeBlocks3 > 1)
-					//{
-					//	mergePHI3 = builder->CreatePHI(NomClass::GetDynamicDispatcherLookupResultType(), mergeBlocks3);
-					//	returnVal3 = mergePHI3;
-					//}
-					//builder->CreateBr(mergeBlock2);
-
-					//if (classObjectBlock != nullptr)
-					//{
-					//	builder->SetInsertPoint(classObjectBlock);
-					auto dispatcherLookupPtr = RTClass::GenerateReadDispatcherLookup(builder, vtable);
-					auto dispatcherLookupCall = builder->CreateCall(NomClass::GetDynamicDispatcherLookupType(), dispatcherLookupPtr, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(""))/*, typeargcount, argcount*/ }, "dispatcher");
-					dispatcherLookupCall->setCallingConv(NOMCC);
-					if (mergePHI2 != nullptr)
-					{
-						mergePHI2->addIncoming(dispatcherLookupCall, builder->GetInsertBlock());
-					}
-					else
-					{
-						returnVal2 = dispatcherLookupCall;
-					}
-					builder->CreateBr(mergeBlock2);
-					//}
-
-					//if (vtlambdaBlock != nullptr)
-					//{
-					//	BasicBlock* lambdaMatch = BasicBlock::Create(LLVMCONTEXT, "castedLambdaArityMatch", fun);
-					//	BasicBlock* wrongArity = RTOutput_Fail::GenerateFailOutputBlock(builder, "Trying to call lambda with wrong arity!");
-					//	builder->SetInsertPoint(vtlambdaBlock);
-					//	auto lambdaMeta = LambdaHeader::GenerateReadLambdaMetadata(builder, receiver);
-					//	auto lambdaArityMatch = RTLambda::GenerateCheckArgCountsMatch(builder, lambdaMeta, typeargcount, argcount);
-					//	builder->CreateCondBr(lambdaArityMatch, lambdaMatch, wrongArity);
-
-					//	builder->SetInsertPoint(lambdaMatch);
-					//	auto ldispatcher = RTLambda::GenerateReadDispatcherPointer(builder, lambdaMeta);
-					//	auto ldispatcherPair = builder->CreateInsertValue(UndefValue::get(NomClass::GetDynamicDispatcherLookupResultType()), builder->CreatePointerCast(ldispatcher, POINTERTYPE), { 0 });
-					//	ldispatcherPair = builder->CreateInsertValue(ldispatcherPair, receiver, { 1 });
-
-					//	if (mergePHI3 != nullptr)
-					//	{
-					//		mergePHI3->addIncoming(ldispatcherPair, builder->GetInsertBlock());
-					//	}
-					//	else
-					//	{
-					//		returnVal3 = ldispatcherPair;
-					//	}
-					//	builder->CreateBr(mergeBlock3);
-					//}
-
-					//if (vtstructBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "dynamic struct invoke not implemented", vtstructBlock);
-					//}
-
-					//if (vtpartialAppBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "dynamic partial app invoke not implemented", vtpartialAppBlock);
-					//}
-
-					//if (multiCastBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "dynamic invoke on multicasted values not implemented", multiCastBlock);
-					//}
-					//if (mergePHI2 != nullptr)
-					//{
-					//	mergePHI2->addIncoming(returnVal3, mergeBlock3);
-					//}
-					//else
-					//{
-					//	returnVal2 = returnVal3;
-					//}
-				}
-
-
-				if (lambdaBlock != nullptr)
-				{
-					//BasicBlock* lambdaMatch = BasicBlock::Create(LLVMCONTEXT, "lambdaArityMatch", fun);
-					//BasicBlock* wrongArity = RTOutput_Fail::GenerateFailOutputBlock(builder, "Trying to call lambda with wrong arity!");
-					builder->SetInsertPoint(lambdaBlock);
-					auto lambdaMeta = LambdaHeader::GenerateReadLambdaMetadata(builder, receiver);
-					//auto lambdaArityMatch = RTLambda::GenerateCheckArgCountsMatch(builder, lambdaMeta, typeargcount, argcount);
-					//builder->CreateCondBr(lambdaArityMatch, lambdaMatch, wrongArity);
-
-					//builder->SetInsertPoint(lambdaMatch);
-					auto ldispatcher = RTLambda::GenerateReadDispatcherPointer(builder, lambdaMeta);
-					auto ldispatcherPair = builder->CreateInsertValue(UndefValue::get(NomClass::GetDynamicDispatcherLookupResultType()),/* builder->CreatePointerCast(*/ldispatcher/*, POINTERTYPE)*/, { 0 });
-					ldispatcherPair = builder->CreateInsertValue(ldispatcherPair, receiver, { 1 });
-
-					if (mergePHI2 != nullptr)
-					{
-						mergePHI2->addIncoming(ldispatcherPair, builder->GetInsertBlock());
-					}
-					else
-					{
-						returnVal2 = ldispatcherPair;
-					}
-					builder->CreateBr(mergeBlock2);
-				}
-
-				if (structBlock != nullptr)
-				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "dynamic struct invoke not implemented", structBlock);
-				}
-				if (partialAppBlock != nullptr)
-				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "dynamic partial app invoke not implemented", partialAppBlock);
-				}
+				builder->SetInsertPoint(packPairBlock);
+				auto rawInvokePtr = builder->CreatePointerCast(RefValueHeader::GenerateReadRawInvoke(builder, receiver), GetIMTFunctionType()->getPointerTo());
+				auto partialPair = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), rawInvokePtr, { 0 });
+				auto returnVal2 = builder->CreateInsertValue(partialPair, builder->CreatePointerCast(receiver, POINTERTYPE), { 1 });
 
 				if (mergePHI != nullptr)
 				{
-					mergePHI->addIncoming(returnVal2, mergeBlock2);
+					mergePHI->addIncoming(returnVal2, builder->GetInsertBlock());
 				}
 				else
 				{
 					returnVal = returnVal2;
 				}
+				builder->CreateBr(mergeBlock);
 			}
 
 			if (packedIntBlock != nullptr)
@@ -244,8 +124,6 @@ namespace Nom
 				{
 					builder->CreateCall(GetIncDynamicInvokes(*builder->GetInsertBlock()->getParent()->getParent()), {});
 				}
-				//RegisterValue(env, NVGenerateBestInvoke(builder, env, receiver, typeargs));
-				//env->ClearArguments();
 				env->PushDispatchPair(GenerateGetBestInvokeDispatcherDyn(builder, receiver));
 				return;
 			}
@@ -254,7 +132,6 @@ namespace Nom
 			{
 				builder->CreateCall(GetIncDynamicMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
-
 
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 			Value* primitiveIntVal, * primitiveFloatVal, * primitiveBoolVal;
@@ -272,149 +149,31 @@ namespace Nom
 			if (mergeBlocks > 1)
 			{
 				builder->SetInsertPoint(mergeBlock);
-				mergePHI = builder->CreatePHI(NomClass::GetDynamicDispatcherLookupResultType(), mergeBlocks);
+				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), mergeBlocks);
 				returnVal = mergePHI;
 			}
 
 			if (refValueBlock != nullptr)
 			{
-				BasicBlock* regularVTableBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr;
 				builder->SetInsertPoint(refValueBlock);
-				Value* vtable = nullptr, * sTable = nullptr;
-				int mergeBlocks2 = RefValueHeader::GenerateVTableTagSwitch(builder, receiver, &vtable, &sTable, &regularVTableBlock, &lambdaBlock, &structBlock, &partialAppBlock);
-
-				BasicBlock* mergeBlock2 = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge2", fun);
-				PHINode* mergePHI2 = nullptr;
-				Value* returnVal2 = nullptr;
-				builder->SetInsertPoint(mergeBlock2);
-				if (mergeBlocks2 > 1)
-				{
-					mergePHI2 = builder->CreatePHI(NomClass::GetDynamicDispatcherLookupResultType(), mergeBlocks2);
-					returnVal2 = mergePHI2;
-				}
-				builder->CreateBr(mergeBlock);
-
-				if (regularVTableBlock != nullptr)
-				{
-					builder->SetInsertPoint(regularVTableBlock);
-					//BasicBlock* classObjectBlock = nullptr, * vtlambdaBlock = nullptr, * vtstructBlock = nullptr, * vtpartialAppBlock = nullptr, * multiCastBlock = nullptr;
-
-					//int mergeBlocks3 = RTVTable::GenerateVTableKindSwitch(builder, vtable, &classObjectBlock, &vtlambdaBlock, &vtstructBlock, &vtpartialAppBlock, &multiCastBlock);
-
-					//BasicBlock* mergeBlock3 = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge3", fun);
-					//PHINode* mergePHI3 = nullptr;
-					//Value* returnVal3 = nullptr;
-					//builder->SetInsertPoint(mergeBlock3);
-					//if (mergeBlocks3 > 1)
-					//{
-					//	mergePHI3 = builder->CreatePHI(NomClass::GetDynamicDispatcherLookupResultType(), mergeBlocks3);
-					//	returnVal3 = mergePHI3;
-					//}
-					//builder->CreateBr(mergeBlock2);
-
-					//if (classObjectBlock != nullptr)
-					//{
-					//	builder->SetInsertPoint(classObjectBlock);
-					auto dispatcherLookupPtr = RTClass::GenerateReadDispatcherLookup(builder, vtable);
-					auto dispatcherLookupCall = builder->CreateCall(NomClass::GetDynamicDispatcherLookupType(), dispatcherLookupPtr, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName))/*, MakeInt32(typeargcount), MakeInt32(argcount)*/ }, "dispatcher");
-					dispatcherLookupCall->setCallingConv(NOMCC);
-					if (mergePHI2 != nullptr)
-					{
-						mergePHI2->addIncoming(dispatcherLookupCall, builder->GetInsertBlock());
-					}
-					else
-					{
-						returnVal2 = dispatcherLookupCall;
-					}
-					builder->CreateBr(mergeBlock2);
-					//}
-
-					//if (vtlambdaBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "lambdas have no named members!", vtlambdaBlock);
-					//}
-
-					//if (vtstructBlock != nullptr)
-					//{
-					//	builder->SetInsertPoint(vtstructBlock);
-					//	auto structDesc = StructHeader::GenerateReadStructDescriptor(builder, receiver);
-					//	auto structDispatcherLookupPtr = RTStruct::GenerateReadDispatcherLookup(builder, structDesc);
-					//	auto structDispatcher = builder->CreateCall(NomStruct::GetDynamicDispatcherLookupType(), structDispatcherLookupPtr, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName)), MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(argcount) });
-					//	structDispatcher->setCallingConv(NOMCC);
-					//	if (mergePHI3 != nullptr)
-					//	{
-					//		mergePHI3->addIncoming(structDispatcher, builder->GetInsertBlock());
-					//	}
-					//	else
-					//	{
-					//		returnVal3 = structDispatcher;
-					//	}
-					//	builder->CreateBr(mergeBlock3);
-					//}
-
-					//if (vtpartialAppBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "partial applications have no named members!", vtpartialAppBlock);
-					//}
-
-					//if (multiCastBlock != nullptr)
-					//{
-					//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "dynamic invoke on multicasted values not implemented", multiCastBlock);
-					//}
-
-					//if (mergePHI2 != nullptr)
-					//{
-					//	mergePHI2->addIncoming(returnVal3, mergeBlock3);
-					//}
-					//else
-					//{
-					//	returnVal2 = returnVal3;
-					//}
-				}
-
-
-				if (lambdaBlock != nullptr)
-				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "lambdas have no named members!", lambdaBlock);
-				}
-
-				if (structBlock != nullptr)
-				{
-					builder->SetInsertPoint(structBlock);
-					auto structDesc = sTable;
-					auto structDispatcherLookupPtr = RTStruct::GenerateReadDispatcherLookup(builder, structDesc);
-					auto structDispatcher = builder->CreateCall(NomStruct::GetDynamicDispatcherLookupType(), structDispatcherLookupPtr, { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName))/*, MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(argcount)*/ });
-					structDispatcher->setCallingConv(NOMCC);
-					if (mergePHI2 != nullptr)
-					{
-						mergePHI2->addIncoming(structDispatcher, builder->GetInsertBlock());
-					}
-					else
-					{
-						returnVal2 = structDispatcher;
-					}
-					builder->CreateBr(mergeBlock2);
-				}
-				if (partialAppBlock != nullptr)
-				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "partial applications have no named members", partialAppBlock);
-				}
+				auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+				auto returnVal2 = RTVTable::GenerateFindDynamicDispatcherPair(builder, receiver, vtable, NomNameRepository::Instance().GetNameID(methodName));
 
 				if (mergePHI != nullptr)
 				{
-					mergePHI->addIncoming(returnVal2, mergeBlock2);
+					mergePHI->addIncoming(returnVal2, builder->GetInsertBlock());
 				}
 				else
 				{
 					returnVal = returnVal2;
 				}
+				builder->CreateBr(mergeBlock);
 			}
 
 			if (packedIntBlock != nullptr)
 			{
 				builder->SetInsertPoint(packedIntBlock);
-				auto intDispatcher = builder->CreateCall(NomClass::GetDynamicDispatcherLookupType(), RTClass::GenerateReadDispatcherLookup(builder, NomIntClass::GetInstance()->GetLLVMElement(*env->Module)), { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName))/*, MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(env->GetArgCount())*/ });
-				intDispatcher->setCallingConv(NOMCC);
+				auto intDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, receiver, NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
 				if (mergePHI != nullptr)
 				{
 					mergePHI->addIncoming(intDispatcher, builder->GetInsertBlock());
@@ -429,8 +188,7 @@ namespace Nom
 			if (packedFloatBlock != nullptr)
 			{
 				builder->SetInsertPoint(packedFloatBlock);
-				auto floatDispatcher = builder->CreateCall(NomClass::GetDynamicDispatcherLookupType(), RTClass::GenerateReadDispatcherLookup(builder, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module)), { receiver, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName))/*, MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(env->GetArgCount())*/ });
-				floatDispatcher->setCallingConv(NOMCC);
+				auto floatDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, receiver, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
 				if (mergePHI != nullptr)
 				{
 					mergePHI->addIncoming(floatDispatcher, builder->GetInsertBlock());
@@ -445,8 +203,7 @@ namespace Nom
 			{
 				builder->SetInsertPoint(primitiveIntBlock);
 				auto packedInt = PackInt(builder, receiver);
-				auto intDispatcher = builder->CreateCall(NomClass::GetDynamicDispatcherLookupType(), RTClass::GenerateReadDispatcherLookup(builder, NomIntClass::GetInstance()->GetLLVMElement(*env->Module)), { packedInt, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName))/*, MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(env->GetArgCount())*/ });
-				intDispatcher->setCallingConv(NOMCC);
+				auto intDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, packedInt, NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
 				if (mergePHI != nullptr)
 				{
 					mergePHI->addIncoming(intDispatcher, builder->GetInsertBlock());
@@ -461,8 +218,7 @@ namespace Nom
 			{
 				builder->SetInsertPoint(primitiveFloatBlock);
 				auto packedFloat = PackFloat(builder, receiver);
-				auto floatDispatcher = builder->CreateCall(NomClass::GetDynamicDispatcherLookupType(), RTClass::GenerateReadDispatcherLookup(builder, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module)), { packedFloat, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName))/*, MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(env->GetArgCount()) */});
-				floatDispatcher->setCallingConv(NOMCC);
+				auto floatDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, packedFloat, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
 				if (mergePHI != nullptr)
 				{
 					mergePHI->addIncoming(floatDispatcher, builder->GetInsertBlock());
@@ -477,8 +233,7 @@ namespace Nom
 			{
 				builder->SetInsertPoint(primitiveBoolBlock);
 				auto packedBool = PackBool(builder, receiver);
-				auto boolDispatcher = builder->CreateCall(NomClass::GetDynamicDispatcherLookupType(), RTClass::GenerateReadDispatcherLookup(builder, NomBoolClass::GetInstance()->GetLLVMElement(*env->Module)), { packedBool, MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(methodName))/*, MakeInt<int32_t>(typeargcount), MakeInt<int32_t>(env->GetArgCount()) */});
-				boolDispatcher->setCallingConv(NOMCC);
+				auto boolDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, packedBool, NomBoolClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
 				if (mergePHI != nullptr)
 				{
 					mergePHI->addIncoming(boolDispatcher, builder->GetInsertBlock());

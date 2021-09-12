@@ -3,7 +3,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "NomMethod.h"
 #include <vector>
-#include "NomDescriptor.h"
 
 namespace Nom
 {

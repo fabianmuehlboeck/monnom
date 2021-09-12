@@ -20,16 +20,10 @@
 #include "CastStats.h"
 #include "LambdaHeader.h"
 #include "RTLambda.h"
-#include "RTFunctionalInterface.h"
-#include "RTLambdaInterface.h"
 #include "NomTypeRegistry.h"
 #include "RTInterface.h"
 #include "RTSubtyping.h"
 #include "RTSignature.h"
-#include "RTStruct.h"
-#include "RTGeneralInterface.h"
-#include "RTStructInterface.h"
-#include "StructHeader.h"
 #include "NomType.h"
 #include "CallingConvConf.h"
 #include "NullClass.h"
@@ -39,6 +33,7 @@
 #include "RTCompileConfig.h"
 #include "RTDictionary.h"
 #include "StructuralValueHeader.h"
+#include "Metadata.h"
 
 using namespace llvm;
 using namespace std;
@@ -147,14 +142,14 @@ namespace Nom
 			int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
 
 			SmallVector<tuple<BasicBlock*, Value*, Value*>, 8> targsInObjectSources;
-			Value* vtableVar, * sTableVar = nullptr;
+			Value* vtableVar = nullptr;
 			if (refValueBlock != nullptr)
 			{
 				builder->SetInsertPoint(refValueBlock);
 
 				BasicBlock* classBlock = nullptr, * structuralValueBlock = nullptr;
 
-				int vtableCases = RefValueHeader::GenerateRefValueKindSwitch(builder, value, &vtableVar, &sTableVar, &classBlock, &structuralValueBlock);
+				int vtableCases = RefValueHeader::GenerateNominalStructuralSwitch(builder, value, &vtableVar, &classBlock, &structuralValueBlock);
 
 				//Nominally typed objects; just collecting blocks here for unified treatments with ints/floats/bools outside
 				if (classBlock != nullptr)
@@ -167,7 +162,7 @@ namespace Nom
 					builder->SetInsertPoint(structuralValueBlock);
 					BasicBlock* outBlocks[2] = { outTrueBlock,outFalseBlock };
 					auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
-					StructuralValueHeader::GenerateMonotonicStructuralCast(builder, env, fun, outBlocks[0], outBlocks[1], value, type, substStack);
+					StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, type, substStack);
 				}
 			}
 
@@ -276,7 +271,7 @@ namespace Nom
 				{
 					builder->SetInsertPoint(std::get<0>(tpl));
 					auto typeArgsCast = builder->CreatePointerCast(std::get<1>(tpl), TYPETYPE->getPointerTo());
-					auto ifaceCast = builder->CreatePointerCast(std::get<2>(tpl), RTInterface::GetLLVMType()->getPointerTo());
+					auto ifaceCast = RTClass::GetInterfaceReference(builder,std::get<2>(tpl));
 
 					if (nominalSubtypingCases > 1)
 					{
@@ -346,9 +341,11 @@ namespace Nom
 			{
 				builder->SetInsertPoint(refValueBlock);
 
+
+
 				BasicBlock* classBlock = nullptr, * structuralValueBlock = nullptr;
 
-				int vtableCases = RefValueHeader::GenerateRefValueKindSwitch(builder, value, &vtableVar, nullptr, &classBlock, &structuralValueBlock);
+				int vtableCases = RefValueHeader::GenerateNominalStructuralSwitch(builder, value, &vtableVar, &classBlock, &structuralValueBlock);
 
 				//Nominal objects; just collecting blocks here for unified treatments with ints/floats/bools outside
 				if (classBlock != nullptr)
@@ -371,14 +368,14 @@ namespace Nom
 					{
 						builder->SetInsertPoint(rightClassTypeBlock);
 						auto iface = RTClassType::GenerateReadClassDescriptorLink(builder, rightPHI);
-						StructuralValueHeader::GenerateMonotonicStructuralCast(builder, env, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTClassType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
+						StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTClassType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
 					}
 
 					if (rightInstanceTypeBlock)
 					{
 						builder->SetInsertPoint(rightInstanceTypeBlock);
 						auto iface = RTInstanceType::GenerateReadClassDescriptorLink(builder, rightPHI);
-						StructuralValueHeader::GenerateMonotonicStructuralCast(builder, env, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTInstanceType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
+						StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTInstanceType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
 					}
 				}
 			}
@@ -434,7 +431,7 @@ namespace Nom
 				{
 					builder->SetInsertPoint(std::get<0>(tpl));
 					auto typeArgsCast = builder->CreatePointerCast(std::get<1>(tpl), TYPETYPE->getPointerTo());
-					auto ifaceCast = builder->CreatePointerCast(std::get<2>(tpl), RTInterface::GetLLVMType()->getPointerTo());
+					auto ifaceCast = RTClass::GetInterfaceReference(builder,std::get<2>(tpl));
 
 					if (nominalSubtypingCases > 1)
 					{
@@ -459,7 +456,7 @@ namespace Nom
 				subtypingResult->setCallingConv(NOMCC);
 				auto subtypingFailed = builder->CreateICmpEQ(subtypingResult, MakeUInt(2, 0));
 				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { subtypingFailed, MakeUInt(1,0) });
-				builder->CreateCondBr(subtypingFailed, outBlocks[1], outBlocks[0]);
+				builder->CreateCondBr(subtypingFailed, outBlocks[1], outBlocks[0], GetLikelySecondBranchMetadata());
 			}
 
 			builder->SetInsertPoint(outBlock);
@@ -528,7 +525,8 @@ namespace Nom
 					BasicBlock* IsNotNullBlock = BasicBlock::Create(LLVMCONTEXT, "isNotNull", fun);
 					auto nullobjptr = builder->CreatePtrToInt(NomNullObject::GetInstance()->GetLLVMElement(*env->Module), INTTYPE);
 					auto nullcmp = builder->CreateICmpEQ(nullobjptr, builder->CreatePtrToInt(value, INTTYPE));
-					builder->CreateCondBr(nullcmp, outBlock, IsNotNullBlock);
+					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { nullcmp, MakeUInt(1,0) });
+					builder->CreateCondBr(nullcmp, outBlock, IsNotNullBlock, GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(IsNotNullBlock);
 					auto castresult = GenerateCast(builder, env, value, ((NomMaybeTypeRef)type)->PotentialType);

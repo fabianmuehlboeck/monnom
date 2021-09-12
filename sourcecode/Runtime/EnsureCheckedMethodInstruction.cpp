@@ -5,7 +5,7 @@
 #include "CompileEnv.h"
 #include "NomClassType.h"
 #include "RTOutput.h"
-#include "RTStruct.h"
+#include "RTRecord.h"
 #include "NomNameRepository.h"
 #include "CompileHelpers.h"
 #include "CallingConvConf.h"
@@ -41,76 +41,12 @@ namespace Nom
 				if (refValueBlock != nullptr)
 				{
 					builder->SetInsertPoint(refValueBlock);
-
-					if (receiver.GetNomType()->GetKind() == TypeKind::TKClass && !((NomClassTypeRef)receiver.GetNomType())->Named->IsInterface())
+					auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+					auto nameid = NomNameRepository::Instance().GetNameID(methodName);
+					RTVTable::GenerateFreezeMethodField(builder, receiver, vtable, MakeInt<size_t>(nameid), MakeUInt(32, nameid % IMTsize));
+					if (returnBlock != nullptr)
 					{
-						//nothing to do here
-						if (returnBlock != nullptr)
-						{
-							builder->CreateBr(returnBlock);
-						}
-					}
-					else
-					{
-						BasicBlock* classBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr;
-						Value* vTableVar = nullptr, * sTableVar = nullptr;
-						if (methodName.length() != 0)
-						{
-							std::string* invalidLambdaMethodMsg = new std::string("Invalid method call on Lambda: " + methodName);
-							lambdaBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, invalidLambdaMethodMsg->c_str());
-						}
-						RefValueHeader::GenerateVTableTagSwitch(builder, receiver, &vTableVar, &sTableVar, &classBlock, &lambdaBlock, &structBlock, &partialAppBlock);
-						if (returnBlock == nullptr)
-						{
-							returnBlock = BasicBlock::Create(LLVMCONTEXT, "ensureMethodOut", builder->GetInsertBlock()->getParent());
-						}
-						if (classBlock != nullptr)
-						{
-							builder->SetInsertPoint(classBlock);
-							if (returnBlock != nullptr)
-							{
-								builder->CreateBr(returnBlock);
-							}
-						}
-						if (lambdaBlock != nullptr && methodName.length() == 0)
-						{
-							builder->SetInsertPoint(lambdaBlock);
-							if (returnBlock != nullptr)
-							{
-								builder->CreateBr(returnBlock);
-							}
-						}
-						if (structBlock != nullptr)
-						{
-							if (returnBlock == nullptr)
-							{
-								returnBlock = BasicBlock::Create(LLVMCONTEXT, "ensureMethodOut", builder->GetInsertBlock()->getParent());;
-							}
-							std::string* invalidStructMethodMsg = new std::string("No such method exists in given struct: " + methodName);
-							BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, invalidStructMethodMsg->c_str());
-							builder->SetInsertPoint(structBlock);
-							auto methodEnsureFun = RTStruct::GenerateReadMethodEnsure(builder, sTableVar);
-							auto methodEnsureCall = builder->CreateCall(GetMethodEnsureFunctionType(), methodEnsureFun, { receiver, MakeInt<size_t>(NomNameRepository::Instance().GetNameID(methodName)) });
-							methodEnsureCall->setCallingConv(NOMCC);
-							builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { methodEnsureCall, MakeUInt(1,1) });
-							builder->CreateCondBr(methodEnsureCall, returnBlock, errorBlock);
-						}
-						if (partialAppBlock != nullptr)
-						{
-							builder->SetInsertPoint(partialAppBlock);
-							if (methodName.length() == 0)
-							{
-								if (returnBlock != nullptr)
-								{
-									builder->CreateBr(returnBlock);
-								}
-							}
-							else
-							{
-								std::string* invalidPartialAppMethodMsg = new std::string("Invalid method call on Partial Application: " + methodName);
-								RTOutput_Fail::MakeBlockFailOutputBlock(builder, invalidPartialAppMethodMsg->c_str(), partialAppBlock);
-							}
-						}
+						builder->CreateBr(returnBlock);
 					}
 				}
 

@@ -24,6 +24,11 @@ namespace Nom
 			}
 			return fun;
 		}
+		llvm::BasicBlock* RTOutput_Fail::GenerateFailUnimplementedBlock(NomBuilder& builder)
+		{
+			static const char* msg = "UNIMPLEMENTED!";
+			return RTOutput_Fail::GenerateFailOutputBlock(builder, msg);
+		}
 		llvm::BasicBlock* RTOutput_Fail::GenerateFailOutputBlock(NomBuilder& builder, const char* errorMessage)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();

@@ -2,6 +2,7 @@
 #include "CompileHelpers.h"
 #include "RTInterface.h"
 
+using namespace llvm;
 namespace Nom
 {
 	namespace Runtime
@@ -13,7 +14,7 @@ namespace Nom
 		}
 		void RTInstanceType::CreateInitialization(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::Value* hash, llvm::Value* nomtypeptr, llvm::Value *rtclassdesc, llvm::Value *ptrToTypeArgs)
 		{
-			RTTypeHead::CreateInitialization(builder, mod, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTInstanceTypeFields::Head) }), TypeKind::TKInstance, hash, nomtypeptr);
+			RTTypeHead::CreateInitialization(builder, mod, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTInstanceTypeFields::Head) }), TypeKind::TKInstance, hash, nomtypeptr, ConstantPointerNull::get(GetCastFunctionType()->getPointerTo()));
 			MakeInvariantStore(builder, mod, rtclassdesc, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTInstanceTypeFields::Class) }));
 			MakeInvariantStore(builder, mod, ptrToTypeArgs, builder->CreateGEP(ptr, { MakeInt32(0), MakeInt32((unsigned char)RTInstanceTypeFields::TypeArgs) }));
 		}

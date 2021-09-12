@@ -8,7 +8,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomNamedLoaded::NomNamedLoaded(const ConstantID name, ConstantID typeArgs, const NomMemberContext *parent) : NomMemberContextLoaded(parent, typeArgs), name(name) /*TypeArgumentConstraints(typeArgs),*/
+		NomNamedLoaded::NomNamedLoaded(const ConstantID name, ConstantID typeArgs, const NomMemberContext *parent) : NomMemberContextLoaded(parent, typeArgs), name(name)
 		{
 			NomNamed::Register(NomConstants::GetString(name)->GetText(), this);
 		}
@@ -37,11 +37,6 @@ namespace Nom
 		{
 			return type->GetClassInstantiation(this);
 		}
-		//size_t NomNamed::GetTypeArgCount() const
-		//{
-		//	static size_t tac = NomConstants::GetTypeList(TypeArgumentConstraints)->GetTypeList().size() / 2;
-		//	return tac;
-		//}
 		NomClassTypeRef NomNamed::GetType(llvm::ArrayRef<NomTypeRef> args) const {
 			if (args.size() != GetTypeParametersCount())
 			{
@@ -55,46 +50,6 @@ namespace Nom
 			}
 			return instances[args];
 		}
-		//NomClassTypeRef NomNamedLoaded::GetGeneralType() const
-		//{
-		//	if (this->TypeParameters.size() > 0)
-		//	{
-		//		NomTypeRef *argsbuf = (NomTypeRef *)(alloca(sizeof(NomTypeRef) * this->TypeParameters.size() /** 2*/));
-		//		NomTypeRef *curarg = argsbuf;
-		//		for (auto tparam : TypeParameters)
-		//		{
-		//			//*curarg = NomType::Anything;
-		//			//curarg++;
-		//			*curarg = NomType::Nothing;
-		//			curarg++;
-		//		}
-		//		return this->GetType(llvm::ArrayRef<NomTypeRef>(argsbuf,TypeParameters.size()/**2*/));
-		//	}
-		//	else
-		//	{
-		//		return this->GetType();
-		//	}
-		//}
-		//NomClassTypeRef NomNamedLoaded::GetGeneralBottomType() const
-		//{
-		//	if (this->TypeParameters.size() > 0)
-		//	{
-		//		NomTypeRef *argsbuf = (NomTypeRef *)(alloca(sizeof(NomTypeRef) * this->TypeParameters.size() /** 2*/));
-		//		NomTypeRef *curarg = argsbuf;
-		//		for (auto tparam : TypeParameters)
-		//		{
-		//			//*curarg = NomType::Nothing;
-		//			//curarg++;
-		//			*curarg = NomType::Anything;
-		//			curarg++;
-		//		}
-		//		return this->GetType(llvm::ArrayRef<NomTypeRef>(argsbuf, TypeParameters.size()/* * 2*/));
-		//	}
-		//	else
-		//	{
-		//		return this->GetType();
-		//	}
-		//}
 		const std::string* NomNamedLoaded::GetSymbolName() const
 		{
 			if (namestr.empty())

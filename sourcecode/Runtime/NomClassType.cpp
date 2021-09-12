@@ -7,7 +7,6 @@
 #include "IntClass.h"
 #include "FloatClass.h"
 #include "NomJIT.h"
-#include "RecursionBuffer.h"
 #include "NomBottomType.h"
 #include "Util.h"
 #include "RTClassType.h"
@@ -18,6 +17,15 @@
 #include "BoolClass.h"
 #include "RTInterface.h"
 #include "BoehmContainers.h"
+#include "CallingConvConf.h"
+#include "RefValueHeader.h"
+#include "RTVTable.h"
+#include "RTClass.h"
+#include "RTTypeEq.h"
+#include "RTSubstStack.h"
+#include "RTOutput.h"
+#include "Metadata.h"
+#include "StructuralValueHeader.h"
 
 using namespace llvm;
 namespace Nom
@@ -264,7 +272,66 @@ namespace Nom
 			llvm::StructType * ttt = RTClassType::GetLLVMType(this->Arguments.size());
 			llvm::GlobalVariable * gv = new llvm::GlobalVariable(mod, ttt, true, linkage, nullptr, GetGlobalName());
 
-			gv->setInitializer(RTClassType::GetConstant(mod, this));
+			Function* fun = Function::Create(GetCastFunctionType(), linkage, "MONNOM_RT_TYPECASTFUN_CLS_"+GetGlobalName(), mod);
+			{
+				fun->setCallingConv(NOMCC);
+				BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+				NomBuilder builder;
+				builder->SetInsertPoint(startBlock);
+				auto argiter = fun->arg_begin();
+				Value* self = argiter;
+				argiter++;
+				Value* castedValue = argiter;
+				
+				BasicBlock* failBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Cast Failed!");
+				BasicBlock* successBlock = BasicBlock::Create(LLVMCONTEXT, "success", fun);
+				auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, castedValue);
+				auto clsptr = RTClass::GetInterfaceReference(builder, vtable);
+				if (!this->Named->IsInterface())
+				{
+					BasicBlock* directMatchBlock = BasicBlock::Create(LLVMCONTEXT, "directClassMatch", fun);
+					BasicBlock* noDirectMatchBlock = BasicBlock::Create(LLVMCONTEXT, "noDirectClassMatch", fun);
+					auto directClassMatch = CreatePointerEq(builder, clsptr, this->Named->GetInterfaceDescriptor(mod));
+					builder->CreateCondBr(directClassMatch, directMatchBlock, noDirectMatchBlock);
+
+					builder->SetInsertPoint(directMatchBlock);
+					if (this->Arguments.size() != 0)
+					{
+						int argpos = 0;
+						for (auto& arg : this->Arguments)
+						{
+							BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
+							auto targ = ObjectHeader::GenerateReadTypeArgument(builder, castedValue, argpos);
+							RTTypeEq::CreateInlineTypeEqCheck(builder, targ, arg, ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()), nextBlock, failBlock, failBlock);
+							builder->SetInsertPoint(nextBlock);
+							argpos++;
+						}
+					}
+					builder->CreateRet(castedValue);
+
+					builder->SetInsertPoint(noDirectMatchBlock);
+				}
+				BasicBlock* nominalObjectBlock = BasicBlock::Create(LLVMCONTEXT, "nominalObject", fun);
+				BasicBlock* structuralObjectBlock = BasicBlock::Create(LLVMCONTEXT, "structuralObject", fun);
+				auto isNominalObject = RTVTable::GenerateIsNominalValue(builder, vtable);
+				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isNominalObject, MakeUInt(1,1) });
+				builder->CreateCondBr(isNominalObject, nominalObjectBlock, structuralObjectBlock, GetLikelyFirstBranchMetadata());
+
+				builder->SetInsertPoint(nominalObjectBlock);
+				{
+					auto supercount = RTInterface::GenerateReadSuperInstanceCount(builder, clsptr);
+					auto superinstances = RTInterface::GenerateReadSuperInstances(builder, clsptr);
+
+				}
+
+				builder->SetInsertPoint(structuralObjectBlock);
+				{
+					StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, successBlock, failBlock, castedValue, this, ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()));
+				}
+				builder->SetInsertPoint(successBlock);
+				builder->CreateRet(castedValue);
+			}
+			gv->setInitializer(RTClassType::GetConstant(mod, this, fun));
 			return llvm::ConstantExpr::getGetElementPtr(gv->getType()->getElementType(), gv, llvm::ArrayRef<llvm::Constant *>({ MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head) }));
 		}
 
@@ -303,24 +370,25 @@ namespace Nom
 		}
 		intptr_t NomClassType::GetRTElement() const
 		{
-			if (head.Entry() != nullptr)
-			{
-				return reinterpret_cast<intptr_t>(head.Entry());
-			}
-			if (auto var = NomJIT::Instance().lookup(GetGlobalName())->getAddress())
-			{
-				intptr_t ret = (var) + RTClassType::HeadOffset();
-				head = RTTypeHead((void *)ret);
-				return ret;
-			}
-			auto mmod = GetMainModule();
-			if (mmod != nullptr)
-			{
-				throw new std::exception();
-			}
-			void * rtct = (nmalloc(RTClassType::SizeOf()+sizeof(intptr_t *)*this->Arguments.size()));
-			auto initfun = GetCPPInitializerFunction();
-			return (intptr_t)initfun(rtct, (void*) this->Named->GetRTElement(), this->GetHashCode(), this, this->Arguments.size(), this->Arguments.data());
+			throw new std::exception();
+			//if (head.Entry() != nullptr)
+			//{
+			//	return reinterpret_cast<intptr_t>(head.Entry());
+			//}
+			//if (auto var = NomJIT::Instance().lookup(GetGlobalName())->getAddress())
+			//{
+			//	intptr_t ret = (var) + RTClassType::HeadOffset();
+			//	head = RTTypeHead((void *)ret);
+			//	return ret;
+			//}
+			//auto mmod = GetMainModule();
+			//if (mmod != nullptr)
+			//{
+			//	throw new std::exception();
+			//}
+			//void * rtct = (nmalloc(RTClassType::SizeOf()+sizeof(intptr_t *)*this->Arguments.size()));
+			//auto initfun = GetCPPInitializerFunction();
+			//return (intptr_t)initfun(rtct, (void*) this->Named->GetRTElement(), this->GetHashCode(), this, this->Arguments.size(), this->Arguments.data());
 		}
 		NomClassTypeRef NomClassType::GetClassInstantiation(const NomNamed * named) const
 		{

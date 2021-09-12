@@ -7,6 +7,8 @@
 #include "CompileHelpers.h"
 #include "RTVTable.h"
 #include "RTInterface.h"
+#include "IMT.h"
+#include "RTCompileConfig.h"
 
 using namespace llvm;
 using namespace std;
@@ -21,11 +23,9 @@ namespace Nom
 			if (once)
 			{
 				once = false;
-				rtct->setBody({ RTInterface::GetLLVMType(),		//interface table, flags, nom IR link, type argument count, supertypes
-					POINTERTYPE,								//field lookup
-					POINTERTYPE,								//field store
-					POINTERTYPE,								//dispatcher lookup
-					numtype(size_t)								//field count
+				rtct->setBody({ RTVTable::GetLLVMType(),		//vtable
+								RTInterface::GetLLVMType(),		//interface stuff: supertypes, etc.
+								numtype(size_t)					//field count
 					});
 			}
 			return rtct;
@@ -34,34 +34,62 @@ namespace Nom
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="offset">offset relative to 128 bit alignment (with min 64 bit alignment) in bytes (i.e. 0 or 8)</param>
+		/// <param name="offset">offset relative to 256 bit alignment (with min 64 bit alignment) in bytes (i.e. 0..32:8)</param>
 		/// <param name="methodTableType"></param>
+		/// <param name="ddtype">type of dispatcher dictionary entry struct</param>
+		/// <param name="stetype">type of super type entry table</param>
 		/// <returns></returns>
-		llvm::StructType* RTClass::GetConstantType(size_t offset, llvm::Type * methodTableType)
+		llvm::StructType* RTClass::GetConstantType(size_t offset, llvm::Type* methodTableType, llvm::StructType* ddtype, llvm::StructType *stetype)
 		{
-			auto baseOffset = NomJIT::Instance().getDataLayout().getTypeAllocSize(methodTableType)%16;
+			auto baseOffset = NomJIT::Instance().getDataLayout().getTypeAllocSize(methodTableType) % 64;
 			if (baseOffset == offset)
 			{
-				return StructType::get(LLVMCONTEXT, { methodTableType, GetLLVMType() }, true);
+				return StructType::get(LLVMCONTEXT, { methodTableType, GetLLVMType(), ddtype, stetype }, true);
 			}
 			else
 			{
-				return StructType::get(LLVMCONTEXT, { inttype(64), methodTableType, GetLLVMType() }, true);
+				if (baseOffset > offset)
+				{
+					offset += 64;
+				}
+				offset -= baseOffset;
+				return StructType::get(LLVMCONTEXT, { arrtype(inttype(64), offset / 8) , methodTableType, GetLLVMType(), ddtype, stetype }, true);
 			}
 		}
 
-		llvm::Constant* RTClass::CreateConstant(llvm::GlobalVariable *gvar, llvm::StructType *gvartype, const NomInterface *irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Function* lookupDispatcher, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superTypesCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* methodEnsureFunction, llvm::Constant* interfaceTable, llvm::Constant* signature)
+		llvm::Constant* RTClass::CreateConstant(llvm::GlobalVariable* gvar, llvm::StructType* gvartype, const NomInterface* irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Constant* dynamicDispatcherTable, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superClassCount, llvm::ConstantInt* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* interfaceMethodTable, llvm::Constant* signature, llvm::Constant* castFunction)
 		{
-			gvar->setAlignment(Align(128));
-			if (gvartype->getNumElements() == 2)
+			gvar->setAlignment(Align(256));
+			if (gvartype->getNumElements() == 4)
 			{
-				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), interfaceTable, checkReturnValueFunction, methodEnsureFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), ConstantExpr::getPointerCast(fieldRead, POINTERTYPE), ConstantExpr::getPointerCast(fieldWrite, POINTERTYPE), ConstantExpr::getPointerCast(lookupDispatcher, POINTERTYPE), fieldCount)));
+				auto ddarr = makealloca(Constant*, IMTsize);
+				for (decltype(IMTsize) i = 0; i < IMTsize; i++)
+				{
+					ddarr[i] = ConstantExpr::getPointerCast(ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements() - 2), MakeInt32(i) })), GetDynamicDispatchListEntryType()->getPointerTo());
+				}
+				auto dynamicDispatcherTableReferences = ConstantArray::get(arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(ddarr, IMTsize));
+				auto ptrToClassInstantiations = ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<Constant*>({MakeInt32(0), MakeInt32(gvartype->getNumElements() - 1), MakeInt32(0), MakeInt32(0) }));
+				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Class, interfaceMethodTable, dynamicDispatcherTableReferences, fieldRead, fieldWrite), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superClassCount, superInterfaceCount, ptrToClassInstantiations, checkReturnValueFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature, castFunction), fieldCount), dynamicDispatcherTable, superTypeEntries));
 			}
 			else
 			{
-				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, MakeUInt(64,0), methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superTypesCount, ConstantExpr::getGetElementPtr(((PointerType*)superTypeEntries->getType())->getElementType(), superTypeEntries, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(0) })), interfaceTable, checkReturnValueFunction, methodEnsureFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), ConstantExpr::getPointerCast(fieldRead, POINTERTYPE), ConstantExpr::getPointerCast(fieldWrite, POINTERTYPE), ConstantExpr::getPointerCast(lookupDispatcher, POINTERTYPE), fieldCount)));
+				auto arrsize = gvartype->getElementType(0)->getArrayNumElements();
+				auto fillarr = makealloca(Constant*, arrsize);
+				for (decltype(arrsize) i = 0; i < arrsize; i++)
+				{
+					fillarr[i] = MakeUInt(64, 0);
+				}
+				auto ddarr = makealloca(Constant*, IMTsize);
+				for (decltype(IMTsize) i = 0; i < IMTsize; i++)
+				{
+					ddarr[i] = ConstantExpr::getPointerCast(ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements() - 2), MakeInt32(i) })), GetDynamicDispatchListEntryType()->getPointerTo());
+				}
+				auto dynamicDispatcherTableReferences = ConstantArray::get(arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(ddarr, IMTsize));
+
+				auto ptrToClassInstantiations = ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements() - 1), MakeInt32(0), MakeInt32(0) }));
+				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, ConstantArray::get(arrtype(inttype(64), arrsize), ArrayRef<Constant*>(fillarr, arrsize)), methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Class, interfaceMethodTable, dynamicDispatcherTableReferences, fieldRead, fieldWrite), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superClassCount, superInterfaceCount, ptrToClassInstantiations, checkReturnValueFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature, castFunction), fieldCount), dynamicDispatcherTable, superTypeEntries));
 			}
-			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements()-1) }));
+			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements() - 3) }));
 		}
 		llvm::Constant* RTClass::FindConstant(llvm::Module& mod, const StringRef name)
 		{
@@ -70,153 +98,32 @@ namespace Nom
 			{
 				return nullptr;
 			}
-			return ConstantExpr::getGetElementPtr(cnst->getValueType(), cnst, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(cnst->getValueType()->getStructNumElements()-1) }));
+			return ConstantExpr::getGetElementPtr(cnst->getValueType(), cnst, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(cnst->getValueType()->getStructNumElements() - 3) }));
 		}
-
-		llvm::Value* RTClass::GenerateReadKind(NomBuilder& builder, llvm::Value* descriptorPtr)
-		{
-			return RTInterface::GenerateReadKind(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
-		}
-
-		llvm::Value* RTClass::GenerateReadNomIRLink(NomBuilder& builder, llvm::Value* descriptorPtr)
-		{
-			return RTInterface::GenerateReadNomIRLink(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
-		}
-
-		llvm::Value* RTClass::GenerateReadFieldLookup(NomBuilder& builder, llvm::Value* descriptorPtr)
-		{
-			return builder->CreatePointerCast(MakeLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMPointerType()), MakeInt32(RTClassFields::FieldLookup)), NomClass::GetDynamicFieldLookupType()->getPointerTo());
-		}
-
-		llvm::Value* RTClass::GenerateReadFieldStore(NomBuilder& builder, llvm::Value* descriptorPtr)
-		{
-			return builder->CreatePointerCast(MakeLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMPointerType()), MakeInt32(RTClassFields::FieldStore)), NomClass::GetDynamicFieldStoreType()->getPointerTo());
-		}
-
-		llvm::Value* RTClass::GenerateReadDispatcherLookup(NomBuilder& builder, llvm::Value* descriptorPtr)
-		{
-			return builder->CreatePointerCast(MakeLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMPointerType()), MakeInt32(RTClassFields::DispatcherLookup)), NomClass::GetDynamicDispatcherLookupType()->getPointerTo());
-		}
-
-
 
 		llvm::Value* RTClass::GenerateReadFieldCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTClassFields::FieldCount),"FieldCount", AtomicOrdering::NotAtomic);
+			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTClassFields::FieldCount), "FieldCount", AtomicOrdering::NotAtomic);
 		}
 		llvm::Value* RTClass::GenerateReadSuperInstanceCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
 			return RTInterface::GenerateReadSuperInstanceCount(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
-			//MakeLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTClassFields::SuperTypesCount));
 		}
 		llvm::Value* RTClass::GenerateReadSuperInstances(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
 			return RTInterface::GenerateReadSuperInstances(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
-			//return MakeLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTClassFields::SuperTypes));
 		}
-		llvm::Value* RTClass::GenerateReadMethodTableEntry(NomBuilder& builder, llvm::Value* vtablePtr, llvm::Value* offset)
+		llvm::Constant* RTClass::GetInterfaceReference(llvm::Constant* clsVtablePtr)
 		{
-			return RTInterface::GenerateReadMethodTableEntry(builder, builder->CreateGEP(builder->CreatePointerCast(vtablePtr, GetLLVMPointerType()), { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }), offset);
+			return ConstantExpr::getGetElementPtr(GetLLVMType(), ConstantExpr::getPointerCast(clsVtablePtr, GetLLVMPointerType()), llvm::ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
+		}
+		llvm::Value* RTClass::GetInterfaceReference(NomBuilder &builder, llvm::Value* clsVtablePtr)
+		{
+			return builder->CreateGEP(builder->CreatePointerCast(clsVtablePtr, GetLLVMPointerType()), llvm::ArrayRef<Value*>({ MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
 		}
 		llvm::Value* RTClass::GenerateReadTypeArgCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
 			return RTInterface::GenerateReadTypeArgCount(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
-			//return MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTClassFields::TypeArgCount) }));;
 		}
-		void RTClass::GenerateInitialization(NomBuilder& builder, llvm::Value* clsptr, llvm::Value* /*vt_ifcoffset*/ vt_imtptr, llvm::Value* vt_kind, llvm::Value* vt_irdesc, llvm::Value* ifc_flags, llvm::Value* ifc_targcount, llvm::Value* ifc_supercount, llvm::Value* ifc_superentries, llvm::Value* fieldlookup, llvm::Value* fieldstore, llvm::Value* displookup, llvm::Value* fieldcount)
-		{
-			RTInterface::GenerateInitialization(builder, clsptr, /*vt_ifcoffset*/ vt_imtptr, vt_kind, vt_irdesc, ifc_flags, ifc_targcount, ifc_supercount, ifc_superentries);
-			llvm::Value* selfptr = builder->CreatePointerCast(clsptr, GetLLVMType()->getPointerTo());
-			MakeInvariantStore(builder, fieldlookup, selfptr, MakeInt32(RTClassFields::FieldLookup));
-			MakeInvariantStore(builder, fieldstore, selfptr, MakeInt32(RTClassFields::FieldStore));
-			MakeInvariantStore(builder, displookup, selfptr, MakeInt32(RTClassFields::DispatcherLookup));
-			MakeInvariantStore(builder, fieldcount, selfptr, MakeInt32(RTClassFields::FieldCount));
-		}
-		//llvm::Value* RTClass::GenerateReadNumInterfaceTableEntries(NomBuilder& builder, llvm::Value* descriptorPtr)
-		//{
-		//	return RTVTable::GenerateReadNumInterfaceTableEntries(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTVTable) }));
-		//}
-		//llvm::Value* RTClass::GenerateReadFirstInterfaceTableEntryPointer(NomBuilder& builder, llvm::Value* descriptorPtr)
-		//{
-		//	return RTVTable::GenerateReadFirstInterfaceTableEntryPointer(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTVTable) }));
-		//}
-
-		//llvm::Value* RTClass::GenerateReadMethodTable(NomBuilder& builder, llvm::Value* descriptorPtr, llvm::Value* offset)
-		//{
-		//	if (offset == nullptr)
-		//	{
-		//		offset = ConstantInt::get(numtype(int32_t), 0);
-		//	}
-		//	return MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTClassFields::MethodTable), offset }));;
-		//}
-
-		
-
-		//static const llvm::StructLayout *GetLLVMLayout();
-
-		/*uint64_t RTClass::NameOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::NomNamedLink); return offset;
-		}
-		uint64_t RTClass::MethodTableOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::MethodTable); return offset;
-		}
-		uint64_t RTClass::ArgCountOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::ArgCount); return offset;
-		}
-		uint64_t RTClass::FieldCountOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::FieldCount); return offset;
-		}
-		uint64_t RTClass::SuperTypesCountOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::SuperTypesCount); return offset;
-		}
-		uint64_t RTClass::SuperTypesOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::SuperTypes); return offset;
-		}
-		uint64_t RTClass::InterfaceTableSizeOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::InterfaceTableSize); return offset;
-		}
-		uint64_t RTClass::InterfaceTableOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::InterfaceTable); return offset;
-		}
-		uint64_t RTClass::DispatchDictOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassFields::Dictionary); return offset;
-		}*/
-		//const char * RTClass::Entry() const
-		//{
-		//	static llvm::ArrayType * arrtype = llvm::ArrayType::get(GetLLVMType(), 0);
-		//	return entry + NomJIT::Instance().getDataLayout().getIndexedOffsetInType(arrtype, llvm::ArrayRef<llvm::Value *>(llvm::ConstantInt::get(INTTYPE, offset, false)));
-		//}
-		//inline const llvm::StructLayout * RTClass::GetLLVMLayout()
-		//{
-		//	static const llvm::StructLayout *layout = NomJIT::Instance().getDataLayout().getStructLayout(GetLLVMType()); return layout;
-		//}
-		//ObjectHeader RTClass::Name() const
-		//{
-		//	return (ObjectHeader(Entry(NameOffset())));
-		//}
-
-
-
-		llvm::Value* RTClass::CreateCheckIsExpando(NomBuilder& builder, llvm::Module& mod, llvm::Value* cdesc)
-		{
-			return ConstantInt::get(BOOLTYPE, 0);
-		}
-		//size_t RTClass::getSize() const
-		//{
-		//	return RTClass::SizeOf() + NomJIT::Instance().getDataLayout().getIndexedOffsetInType(REFTYPE, { llvm::ConstantInt::get(llvm::IntegerType::getInt32Ty(LLVMCONTEXT), FieldCount()) });
-		//}
-		//RTClass::RTClass(const char * entry, intptr_t offset, ObjectHeader namestr, void ** methodTable) : entry(entry), offset(offset)
-		//{
-		//	
-		//}
 	}
 }

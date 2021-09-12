@@ -20,7 +20,7 @@ namespace Nom
 			StringConstant = 103, 
 			IntegerConstant = 104,
 			FloatConstant = 105,
-			CTStruct = 110,
+			CTRecord = 110,
 			ClassConstant = 111,
 			InterfaceConstant = 112,
 			CTTypeParameter = 113,
@@ -50,7 +50,7 @@ namespace Nom
 			Method = 203,
 			Constructor = 204,
 			Lambda = 205,
-			Struct = 206
+			Record = 206
 		};
 
 		class BytecodeReader
@@ -72,9 +72,9 @@ namespace Nom
 
 			NomLambda* ReadLambda(NomClassLoaded* cls);
 
-			NomStruct* ReadStruct(NomClassLoaded* cls);
+			NomRecord* ReadStruct(NomClassLoaded* cls);
 
-			NomStructMethod* ReadStructMethod(NomStruct* structure);
+			NomRecordMethod* ReadStructMethod(NomRecord* structure);
 
 			NomMethod *ReadMethod(NomInterfaceLoaded *iface);
 

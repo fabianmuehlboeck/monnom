@@ -144,7 +144,7 @@ DLLEXPORT void RT_NOM_STATS_IncAllocations(AllocationType at)
 	case AllocationType::Lambda:
 		closure_allocations++;
 		break;
-	case AllocationType::Struct:
+	case AllocationType::Record:
 		record_allocations++;
 		break;
 	case AllocationType::ClassType:

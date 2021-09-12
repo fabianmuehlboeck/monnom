@@ -6,6 +6,8 @@
 #include "RTDynamicType.h"
 #include "CompileHelpers.h"
 #include "NomMaybeType.h"
+#include "RTTypeHead.h"
+#include "CallingConvConf.h"
 
 using namespace llvm;
 using namespace std;
@@ -13,16 +15,38 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomDynamicType::NomDynamicType()
+		NomDynamicType::NomDynamicType(TypeKind kind) : kind(kind)
 		{
 		}
 		NomDynamicType& NomDynamicType::Instance()
 		{
-			static NomDynamicType ndt; return ndt;
+			static NomDynamicType ndt(TypeKind::TKDynamic); return ndt;
+		}
+		NomDynamicType& NomDynamicType::LambdaInstance()
+		{
+			static NomDynamicType ndt(TypeKind::TKLambda); return ndt;
+		}
+		NomDynamicType& NomDynamicType::PartialAppInstance()
+		{
+			static NomDynamicType ndt(TypeKind::TKPartialApp); return ndt;
+		}
+		NomDynamicType& NomDynamicType::RecordInstance()
+		{
+			static NomDynamicType ndt(TypeKind::TKRecord); return ndt;
 		}
 		Constant* NomDynamicType::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			auto gv = new GlobalVariable(mod, RTDynamicType::GetLLVMType(), true, linkage, RTDynamicType::CreateConstant(), "RT_NOM_DynamicType");
+			Function* fun = Function::Create(GetCastFunctionType(), linkage, "MONNOM_RT_TYPECASTFUN_DYNAMIC", mod);
+			{
+				fun->setCallingConv(NOMCC);
+				BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+				NomBuilder builder;
+				builder->SetInsertPoint(startBlock);
+				auto argiter = fun->arg_begin();
+				argiter++;
+				builder->CreateRet(argiter);
+			}
+			auto gv = new GlobalVariable(mod, RTDynamicType::GetLLVMType(), true, linkage, RTDynamicType::CreateConstant(fun), "RT_NOM_DynamicType");
 			return llvm::ConstantExpr::getGetElementPtr(gv->getType()->getElementType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTDynamicTypeFields::Head) }));
 		}
 		Constant* NomDynamicType::findLLVMElement(llvm::Module& mod) const
@@ -120,7 +144,7 @@ namespace Nom
 		}
 		TypeKind NomDynamicType::GetKind() const
 		{
-			return TypeKind::TKDynamic;
+			return kind;
 		}
 		intptr_t NomDynamicType::GetRTElement() const
 		{

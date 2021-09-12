@@ -49,7 +49,7 @@ namespace Nom
 			CTString = 103, 
 			CTInteger = 104,
 			CTFloat = 105,
-			CTStruct = 110,
+			CTRecord = 110,
 			CTClass = 111,
 			CTInterface = 112,
 			CTTypeParameter = 113,
@@ -81,7 +81,7 @@ namespace Nom
 			Public = 31
 		};
 
-		enum class TypeKind :unsigned char { TKClass, TKTop, TKVariable, TKBottom, TKInstance, TKStruct, TKPartialApp, TKDynamic, TKMaybe };
+		enum class TypeKind :unsigned char { TKClass, TKTop, TKVariable, TKBottom, TKInstance, TKRecord, TKLambda, TKPartialApp, TKDynamic, TKMaybe };
 		using TypeID = int64_t;
 		class NomInterface;
 		using InterfaceID = uint32_t;

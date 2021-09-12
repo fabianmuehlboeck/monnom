@@ -1,7 +1,7 @@
 #include "ConstructStruct.h"
 #include <iostream>
 #include "../NomConstants.h"
-#include "../NomStruct.h"
+#include "../NomRecord.h"
 #include "../NomDynamicType.h"
 #include "../TypeOperations.h"
 #include "../CallingConvConf.h"
@@ -19,7 +19,7 @@ namespace Nom
 		}
 		void ConstructStructInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
 		{
-			NomStruct* structure = NomConstants::GetStruct(StructureID)->GetStruct();
+			NomRecord* structure = NomConstants::GetRecord(StructureID)->GetRecord();
 			auto targcount = structure->GetDirectTypeParametersCount();
 			llvm::Value** argbuf = makealloca(llvm::Value*, env->GetArgCount()+targcount);
 			Function* constructorFun = structure->GetLLVMElement(*env->Module);
@@ -44,7 +44,7 @@ namespace Nom
 		}
 		void ConstructStructInstruction::Print(bool resolve)
 		{
-			cout << "Struct ";
+			cout << "Record ";
 			NomConstants::PrintConstant(StructureID, resolve);
 			cout << " -> #" << std::dec << WriteRegister;
 			cout << "\n";

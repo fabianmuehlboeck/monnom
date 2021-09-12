@@ -14,7 +14,7 @@
 #include "LambdaHeader.h"
 #include "RTVTable.h"
 #include "RTCast.h"
-#include "StructHeader.h"
+#include "RecordHeader.h"
 #include "gcinclude_config.h"
 #include "CastStats.h"
 #include "RTSubtyping.h"
@@ -61,19 +61,19 @@ llvm::Function* GetClosureAlloc(llvm::Module* mod)
 	Function* ret = mod->getFunction("CPP_NOM_CLOSUREALLOC");
 	if (ret == nullptr)
 	{
-		FunctionType* allocFunType = FunctionType::get(LambdaHeader::GetLLVMType()->getPointerTo(), { INTTYPE, INTTYPE, INTTYPE }, false);
+		FunctionType* allocFunType = FunctionType::get(LambdaHeader::GetLLVMType()->getPointerTo(), { INTTYPE, INTTYPE }, false);
 		ret = Function::Create(allocFunType, Function::ExternalLinkage, "CPP_NOM_CLOSUREALLOC", mod);
 	}
 	return ret;
 }
 
-llvm::Function* GetStructAlloc(llvm::Module* mod)
+llvm::Function* GetRecordAlloc(llvm::Module* mod)
 {
-	Function* ret = mod->getFunction("CPP_NOM_STRUCTALLOC");
+	Function* ret = mod->getFunction("CPP_NOM_RECORDALLOC");
 	if (ret == nullptr)
 	{
-		FunctionType* allocFunType = FunctionType::get(StructHeader::GetLLVMType()->getPointerTo(), { INTTYPE, INTTYPE, INTTYPE }, false);
-		ret = Function::Create(allocFunType, Function::ExternalLinkage, "CPP_NOM_STRUCTALLOC", mod);
+		FunctionType* allocFunType = FunctionType::get(RecordHeader::GetLLVMType()->getPointerTo(), { INTTYPE, INTTYPE }, false);
+		ret = Function::Create(allocFunType, Function::ExternalLinkage, "CPP_NOM_RECORDALLOC", mod);
 	}
 	return ret;
 }
@@ -127,24 +127,24 @@ extern "C" DLLEXPORT void* CPP_NOM_NEWALLOC(size_t numfields, size_t numtargs)
 	return ret;
 }
 
-extern "C" DLLEXPORT void* CPP_NOM_CLOSUREALLOC(size_t numfields, size_t numtargs, size_t numreservedargs)
+extern "C" DLLEXPORT void* CPP_NOM_CLOSUREALLOC(size_t numfields, size_t numtargs)
 {
 	if (NomCastStats > 0)
 	{
 		RT_NOM_STATS_IncAllocations(AllocationType::Lambda);
 	}
-	auto ret = (void*)(((char**)gcalloc(LambdaHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs + numreservedargs)))) + /*numreservedargs*/ numtargs);
+	auto ret = (void*)(((char**)gcalloc(LambdaHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs)))) + numtargs);
 	return ret;
 }
 
-extern "C" DLLEXPORT void* CPP_NOM_STRUCTALLOC(size_t numfields, size_t numtargs, size_t numreservedargs)
+extern "C" DLLEXPORT void* CPP_NOM_RECORDALLOC(size_t numfields, size_t numtargs)
 {
 	if (NomCastStats > 0)
 	{
-		RT_NOM_STATS_IncAllocations(AllocationType::Struct);
+		RT_NOM_STATS_IncAllocations(AllocationType::Record);
 	}
-	auto ret = (void*)(((char**)gcalloc(StructHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs + numreservedargs)))) + /*numreservedargs*/ + numtargs);
-	auto retDictRoot = (void*)(((char*)(((intptr_t)ret) /*+ numreservedargs*/)) + StructHeader::GetLLVMLayout()->getElementOffset((unsigned int)StructHeaderFields::InstanceDictionary));
+	auto ret = (void*)(((char**)gcalloc(RecordHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs)))) + numtargs);
+	auto retDictRoot = (void*)(((char*)(((intptr_t)ret))) + RecordHeader::GetLLVMLayout()->getElementOffset((unsigned int)StructHeaderFields::InstanceDictionary));
 	RT_NOM_ConcurrentDictionaryEmplace(retDictRoot);
 	return ret;
 }

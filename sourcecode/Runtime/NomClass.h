@@ -15,14 +15,13 @@
 #include "NomInstantiationRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "NomInterface.h"
-#include "DispatchDictionaryEntry.h"
 #include "NomConstructor.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "NomField.h"
 #include "RTDictionary.h"
 #include "NomLambda.h"
-#include "NomStruct.h"
+#include "NomRecord.h"
 
 namespace Nom
 {
@@ -36,11 +35,10 @@ namespace Nom
 				static std::unordered_map < NomStringRef, NomClass*, NomStringHash, NomStringEquality > classes; return classes;
 			}
 		protected:
-			std::unordered_map<NomStringRef, DispatchDictionaryEntry, NomStringHash, NomStringEquality, BoehmAllocator<std::pair<NomStringRef, DispatchDictionaryEntry>>> Dictionary;
 			std::vector<NomTypedField*> Fields;
 			mutable std::vector<NomTypedField*> AllFields;
 			std::vector<NomLambda*> Lambdas;
-			std::vector<NomStruct*> Structs;
+			std::vector<NomRecord*> Structs;
 			NomClass()
 			{
 
@@ -74,7 +72,6 @@ namespace Nom
 			std::vector<NomStaticMethod*> StaticMethods;
 			std::vector<NomConstructor*> Constructors;
 
-			virtual bool FindInstantiations(NomNamed* other, RecBufferTypeList& myArgs, InstantiationList& results) const override;
 
 			const NomField* GetField(NomStringRef name) const;
 			virtual size_t GetFieldCount() const;
@@ -88,34 +85,26 @@ namespace Nom
 			NomInstantiationRef<const NomConstructor> GetConstructor(const TypeList typeArgs, const TypeList argTypes) const;
 
 		public:
-			virtual llvm::GlobalVariable* GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
+			virtual llvm::Constant* GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const override;
 			virtual llvm::ArrayType* GetSuperInstancesType(bool generic = true) const override;
 			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds(llvm::ArrayRef<NomTypeRef> args) const override;
 
-			virtual llvm::Constant* GetInterfaceTableLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
+			llvm::Constant* GetInterfaceTableLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
-			llvm::Function* GetMethodEnsureFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
-			static llvm::FunctionType* GetExpandoReaderType();
-			llvm::Function* GetExpandoReaderFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			llvm::Function* GetRawInvokeFunction(llvm::Module& mod) const;
 			llvm::Function* GetRawInvokeFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 
 			size_t GetTypeArgOffset() const;
-			size_t GenerateTypeArgInitialization(NomBuilder& builder, CompileEnv* env, llvm::Value* newObj, TypeList args) const;
 
-			static llvm::FunctionType* GetDynamicDispatcherLookupType();
 			static llvm::FunctionType* GetInterfaceTableLookupType();
-			static llvm::FunctionType* GetDynamicFieldLookupType();
-			static llvm::FunctionType* GetDynamicFieldStoreType();
-			static llvm::StructType* GetDynamicDispatcherLookupResultType();
-
-
-			void GenerateDictionaryEntries(llvm::Module& mod) const;
+			virtual llvm::Constant* GetInterfaceDescriptor(llvm::Module& mod) const override;
+			virtual llvm::Constant* GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
+			virtual int GetSuperClassCount() const override;
 
 		protected:
-			virtual llvm::Function* GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
+			virtual llvm::Constant* GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::StructType* stype) const;
 			virtual llvm::Function* GetDynamicFieldLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			virtual llvm::Function* GetDynamicFieldStore(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 		public:
@@ -131,7 +120,7 @@ namespace Nom
 			{
 				Lambdas.push_back(lambda);
 			}
-			void AddStruct(NomStruct* strct)
+			void AddStruct(NomRecord* strct)
 			{
 				Structs.push_back(strct);
 			}
@@ -167,7 +156,7 @@ namespace Nom
 			NomTypedField* AddField(const ConstantID name, const ConstantID type, Visibility visibility, bool isReadOnly, bool isVolatile);
 
 			NomLambda* AddLambda(const ConstantID lambdaID, int regcount, ConstantID closureTypeParams, ConstantID closureArguments, ConstantID typeParams, ConstantID argTypes, ConstantID returnType);
-			NomStruct* AddStruct(const ConstantID structID, ConstantID closureTypeParams, RegIndex regcount, RegIndex endargregcount, ConstantID initializerArgTypes);
+			NomRecord* AddStruct(const ConstantID structID, ConstantID closureTypeParams, RegIndex regcount, RegIndex endargregcount, ConstantID initializerArgTypes);
 
 
 			virtual void PushDependencies(std::set<ConstantID>& set) const override

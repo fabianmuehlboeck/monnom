@@ -30,7 +30,7 @@
 #include <exception>
 #include "NomLambda.h"
 #include "RTConfig.h"
-#include "NomStructMethod.h"
+#include "NomRecordMethod.h"
 #include <iostream>
 #include "UnaryOpInstruction.h"
 
@@ -268,7 +268,7 @@ namespace Nom
 			case BytecodeTopElementType::LambdaConstant:
 				ReadLambdaConstant();
 				break;
-			case BytecodeTopElementType::CTStruct:
+			case BytecodeTopElementType::CTRecord:
 				ReadStructConstant();
 				break;
 			case BytecodeTopElementType::ClassTypeConstant:
@@ -435,8 +435,8 @@ namespace Nom
 			return lambda;
 		}
 
-		NomStruct* BytecodeReader::ReadStruct(NomClassLoaded* cls) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Struct) {
+		NomRecord* BytecodeReader::ReadStruct(NomClassLoaded* cls) {
+			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Record) {
 				throw "Expected struct, but did not encounter struct marker";
 			}
 			ConstantID structID = context.GetGlobalID(stream.read<LocalConstantID>());
@@ -445,7 +445,7 @@ namespace Nom
 			RegIndex endargregcount = stream.read<RegIndex>();
 			LocalConstantID typeListID = stream.read<LocalConstantID>();
 			ConstantID initializerArgTypes = context.GetGlobalID(typeListID);
-			NomStruct* structure = cls->AddStruct(structID, closureTypeParameters, regcount, endargregcount, initializerArgTypes);
+			NomRecord* structure = cls->AddStruct(structID, closureTypeParameters, regcount, endargregcount, initializerArgTypes);
 			size_t fieldCount = stream.read<size_t>();
 			while (fieldCount > 0)
 			{
@@ -475,7 +475,7 @@ namespace Nom
 			return structure;
 		}
 
-		NomStructMethod* BytecodeReader::ReadStructMethod(NomStruct* structure) {
+		NomRecordMethod* BytecodeReader::ReadStructMethod(NomRecord* structure) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Method) {
 				throw "Expected method, but did not encounter method marker";
 			}
@@ -487,7 +487,7 @@ namespace Nom
 			bool isFinal = (bool)stream.read<char>();
 			RegIndex regcount = stream.read<RegIndex>();
 			std::string qname = "STRUCT_" + to_string(structure->StructID) + "." + namestr;
-			NomStructMethod* meth = structure->AddMethod(namestr, qname, typeParameters, returnType, argTypes, regcount);
+			NomRecordMethod* meth = structure->AddMethod(namestr, qname, typeParameters, returnType, argTypes, regcount);
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
 				auto instr = ReadInstruction();
@@ -652,7 +652,7 @@ namespace Nom
 		}
 
 		ConstantID BytecodeReader::ReadStructConstant() {
-			if (GetNextElementType() != BytecodeTopElementType::CTStruct) {
+			if (GetNextElementType() != BytecodeTopElementType::CTRecord) {
 				throw "Wrong constant type!";
 			}
 			stream.read_char(); //advance past marker

@@ -124,6 +124,29 @@ namespace Nom
 				return lhs==rhs;
 			}
 		};
+
+		struct StringPtrHash
+		{
+			std::size_t operator()(std::string*& s) const noexcept
+			{
+				return std::hash<std::string>()(*s);
+			}
+			std::size_t operator()(const std::string*& s) const noexcept
+			{
+				return std::hash<std::string>()(*s);
+			}
+		};
+		struct StringPtrEq
+		{
+			bool operator()(std::string*& lhs, std::string *&rhs) const noexcept
+			{
+				return std::equal_to<std::string>()(*lhs, *rhs);
+			}
+			bool operator()(const std::string*& lhs, const std::string *&rhs) const noexcept
+			{
+				return std::equal_to<std::string>()(*lhs, *rhs);
+			}
+		};
 	}
 }
 

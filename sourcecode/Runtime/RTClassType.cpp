@@ -1,5 +1,4 @@
 #include "RTClassType.h"
-#include "RecursionBuffer.h"
 #include "NomAlloc.h"
 #include <tuple>
 #include "Context.h"
@@ -15,9 +14,9 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		llvm::StructType * RTClassType::GetLLVMType()
+		llvm::StructType* RTClassType::GetLLVMType()
 		{
-			static llvm::StructType *llvmtype = llvm::StructType::create(LLVMCONTEXT, "LLVMRTClassType");
+			static llvm::StructType* llvmtype = llvm::StructType::create(LLVMCONTEXT, "LLVMRTClassType");
 			static bool dontrepeat = true;
 			if (dontrepeat)
 			{
@@ -27,7 +26,7 @@ namespace Nom
 			}
 			return llvmtype;
 		}
-		llvm::StructType * RTClassType::GetLLVMType(size_t size)
+		llvm::StructType* RTClassType::GetLLVMType(size_t size)
 		{
 			return llvm::StructType::get(LLVMCONTEXT, {
 				llvm::ArrayType::get(RTTypeHead::GetLLVMType()->getPointerTo(), size), //arguments
@@ -35,56 +34,22 @@ namespace Nom
 				RTInterface::GetLLVMType()->getPointerTo(), //class type
 				});
 		}
-		llvm::Constant * RTClassType::GetConstant(llvm::Module &mod, const NomClassType *cls)
+		llvm::Constant* RTClassType::GetConstant(llvm::Module& mod, const NomClassType* cls, llvm::Constant* castFun)
 		{
-			//std::string globalName = "RT_CLASSTYPE_" + std::to_string(cls->GetHashCode());
-			//auto globalVar = mod.getNamedGlobal(globalName);
 			size_t argcount = cls->Arguments.size();
-			//if (globalVar == nullptr)
-			//{
-				//globalVar = new GlobalVariable(mod, GetLLVMType(argcount), true, GlobalValue::LinkageTypes::ExternalWeakLinkage, nullptr);
-				llvm::Constant** argtypes = nullptr;
-				if (argcount > 0)
-				{
-					argtypes = makealloca(llvm::Constant*, argcount);
-					for (size_t i = argcount; i > 0;)
-					{
-						i--;
-						argtypes[i] = cls->Arguments[argcount-(i+1)]->GetLLVMElement(mod);
-					}
-				}
-				//globalVar->setInitializer(llvm::ConstantStruct::get(GetLLVMType(argcount), llvm::ConstantArray::get(arrtype(TYPETYPE, argcount), llvm::ArrayRef<llvm::Constant*>(argtypes, argcount)), RTTypeHead::GetConstant(TypeKind::TKClass, MakeInt(cls->GetHashCode()), cls), llvm::ConstantExpr::getPointerCast(cls->Named->GetLLVMElement(mod), RTInterface::GetLLVMType()->getPointerTo())));
-			//}
-			//return ConstantExpr::getPointerCast(ConstantExpr::getGetElementPtr(GetLLVMType(argcount), globalVar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1) })), GetLLVMType()->getPointerTo());
-				return llvm::ConstantStruct::get(GetLLVMType(argcount), llvm::ConstantArray::get(arrtype(TYPETYPE, argcount), llvm::ArrayRef<llvm::Constant*>(argtypes, argcount)), RTTypeHead::GetConstant(TypeKind::TKClass, MakeInt(cls->GetHashCode()), cls), llvm::ConstantExpr::getPointerCast(cls->Named->GetLLVMElement(mod), RTInterface::GetLLVMType()->getPointerTo()));
-		}
-
-
-		uint64_t RTClassType::HeadOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassTypeFields::Head); return offset;
-		}
-		uint64_t RTClassType::ClassOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassTypeFields::Class); return offset;
-		}
-
-
-		uint64_t RTClassType::ArgumentsOffset()
-		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset((unsigned char)RTClassTypeFields::TypeArgs); return offset;
-		}
-		llvm::Value * RTClassType::FromHead(NomBuilder& builder, llvm::Value * head)
-		{
-			if ((unsigned char)RTClassTypeFields::Head == 0 || HeadOffset() == 0)
+			llvm::Constant** argtypes = nullptr;
+			if (argcount > 0)
 			{
-				return builder->CreatePointerCast(head, GetLLVMType()->getPointerTo());
+				argtypes = makealloca(llvm::Constant*, argcount);
+				for (size_t i = argcount; i > 0;)
+				{
+					i--;
+					argtypes[i] = cls->Arguments[argcount - (i + 1)]->GetLLVMElement(mod);
+				}
 			}
-			return builder->CreateIntToPtr(
-				builder->CreateSub(builder->CreatePtrToInt(head, numtype(intptr_t)), MakeInt<intptr_t>(HeadOffset())),
-				GetLLVMType()->getPointerTo()
-			);
+			return llvm::ConstantStruct::get(GetLLVMType(argcount), llvm::ConstantArray::get(arrtype(TYPETYPE, argcount), llvm::ArrayRef<llvm::Constant*>(argtypes, argcount)), RTTypeHead::GetConstant(TypeKind::TKClass, MakeInt(cls->GetHashCode()), cls, castFun), cls->Named->GetInterfaceDescriptor(mod));
 		}
+
 		llvm::Value* RTClassType::GenerateReadClassDescriptorLink(NomBuilder& builder, llvm::Value* type)
 		{
 			return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTClassTypeFields::Class), "class");
@@ -122,7 +87,7 @@ namespace Nom
 				args++;
 				Value* nomtype = args;
 
-				RTTypeHead::CreateInitialization(builder, mod, ctype, TypeKind::TKClass, hash, nomtype);
+				RTTypeHead::CreateInitialization(builder, mod, ctype, TypeKind::TKClass, hash, nomtype, RTInterface::GenerateReadCastFunction(builder, vtableptr));
 				MakeStore(builder, vtableptr, ctype, MakeInt32(RTClassTypeFields::Class));
 
 				auto targetTypeArgStart = builder->CreateGEP(ctype, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs), builder->CreateNeg(targcount) });

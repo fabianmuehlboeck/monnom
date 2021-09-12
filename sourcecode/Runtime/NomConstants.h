@@ -50,7 +50,7 @@ namespace Nom
 		class NomConstructor;
 		class NomMemberContext;
 		class NomLambda;
-		class NomStruct;
+		class NomRecord;
 		class NomModule;
 	}
 }
@@ -200,20 +200,20 @@ namespace Nom
 			}
 		};
 
-		class NomStructConstant : public NomConstant
+		class NomRecordConstant : public NomConstant
 		{
 		private:
-			mutable NomStruct* structure = nullptr;
+			mutable NomRecord* structure = nullptr;
 		public:
-			NomStructConstant(NomStructConstant&) = delete;
-			NomStructConstant(const NomStructConstant&) = delete;
-			NomStructConstant(NomStructConstant&&) = delete;
-			NomStructConstant() : NomConstant(NomConstantType::CTStruct)
+			NomRecordConstant(NomRecordConstant&) = delete;
+			NomRecordConstant(const NomRecordConstant&) = delete;
+			NomRecordConstant(NomRecordConstant&&) = delete;
+			NomRecordConstant() : NomConstant(NomConstantType::CTRecord)
 			{
 			}
-			virtual ~NomStructConstant() override = default;
-			NomStruct* GetStruct() const;
-			void SetStruct(NomStruct* structure) const;
+			virtual ~NomRecordConstant() override = default;
+			NomRecord* GetRecord() const;
+			void SetStruct(NomRecord* structure) const;
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
@@ -619,7 +619,7 @@ namespace Nom
 			static NomStringConstant* GetString(const ConstantID constant);
 			static NomClassConstant* GetClass(const ConstantID constant);
 			static NomLambdaConstant* GetLambda(const ConstantID constant);
-			static NomStructConstant* GetStruct(const ConstantID constant);
+			static NomRecordConstant* GetRecord(const ConstantID constant);
 			static NomMethodConstant* GetMethod(const ConstantID constant);
 			static NomStaticMethodConstant* GetStaticMethod(const ConstantID constant);
 			static NomConstructorConstant* GetConstructor(const ConstantID constant);

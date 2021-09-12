@@ -48,16 +48,5 @@ namespace Nom
 		template <class T, class U>
 		bool operator!=(const BoehmAllocator<T>&, const BoehmAllocator<U>&) { return false; }
 
-		//template<class T>
-		//using BoehmList = std::list<T, BoehmAllocator<T>>;
-
-		//template<class T>
-		//using BoehmVector = std::vector<T, BoehmAllocator<T>>;
-
-		//template<class K, class V, typename _cmp = std::less<K>>
-		//using BoehmMap = std::map<K, V, _cmp, BoehmAllocator<std::pair<const K, V>>>;
-
-		//template<class K, class V, typename _hash = std::hash<K>, typename _eq = std::equal_to<K>>
-		//using BoehmHashMap = std::unordered_map<K, V, _hash, _eq, BoehmAllocator<std::pair<const K, V>>>;
 	}
 }

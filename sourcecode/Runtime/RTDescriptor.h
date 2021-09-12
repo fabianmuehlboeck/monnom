@@ -19,7 +19,7 @@ namespace Nom
 		/// Also bit-encoded as follows:
 		/// LSB = 0 -> type arguments recorded in instance
 		/// </summary>
-		enum class RTDescriptorKind : unsigned char { Class = 0, Lambda = 1, OptimizedLambda = 2, Struct = 3, OptimizedStruct = 4, PartialApplication = 5, MultiCast = 7 };
+		enum class RTDescriptorKind : unsigned char { Class = 0, Lambda = 1, OptimizedLambda = 2, Record = 3, OptimizedStruct = 4, PartialApplication = 5, MultiCast = 7 };
 		//llvm::StructType* GetDescriptorDictionaryEntryType();
 		//llvm::Constant* CreateDescriptorDictionaryEntryConstant(DescriptorDictionaryEntryKind det, bool readonly, Visibility visibility, llvm::Constant* typeOrPartialAppOrDispatcher, int32_t index);
 

@@ -26,19 +26,12 @@ namespace Nom
 		{
 		private:
 			mutable NomTypeRef returnTypeBuf;
-			//mutable TypeList argumentTypesBuf = TypeList((NomTypeRef *)nullptr, (size_t)0);
 			std::vector<NomInstruction *> preInstructions;
 			std::vector<RegIndex> superConstructorArgs;
-			//const ConstantID argumentTypes;
-		//public:
-		//	virtual TypeList GetArgumentTypes(const NomSubstitutionContext* context) const override;
-
-		//	virtual int GetArgumentCount() const override;
 		public:
 			const NomClass * const Class;
 			NomConstructorLoaded(const NomClass * cls, const std::string &name, const std::string &qname, const ConstantID arguments, const RegIndex regcount, const ConstantID typeArgs, bool declOnly = false, bool cppWrapper=false);
 			virtual ~NomConstructorLoaded() override;
-			//bool Satisfies(const TypeList typeArgs, const TypeList argTypes, bool optimistic=false) const;
 
 			void AddPreInstruction(NomInstruction *instr)
 			{

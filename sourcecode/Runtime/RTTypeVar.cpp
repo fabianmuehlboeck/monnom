@@ -1,7 +1,10 @@
 #include "RTTypeVar.h"
 #include "NomTypeVar.h"
 #include "CompileHelpers.h"
+#include "llvm/IR/Constant.h"
 
+using namespace llvm;
+using namespace std;
 namespace Nom
 {
 	namespace Runtime
@@ -27,7 +30,7 @@ namespace Nom
 		}
 		llvm::Constant * RTTypeVar::GetConstant(int index, llvm::Constant * lowerBound, llvm::Constant * upperBound, const NomTypeVar * type)
 		{
-			return llvm::ConstantStruct::get(GetLLVMType(), RTTypeHead::GetConstant(TypeKind::TKVariable, MakeInt(type->GetHashCode()), type), MakeInt(index), lowerBound, upperBound);
+			return llvm::ConstantStruct::get(GetLLVMType(), RTTypeHead::GetConstant(TypeKind::TKVariable, MakeInt(type->GetHashCode()), type, ConstantPointerNull::get(GetCastFunctionType()->getPointerTo())), MakeInt(index), lowerBound, upperBound);
 		}
 		int32_t RTTypeVar::HeadOffset()
 		{

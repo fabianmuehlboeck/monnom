@@ -8,6 +8,8 @@
 #include "RTSubtyping.h"
 #include "RTInterface.h"
 #include "RTInstanceType.h"
+#include "RTTypeVar.h"
+#include "RTMaybeType.h"
 
 using namespace Nom::Runtime;
 using namespace llvm;
@@ -74,7 +76,7 @@ namespace Nom
 			auto typeSwitch = builder->CreateSwitch(typeKind, errorBlock, 8);
 			typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKBottom), idBlock);
 			typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKDynamic), idBlock);
-			typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKStruct), idBlock);
+			typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKRecord), idBlock);
 			typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKPartialApp), idBlock);
 			typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKTop), idBlock);
 
@@ -137,7 +139,7 @@ namespace Nom
 
 				builder->SetInsertPoint(newInstanceBlock);
 				static auto uniqueInstantiationFun = NomInterface::GetGetUniqueInstantiationFunction(mod);
-				auto uniquedResult = builder->CreateCall(uniqueInstantiationFun, {RTInterface::GenerateReadNomIRLink(builder, iface), iface, newTypeArgsArr, hashArr, targcount});
+				auto uniquedResult = builder->CreateCall(uniqueInstantiationFun, {RTInterface::GenerateReadIRPtr(builder, iface), iface, newTypeArgsArr, hashArr, targcount});
 				uniquedResult->setCallingConv(uniqueInstantiationFun->getCallingConv());
 				builder->CreateRet(uniquedResult);
 			}
@@ -177,7 +179,7 @@ namespace Nom
 
 				builder->SetInsertPoint(newInstanceBlock);
 				static auto uniqueInstantiationFun = NomInterface::GetGetUniqueInstantiationFunction(mod);
-				auto uniquedResult = builder->CreateCall(uniqueInstantiationFun, { RTInterface::GenerateReadNomIRLink(builder, iface), iface, newTypeArgsArr, hashArr, targcount });
+				auto uniquedResult = builder->CreateCall(uniqueInstantiationFun, { RTInterface::GenerateReadIRPtr(builder, iface), iface, newTypeArgsArr, hashArr, targcount });
 				uniquedResult->setCallingConv(uniqueInstantiationFun->getCallingConv());
 				builder->CreateRet(uniquedResult);
 			}

@@ -23,11 +23,11 @@ std::vector<std::string> NomApplicationArgs = std::vector<std::string>();
 bool NomRuntimeStopAtEnd = false;
 std::ostream * RT_debugout = &std::cout;
 
-bool RTConfig_CheckLambdaSignaturesAtCast = true;
+bool RTConfig_CheckLambdaSignaturesAtCast = false;
 int RTConfig_NumberOfVarargsArguments = 2;
 bool RTConfig_IgnoreEnsureMethod = false;
 bool RTConfig_AlwaysEnsureMethod = false;
-bool RTConfig_RunUnncessesaryLambdaCallTagChecks = false;
+bool RTConfig_RunUnncessesaryCallTagChecks = false;
 bool RTConfig_OmitLambdaCallTags = false;
 bool RTConfig_AdditionalOptPasses = false;
 
@@ -288,17 +288,17 @@ namespace Nom
 						{
 							RTConfig_AdditionalOptPasses = true;
 						}
-						else if (strncmp(args[argpos], "--omitlambdasigchecks", 24) == 0)
+						else if (strncmp(args[argpos], "--dolambdasigchecks", 24) == 0)
 						{
-							RTConfig_CheckLambdaSignaturesAtCast = false;
+							RTConfig_CheckLambdaSignaturesAtCast = true;
 						}
 						else if (strncmp(args[argpos], "--omitlambdacalltags", 24) == 0)
 						{
 							RTConfig_OmitLambdaCallTags = true;
 						}
-						else if (strncmp(args[argpos], "--alwayschecklambdacalltags", 32) == 0)
+						else if (strncmp(args[argpos], "--alwayscheckcalltags", 32) == 0)
 						{
-							RTConfig_RunUnncessesaryLambdaCallTagChecks = true;
+							RTConfig_RunUnncessesaryCallTagChecks = true;
 						}
 						else if (strncmp(args[argpos], "--varargscount", 24) == 0)
 						{

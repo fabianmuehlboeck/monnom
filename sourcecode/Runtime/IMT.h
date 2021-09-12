@@ -10,13 +10,19 @@ namespace Nom
 	{
 		class NomInterface;
 		class NomMethodTableEntry;
-		class NomMethodKey;
+		class NomInterfaceCallTag;
 		llvm::FunctionType* GetIMTCastFunctionType();
+		llvm::FunctionType* GetFieldReadFunctionType();
+		llvm::FunctionType* GetFieldWriteFunctionType();
 		llvm::FunctionType* GetIMTFunctionType();
+
+		enum class DynamicDispatchListEntryFields : char { Key = 0, Flags = 1, Dispatcher = 2 };
+		llvm::StructType* GetDynamicDispatchListEntryType();
+		llvm::Constant* GetDynamicDispatchListEntryConstant(llvm::Constant* key, llvm::Constant* flags, llvm::Constant* dispatcherPtr);
+		llvm::StructType* GetDynamicDispatcherLookupResultType();
 		llvm::FunctionType* GetCheckReturnValueFunctionType();
-		llvm::Function* GenerateIMT(llvm::Module* mod, llvm::GlobalValue::LinkageTypes linkage, const llvm::Twine name, llvm::SmallVector<std::pair<NomMethodKey*, llvm::Function*>, 8>& imtPairs);
-		llvm::Function* GenerateRawInvokeWrap(llvm::Module* mod, llvm::GlobalValue::LinkageTypes linkage, const llvm::Twine name, const NomInterface* ifc, llvm::Function* callCode);
 
 
+		llvm::StructType* GetDynamicDispatcherLookupResultType();
 	}
 }

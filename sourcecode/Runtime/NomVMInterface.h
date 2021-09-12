@@ -17,7 +17,7 @@ extern llvm::Function* GetNewAlloc(llvm::Module* mod);
 
 extern llvm::Function* GetClosureAlloc(llvm::Module* mod);
 
-extern llvm::Function* GetStructAlloc(llvm::Module* mod);
+extern llvm::Function* GetRecordAlloc(llvm::Module* mod);
 
 extern void GenerateLLVMDebugPrint(llvm::IRBuilder<> &builder, llvm::Module *mod, const std::string &str);
 
@@ -27,9 +27,9 @@ extern "C" DLLEXPORT void *CPP_NOM_GCALLOC(size_t size);
 
 extern "C" DLLEXPORT void* CPP_NOM_NEWALLOC(size_t numfields, size_t numtargs);
 
-extern "C" DLLEXPORT void* CPP_NOM_CLOSUREALLOC(size_t numfields, size_t numtargs, size_t numreservedargs);
+extern "C" DLLEXPORT void* CPP_NOM_CLOSUREALLOC(size_t numfields, size_t numtargs);
 
-extern "C" DLLEXPORT void* CPP_NOM_STRUCTALLOC(size_t numfields, size_t numtargs, size_t numreservedargs);
+extern "C" DLLEXPORT void* CPP_NOM_RECORDALLOC(size_t numfields, size_t numtargs);
 
 extern "C" DLLEXPORT void* CPP_NOM_CLASSTYPEALLOC(size_t numtargs);
 

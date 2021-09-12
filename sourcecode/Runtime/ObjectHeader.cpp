@@ -16,23 +16,16 @@
 #include "IntClass.h"
 #include "BoolClass.h"
 #include "NomClassType.h"
-#include "NomStructType.h"
-#include "NomPartialAppType.h"
-#include "RTPartialAppType.h"
-#include "RTStructType.h"
 #include "CompileHelpers.h"
 #include "TypeOperations.h"
 #include "RTDictionary.h"
 #include "RTOutput.h"
 #include "RefValueHeader.h"
 #include "RTVTable.h"
-#include "RTStructType.h"
-#include "NomStructType.h"
-#include "StructHeader.h"
-#include "RTStruct.h"
 #include "CallingConvConf.h"
 #include "RTCompileConfig.h"
 #include "CastStats.h"
+#include "IMT.h"
 
 using namespace llvm;
 
@@ -174,7 +167,7 @@ namespace Nom
 			Value* vTableVar = nullptr, *sTableVar = nullptr;
 			Function* fun = builder->GetInsertBlock()->getParent();
 
-			RefValueHeader::GenerateVTableTagSwitch(builder, receiver, &vTableVar, &sTableVar, &classBlock, &lambdaBlock, &structBlock, &partialAppBlock);
+			RefValueHeader::GenerateRefValueKindSwitch(builder, receiver, &vTableVar, &classBlock, &lambdaBlock, &structBlock, &partialAppBlock);
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "DictLoadOut", fun);
 
 			builder->SetInsertPoint(outBlock);
@@ -184,8 +177,8 @@ namespace Nom
 			{
 				builder->SetInsertPoint(classBlock);
 				vTableVar->setName("classDescriptor");
-				auto fieldLookupFun = RTClass::GenerateReadFieldLookup(builder, vTableVar);
-				auto fieldValue = builder->CreateCall(NomClass::GetDynamicFieldLookupType(), fieldLookupFun, { receiver, key }, "fieldValue");
+				auto fieldLookupFun = RTVTable::GenerateReadReadFieldFunction(builder, vTableVar);
+				auto fieldValue = builder->CreateCall(GetFieldReadFunctionType(), fieldLookupFun, { key, receiver }, "fieldValue");
 				fieldValue->setCallingConv(NOMCC);
 				outPHI->addIncoming(fieldValue, builder->GetInsertBlock());
 				builder->CreateBr(outBlock);
@@ -194,9 +187,8 @@ namespace Nom
 			if (structBlock != nullptr)
 			{
 				builder->SetInsertPoint(structBlock);
-				auto structDesc = sTableVar;
-				auto structFieldLookupFun = RTStruct::GenerateReadFieldLookup(builder, structDesc);
-				auto structFieldValue = builder->CreateCall(NomStruct::GetDynamicFieldLookupType(), structFieldLookupFun, { receiver, key }, "structFieldValue");
+				auto structFieldLookupFun = RTVTable::GenerateReadReadFieldFunction(builder, vTableVar);
+				auto structFieldValue = builder->CreateCall(GetFieldReadFunctionType(), structFieldLookupFun, { key, receiver }, "structFieldValue");
 				structFieldValue->setCallingConv(NOMCC);
 				outPHI->addIncoming(structFieldValue, builder->GetInsertBlock());
 				builder->CreateBr(outBlock);
@@ -228,7 +220,7 @@ namespace Nom
 			static llvm::Function* fieldaddrfun = llvm::Function::Create(llvm::FunctionType::get(REFTYPE->getPointerTo(), { REFTYPE, inttype(32) }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_GETFIELDADDR", mod);
 			
 			static llvm::Function* readfun_forinvoke = llvm::Function::Create(llvm::FunctionType::get(REFTYPE, { REFTYPE, inttype(32) }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_READFIELD_FORINVOKABLE", mod);
-			static llvm::Function* writefun_forinvoke = llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { REFTYPE, inttype(32), REFTYPE }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_READFIELD_FORINVOKABLE", mod);
+			static llvm::Function* writefun_forinvoke = llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { REFTYPE, inttype(32), REFTYPE }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_WRITEFIELD_FORINVOKABLE", mod);
 			static llvm::Function* readtargfun = llvm::Function::Create(llvm::FunctionType::get(TYPETYPE, { REFTYPE, inttype(32) }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_READTYPEARG", mod);
 			static llvm::Function* writetargfun = llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { REFTYPE, inttype(32), TYPETYPE }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_WRITETYPEARG", mod);
 			static llvm::Function* writeVtableFun = llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { REFTYPE, POINTERTYPE }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_WRITEVTABLE", mod);
@@ -388,7 +380,7 @@ namespace Nom
 		{
 			Value* clsdescptr = RefValueHeader::GenerateReadVTablePointer(builder, (*env)[reg]);
 			Value* clsdescptr_typed = builder->CreatePointerCast(clsdescptr, RTClass::GetLLVMType()->getPointerTo());
-			Value* funaddr = RTClass::GenerateReadMethodTableEntry(builder, clsdescptr_typed, MakeInt32(-1 - method.Elem->GetOffset()));
+			Value* funaddr = RTVTable::GenerateReadMethodTableEntry(builder, clsdescptr_typed, MakeInt32(method.Elem->GetOffset()));
 
 			Value* funaddr_typed = builder->CreatePointerCast( funaddr, method.Elem->GetLLVMFunctionType()->getPointerTo());
 

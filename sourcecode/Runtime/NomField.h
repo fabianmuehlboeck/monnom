@@ -110,17 +110,17 @@ namespace Nom
 			}
 		};
 
-		class NomStructField : public NomField
+		class NomRecordField : public NomField
 		{
 		private:
 			const bool readonly;
 		public:
-			NomStructField(NomStruct* structure, const ConstantID name, const ConstantID type, bool isReadOnly, const int index, RegIndex valueRegister);
-			virtual ~NomStructField() override;
+			NomRecordField(NomRecord* structure, const ConstantID name, const ConstantID type, bool isReadOnly, const int index, RegIndex valueRegister);
+			virtual ~NomRecordField() override;
 
 			const ConstantID Name;
 			const ConstantID Type;
-			NomStruct* const Structure;
+			NomRecord* const Structure;
 			const int Index;
 			const RegIndex ValueRegister;
 

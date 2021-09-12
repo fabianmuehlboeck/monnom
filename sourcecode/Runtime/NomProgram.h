@@ -22,7 +22,6 @@ namespace Nom
 		private:
 			friend class Loader;
 			friend class NomModule;
-			//std::map<const std::string, AssemblyUnit> units;
 		public:
 			std::list<NomClass *> classes;
 			std::list<NomInterface* > interfaces;
@@ -53,34 +52,11 @@ namespace Nom
 				return elem;
 			}
 
-			/*AssemblyUnit * GetAssemblyUnit(const std::string &name)
-			{
-				auto elem = units.find(name);
-				if (elem == units.end()) {
-					auto emplace_result = units.emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(name));
-					return &(emplace_result.first->second);
-				}
-				else
-				{
-					return &(elem->second);
-				}
-			}*/
-
-			/*bool HasAssemblyUnit(const std::string &name)
-			{
-				return units.find(name) == units.end();
-			}
-*/
 			~NomProgram();
 			NomProgram();
 
 			NomProgram(NomProgram&) = delete;
 			NomProgram(const NomProgram&) = delete;
-			//NomProgram(NomProgram&&) = delete;
-
-			/*int Run() {
-
-			}*/
 		};
 
 

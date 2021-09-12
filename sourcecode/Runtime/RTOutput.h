@@ -17,6 +17,8 @@ namespace Nom
 			static llvm::FunctionType* GetFunctionType();
 			static llvm::Function* GetLLVMElement(llvm::Module& mod);
 
+			static llvm::BasicBlock* GenerateFailUnimplementedBlock(NomBuilder& builder);
+
 			static llvm::BasicBlock* GenerateFailOutputBlock(NomBuilder& builder, const char* errorMessage);
 			static void MakeBlockFailOutputBlock(NomBuilder& builder, const char* errorMessage, llvm::BasicBlock* block);
 		};

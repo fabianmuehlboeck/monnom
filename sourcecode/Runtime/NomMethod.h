@@ -47,52 +47,15 @@ namespace Nom
 		class NomMethodLoaded : public virtual NomMethod, public NomCallableLoaded
 		{
 		private:
-			//mutable llvm::ArrayRef<NomTypeRef> argumentTypes = llvm::ArrayRef<NomTypeRef>((NomTypeRef*)nullptr, (size_t)0);
 			mutable NomTypeRef returnTypeBuf = nullptr;
-			//const std::string name;
-			///*const NomTypeRef returnType;
-			//const TypeList arguments;
 			const ConstantID returnType;
 			const bool isFinal;
-			//const ConstantID argTypes;
-			//mutable llvm::Function *compiled;
-			//const int regcount = 0;
-			//std::vector<NomInstruction *> instructions;
 		public:
 			const NomInterface * const Container;
 			NomMethodLoaded(const NomInterface * container, const std::string &name, const std::string &qname, const ConstantID returnType, const ConstantID argTypes, RegIndex regcount, ConstantID typeParameters, bool isFinal);
-			/*NomMethod(const std::string &name, const NomType * const returnType, const TypeList &arguments) : name(name), returnType(returnType), arguments(arguments)
-			{
-
-			}*/
 			virtual ~NomMethodLoaded() override = default;
 			// Inherited via NomCallable
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
-			//std::string GetSymbolName() const;
-			//virtual void Compile(NomBuilder &builder, llvm::Module *mod);
-			//const NomType * const GetReturnType() const {
-			//	return NomConstants::GetType(returnType);
-			//}
-			//const TypeList GetArgumentTypes() const {
-			//	return NomConstants::GetTypeList(argTypes)->GetTypeList();
-			//}
-
-
-			//const std::string GetName() const
-			//{
-			//	return name;
-			//}
-
-			//llvm::FunctionType *GetLLVMFunctionType() const
-			//{
-			//	return GetType();
-			//}
-			//llvm::Function *GetLLVMFunction(llvm::Module *mod) const;
-
-			//void AddInstruction(NomInstruction * instruction)
-			//{
-			//	this->instructions.push_back(instruction);
-			//}
 
 			virtual bool IsFinal() const override { return isFinal; }
 
@@ -102,8 +65,6 @@ namespace Nom
 			// Inherited via NomMethod
 			virtual llvm::ArrayRef<NomTypeParameterRef> GetArgumentTypeParameters() const override;
 			virtual const NomInterface* GetContainer() const override;
-			//virtual TypeList GetArgumentTypes(const NomSubstitutionContext* context) const override;
-			//virtual int GetArgumentCount() const override;
 
 			virtual void PushDependencies(std::set<ConstantID>& set) const override
 			{
@@ -141,10 +102,6 @@ namespace Nom
 		public:
 			const NomInterface* const Container;
 			NomMethodInternal(const NomInterface* container, const std::string& name, const std::string& qname, bool isFinal);
-			/*NomMethod(const std::string &name, const NomType * const returnType, const TypeList &arguments) : name(name), returnType(returnType), arguments(arguments)
-			{
-
-			}*/
 			virtual ~NomMethodInternal() override = default;
 
 			void SetReturnType(NomTypeRef returnType);

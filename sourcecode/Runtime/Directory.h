@@ -3,7 +3,6 @@
 #include "FileSysDefs.h"
 #include <vector>
 #include "File.h"
-#include "Managed.h"
 
 namespace Nom
 {

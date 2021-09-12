@@ -6,7 +6,10 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "CompileHelpers.h"
 #include "NomMaybeType.h"
+#include "CallingConvConf.h"
+#include "RTOutput.h"
 
+using namespace llvm;
 namespace Nom
 {
 	namespace Runtime
@@ -79,7 +82,14 @@ namespace Nom
 		}
 		llvm::Constant * NomBottomType::createLLVMElement(llvm::Module & mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			return new llvm::GlobalVariable(mod, RTTypeHead::GetLLVMType(), true, linkage, RTTypeHead::GetConstant(TypeKind::TKBottom, MakeInt(GetHashCode()), this), "RT_NOM_BottomType");
+			Function* fun = Function::Create(GetCastFunctionType(), linkage, "MONNOM_RT_TYPECASTFUN_BOTTOM", mod);
+			{
+				fun->setCallingConv(NOMCC);
+				BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+				NomBuilder builder;
+				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cast failed: value cannot be subtype of bottom!", startBlock);
+			}
+			return new llvm::GlobalVariable(mod, RTTypeHead::GetLLVMType(), true, linkage, RTTypeHead::GetConstant(TypeKind::TKBottom, MakeInt(GetHashCode()), this, fun), "RT_NOM_BottomType");
 		}
 		llvm::Constant * NomBottomType::findLLVMElement(llvm::Module & mod) const
 		{

@@ -4,19 +4,13 @@
 #include "CompileHelpers.h"
 #include "ObjectClass.h"
 #include "RefValueHeader.h"
-
-//Nom::Runtime::NomBoolClass * _NomBoolClass=Nom::Runtime::NomBoolClass::GetInstance();
-////const Nom::Runtime::RTBoolClass _RTBoolClass;
-//const Nom::Runtime::NomBoolClass * const _NomBoolClassRef = &_NomBoolClass;
-////const Nom::Runtime::RTBoolClass * const _RTBoolClassRef = &_RTBoolClass;
-//const Nom::Runtime::NomClass * const _NomBoolClassNC = &_NomBoolClass;
-////const Nom::Runtime::RTClass * const _RTBoolClassRTC = &_RTBoolClass;
+#include "RTTypeHead.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
-		NomBoolClass::NomBoolClass() : NomInterface("Bool_0"), NomClassInternal(new NomString("Bool_0"))/*, NomMemberContextInternal(llvm::ArrayRef<NomTypeParameterRef>()), NomNamedInternal(boolClassName), NomInterfaceInternal(boolClassName, llvm::ArrayRef<NomTypeParameterRef>(), nullptr, llvm::ArrayRef<NomInstantiationRef<NomInterface>>())*/
+		NomBoolClass::NomBoolClass() : NomInterface("Bool_0"), NomClassInternal(new NomString("Bool_0"))
 		{
 			SetDirectTypeParameters();
 			SetSuperClass(NomInstantiationRef<NomClass>(NomObjectClass::GetInstance(), TypeList()));
@@ -31,7 +25,6 @@ namespace Nom
 			{
 				once = false;
 				NomObjectClass::GetInstance();
-				//nbc.PreprocessInheritance();
 			}
 			return &nbc;
 		}
@@ -45,20 +38,16 @@ namespace Nom
 
 		}
 
-		//RTBoolClass::RTBoolClass() : RTClass(0, 0)
-		//{
 
 		llvm::Constant* NomBoolObjects::GetTrue(llvm::Module& mod)
 		{
 			auto elem = GetInstance()->GetLLVMElement(mod);
-			//return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(((PointerType*)elem->getType())->getElementType(), elem, llvm::ArrayRef<llvm::Constant*>({ {MakeInt(0), MakeInt(1),MakeInt(1),MakeInt(1)} })), REFTYPE);
 			return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(((PointerType*)elem->getType())->getElementType(), elem, llvm::ArrayRef<llvm::Constant*>({ {MakeInt(0), MakeInt(1), MakeInt(1)} })), REFTYPE);
 		}
 
 		llvm::Constant* NomBoolObjects::GetFalse(llvm::Module& mod)
 		{
 			auto elem = GetInstance()->GetLLVMElement(mod);
-			//return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(((PointerType*)elem->getType())->getElementType(), elem, llvm::ArrayRef<llvm::Constant*>({ {MakeInt(0), MakeInt(0),MakeInt(1)} })), REFTYPE);
 			return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(((PointerType*)elem->getType())->getElementType(), elem, llvm::ArrayRef<llvm::Constant*>({ {MakeInt(0), MakeInt(0), MakeInt(1)} })), REFTYPE);
 		}
 
@@ -84,20 +73,8 @@ namespace Nom
 			auto var = new llvm::GlobalVariable(mod, arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2), true, linkage, nullptr, "RT_NOM_BOOLEANS");
 			auto clsref = NomBoolClass::GetInstance()->GetLLVMElement(mod);
 			auto fieldstype = arrtype(REFTYPE, 1);
-			//auto entrytype = ObjectHeader::GetLLVMType(((PointerType *)clsref->getType())->getElementType(), fieldstype, nullptr);
-			//std::cout << "Boolean Instance Type: ";
-			//entrytype->print(out);
-			//out.flush();
-			//std::cout << "\n";
-			//std::cout.flush();
-			//auto type = arrtype(entrytype, 2);
-			//std::cout << "Boolean Instance Array Type: ";
-			//type->print(out);
-			//out.flush();
-			//std::cout << "\n";
 			llvm::Constant* falseConst = ObjectHeader::GetConstant(clsref, llvm::ConstantArray::get(fieldstype, { llvm::ConstantExpr::getIntToPtr(MakeInt(1, (uint64_t)0), REFTYPE) }), llvm::ConstantArray::get(arrtype(RTTypeHead::GetLLVMType()->getPointerTo(), 0), {}));
 			llvm::Constant* trueConst = ObjectHeader::GetConstant(clsref, llvm::ConstantArray::get(fieldstype, { llvm::ConstantExpr::getIntToPtr(MakeInt(1, (uint64_t)1), REFTYPE) }), llvm::ConstantArray::get(arrtype(RTTypeHead::GetLLVMType()->getPointerTo(), 0), {}));
-			///*ObjectHeader::GetConstant(clsref, llvm::ConstantArray::get(fieldstype, { {llvm::ConstantExpr::getIntToPtr(MakeInt(1, (uint64_t)1), ObjectHeader::GetLLVMType()->getPointerTo())} }));*/ llvm::ConstantStruct::get(entrytype,  {llvm::ConstantArray::get(fieldstype, { llvm::ConstantExpr::getIntToPtr(MakeInt(1, (uint64_t)1), ObjectHeader::GetLLVMType()->getPointerTo()) }), clsref, llvm::ConstantPointerNull::get(POINTERTYPE), llvm::ConstantArray::get(arrtype(RTTypeHead::GetLLVMType()->getPointerTo(), 0), {}) });
 			llvm::Constant* arr = llvm::ConstantArray::get(arrtype(falseConst->getType(), 2), { {falseConst, trueConst} });
 			var->setAlignment(llvm::MaybeAlign(8));
 			var->setInitializer(arr);

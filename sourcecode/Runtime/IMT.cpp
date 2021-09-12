@@ -14,10 +14,8 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/IR/Verifier.h"
 #include "RefValueHeader.h"
-#include "RTMulticastedInterface.h"
 #include <stdarg.h>
-#include "RawInvoke.h"
-#include "NomMethodKey.h"
+#include "NomInterfaceCallTag.h"
 #include "RTCompileConfig.h"
 
 using namespace llvm;
@@ -28,9 +26,17 @@ namespace Nom
 	{
 		llvm::FunctionType* GetIMTCastFunctionType()
 		{
-			//static auto ft = FunctionType::get(POINTERTYPE, { /*TYPETYPE->getPointerTo(),*/ POINTERTYPE, POINTERTYPE, POINTERTYPE, POINTERTYPE }, false);
-			//return ft;
 			return GetIMTFunctionType(); //to make sure this can be tail called
+		}
+		llvm::FunctionType* GetFieldReadFunctionType()
+		{
+			static auto ft = FunctionType::get(RefValueHeader::GetUninitializedLLVMType()->getPointerTo(), { numtype(size_t), RefValueHeader::GetUninitializedLLVMType()->getPointerTo() }, false);
+			return ft;
+		}
+		llvm::FunctionType* GetFieldWriteFunctionType()
+		{
+			static auto ft = FunctionType::get(Type::getVoidTy(LLVMCONTEXT), { numtype(size_t), RefValueHeader::GetUninitializedLLVMType()->getPointerTo(), RefValueHeader::GetUninitializedLLVMType()->getPointerTo() }, false);
+			return ft;
 		}
 
 		llvm::FunctionType* GetIMTFunctionType()
@@ -51,6 +57,34 @@ namespace Nom
 			}
 
 			return ft;
+		}
+
+		llvm::StructType* GetDynamicDispatchListEntryType()
+		{
+			static StructType* st = StructType::create(LLVMCONTEXT, "MONNOM_RT_DynamicDispatchListEntry");
+			static bool once = true;
+			if (once)
+			{
+				once = false;
+				st->setBody({
+					inttype(64),							//key
+					inttype(64),							//flags
+					GetIMTFunctionType()->getPointerTo()	//dispatcher
+					}, false);
+			}
+			return st;
+		}
+
+		llvm::Constant* GetDynamicDispatchListEntryConstant(llvm::Constant* key, llvm::Constant* flags, llvm::Constant* dispatcherPtr)
+		{
+			return ConstantStruct::get(GetDynamicDispatchListEntryType(), key, flags, dispatcherPtr);
+		}
+
+
+		llvm::StructType* GetDynamicDispatcherLookupResultType()
+		{
+			static llvm::StructType* st = StructType::create(LLVMCONTEXT, { GetIMTFunctionType()->getPointerTo(), POINTERTYPE }, "DynamicDispatcherResultPair");
+			return st;
 		}
 
 		llvm::FunctionType* GetCheckReturnValueFunctionType()
@@ -76,185 +110,7 @@ namespace Nom
 			return ft;
 		}
 
-		llvm::Function* GenerateRawInvokeWrap(llvm::Module* mod, llvm::GlobalValue::LinkageTypes linkage, const llvm::Twine name, const NomInterface* ifc, llvm::Function* callCode)
-		{
-			NomMethod* invokeMethod = ifc->Methods[0];
-			FunctionType* funtype = invokeMethod->GetRawInvokeLLVMFunctionType();
-
-			Function* fun = Function::Create(funtype, linkage, name, mod);
-			fun->setCallingConv(NOMCC);
-
-			NomBuilder builder;
-			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "start", fun);
-			builder->SetInsertPoint(startBlock);
-
-			auto argiter = fun->arg_begin();
-			auto argcount = funtype->getNumParams();
-			llvm::Value** argarr = makealloca(llvm::Value*, argcount);
-			for (decltype(argcount) i = 0; i < argcount; i++)
-			{
-				argarr[i] = argiter;
-				argiter++;
-			}
-
-			GenerateRawInvoke(builder, ifc, invokeMethod,
-				[callCode](NomBuilder& b, const NomMethod* meth, llvm::ArrayRef<llvm::Value*> cargs)
-				{
-					auto call = b->CreateCall(callCode, cargs);
-					call->setCallingConv(NOMCC);
-					return call;
-				},
-				llvm::ArrayRef<llvm::Value*>(argarr, argcount));
-
-			llvm::raw_os_ostream out(std::cout);
-			if (verifyFunction(*fun, &out))
-			{
-				std::cout << "Could not verify raw-invoke wrapper method!";
-				fun->print(out);
-				out.flush();
-				std::cout.flush();
-				throw name;
-			}
-			return fun;
-		}
-
-		llvm::Function* GenerateIMT(Module* mod, GlobalValue::LinkageTypes linkage, const llvm::Twine name, SmallVector<pair<NomMethodKey*, Function*>, 8>& imtPairs)
-		{
-			FunctionType* funtype = GetIMTFunctionType();
-			Function* fun = Function::Create(funtype, linkage, name, mod);
-			fun->setCallingConv(NOMCC);
-			NomBuilder builder;
-
-
-			auto argiter = fun->arg_begin();
-			Argument* id_and_dynhandler = argiter;
-			argiter++;
-
-			Value** args = makealloca(Value*, 2 + RTConfig_NumberOfVarargsArguments);
-
-			args[0] = argiter;
-			argiter++;
-			args[1] = argiter;
-			argiter++;
-			for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i < RTConfig_NumberOfVarargsArguments; i++)
-			{
-				args[i + 2] = argiter;
-				argiter++;
-			}
-
-			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
-			SmallVector<Value*, 8> argBuf;
-			builder->SetInsertPoint(startBlock);
-			if (imtPairs.size() == 0)
-			{
-				builder->CreateUnreachable();
-			}
-			else
-			{
-				auto givenKey = builder->CreatePtrToInt(id_and_dynhandler, INTTYPE, "key");
-
-				int cases = imtPairs.size();
-				BasicBlock* currentBlock;
-				BasicBlock* nextBlock = startBlock;
-				for (int i = 0; i < cases; i++)
-				{
-					currentBlock = nextBlock;
-					auto& pair = imtPairs[i];
-
-					if (i < cases - 1)
-					{
-						currentBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
-						nextBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
-
-						auto keyMatch = builder->CreateICmpEQ(givenKey, ConstantExpr::getPtrToInt(pair.first->GetLLVMElement(*mod), INTTYPE));
-						builder->CreateCondBr(keyMatch, currentBlock, nextBlock);
-
-					}
-
-					builder->SetInsertPoint(currentBlock);
-
-					argBuf.clear();
-
-					Function* callFun = pair.second;
-					int argpos = 0;
-
-					int argcount = callFun->arg_size();
-					const int maxDirectArgCount = RTConfig_NumberOfVarargsArguments + 1;
-					const int lastRegularArgIndex = RTConfig_NumberOfVarargsArguments - 1;
-					for (auto& argSpec : callFun->args())
-					{
-						if (argpos > lastRegularArgIndex && argcount > maxDirectArgCount)
-						{
-							argBuf.push_back(MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(args[RTConfig_NumberOfVarargsArguments], args[RTConfig_NumberOfVarargsArguments]->getType()->getPointerTo()), MakeInt32(argpos - RTConfig_NumberOfVarargsArguments))));
-						}
-						else
-						{
-							argBuf.push_back(args[argpos]);
-						}
-						if (argSpec.getType()->isPointerTy())
-						{
-							argBuf[argpos] = builder->CreatePointerCast(argBuf[argpos], argSpec.getType());
-						}
-						if (argSpec.getType()->isIntegerTy(INTTYPE->getIntegerBitWidth()))
-						{
-							argBuf[argpos] = builder->CreatePtrToInt(argBuf[argpos], INTTYPE);
-						}
-						else if (argSpec.getType()->isDoubleTy())
-						{
-							argBuf[argpos] = builder->CreateBitCast(builder->CreatePtrToInt(argBuf[argpos], INTTYPE), FLOATTYPE);
-						}
-						else if (argSpec.getType()->isIntegerTy(BOOLTYPE->getIntegerBitWidth()))
-						{
-							argBuf[argpos] = builder->CreatePtrToInt(argBuf[argpos], BOOLTYPE);
-						}
-						argpos++;
-					}
-					auto callResult = builder->CreateCall(callFun, argBuf);
-					callResult->setCallingConv(NOMCC);
-
-					llvm::Value* result = callResult;
-					if (result->getType()->isPointerTy())
-					{
-						if (result->getType() != POINTERTYPE)
-						{
-							result = builder->CreatePointerCast(callResult, POINTERTYPE);
-						}
-					}
-					else
-					{
-						if (result->getType()->isIntegerTy())
-						{
-							result = builder->CreateIntToPtr(result, POINTERTYPE);
-						}
-						else if (result->getType()->isDoubleTy())
-						{
-							result = builder->CreateIntToPtr(builder->CreateBitCast(result, INTTYPE), POINTERTYPE);
-						}
-						else
-						{
-							throw new std::exception();
-						}
-					}
-
-					builder->CreateRet(result);
-				}
-
-			}
-			llvm::raw_os_ostream out(std::cout);
-
-			if (verifyFunction(*fun, &out))
-			{
-				out.flush();
-				std::cout << "Could not verify IMT method!";
-				fun->print(out);
-				out.flush();
-				std::cout.flush();
-				throw name;
-			}
-			return fun;
-		}
-
-		llvm::Function* GenerateCheckReturnTypesFunction(Module* mod, GlobalValue::LinkageTypes linkage, const llvm::Twine name, SmallVector<tuple<NomMethodKey*, Function*, NomType*>, 8>& imtPairs)
+		llvm::Function* GenerateCheckReturnTypesFunction(Module* mod, GlobalValue::LinkageTypes linkage, const llvm::Twine name, SmallVector<tuple<NomInterfaceCallTag*, Function*, NomType*>, 8>& imtPairs)
 		{
 			FunctionType* funtype = GetIMTFunctionType();
 			Function* fun = Function::Create(funtype, linkage, name, mod);

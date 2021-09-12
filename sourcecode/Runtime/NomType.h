@@ -4,7 +4,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Constants.h"
 #include "Context.h"
-#include "RecursionBuffer.h"
 #include "Defs.h"
 #include "CompileEnv.h"
 #include "AvailableExternally.h"

@@ -161,7 +161,7 @@ namespace Nom
 			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_GCALLOC", (void*)&CPP_NOM_GCALLOC);
 			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_Print", (void*)&CPP_NOM_Print);
 			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_NEWALLOC", (void*)&CPP_NOM_NEWALLOC);
-			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_STRUCTALLOC", (void*)&CPP_NOM_STRUCTALLOC);
+			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_RECORDALLOC", (void*)&CPP_NOM_RECORDALLOC);
 			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_CLOSUREALLOC", (void*)&CPP_NOM_CLOSUREALLOC);
 			llvm::sys::DynamicLibrary::AddSymbol("NOM_RT_Fail", (void*)&NOM_RT_Fail);
 			////TM->setOptLevel(llvm::CodeGenOpt::Default);
@@ -180,7 +180,6 @@ namespace Nom
 							oll->setOverrideObjectFlagsWithResponsibilityFlags(true);
 							oll->setAutoClaimResponsibilityForObjectSymbols(true);
 						}
-						//oll->registerJITEventListener(*(llvm::JITEventListener::createIntelJITEventListener()));
 						oll->registerJITEventListener(NomJITEventListener::GetListener());
 						return std::move(oll);
 			};
@@ -191,19 +190,8 @@ namespace Nom
 			}
 
 			auto njit = std::make_unique<NomJIT>(std::move(JIT.get()));
-			//llvm::orc::RTDyldObjectLinkingLayer* oll = (llvm::orc::RTDyldObjectLinkingLayer*) & njit->lljit->getObjLinkingLayer();
 
 			return njit;
-			//auto JTMB = llvm::orc::JITTargetMachineBuilder::detectHost();
-
-			//if (!JTMB)
-			//	return JTMB.takeError();
-
-			//auto DL = JTMB->getDefaultDataLayoutForTarget();
-			//if (!DL)
-			//	return DL.takeError();
-
-			//return std::make_unique<NomJIT>(std::move(*JTMB), std::move(*DL));
 		}
 
 		NomJIT::~NomJIT()
@@ -228,6 +216,7 @@ namespace Nom
 
 				if (NomOptLevel > 0)
 				{
+					if(NomVerbose)
 					{
 						basic_ofstream<char> pobof(NomPath + "//llvmirPO.lli");
 						llvm::raw_os_ostream pofout(pobof);
@@ -442,12 +431,15 @@ namespace Nom
 					out.flush();
 					std::cout.flush();
 				}
-				basic_ofstream<char> bof(NomPath + "//llvmir.lli");
-				llvm::raw_os_ostream fout(bof);
-				M.print(fout, nullptr);
-				fout.flush();
-				bof.flush();
-				bof.close();
+				if (NomVerbose)
+				{
+					basic_ofstream<char> bof(NomPath + "//llvmir.lli");
+					llvm::raw_os_ostream fout(bof);
+					M.print(fout, nullptr);
+					fout.flush();
+					bof.flush();
+					bof.close();
+				}
 				InitializeProfileCounter();
 				if (NomFunctionTimingLevel > 2)
 				{
