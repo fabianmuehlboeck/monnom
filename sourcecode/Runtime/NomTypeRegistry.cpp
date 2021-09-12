@@ -10,6 +10,7 @@
 #include "RTInstanceType.h"
 #include "RTTypeVar.h"
 #include "RTMaybeType.h"
+#include "CastStats.h"
 
 using namespace Nom::Runtime;
 using namespace llvm;
@@ -139,6 +140,10 @@ namespace Nom
 
 				builder->SetInsertPoint(newInstanceBlock);
 				static auto uniqueInstantiationFun = NomInterface::GetGetUniqueInstantiationFunction(mod);
+				if (NomCastStats)
+				{
+					builder->CreateCall(GetIncTypeInstanceAlloactionsFunction(*fun->getParent()), {});
+				}
 				auto uniquedResult = builder->CreateCall(uniqueInstantiationFun, {RTInterface::GenerateReadIRPtr(builder, iface), iface, newTypeArgsArr, hashArr, targcount});
 				uniquedResult->setCallingConv(uniqueInstantiationFun->getCallingConv());
 				builder->CreateRet(uniquedResult);
@@ -178,6 +183,10 @@ namespace Nom
 				builder->CreateCondBr(typeArgsDone, newInstanceBlock, uniqueTypeArgsLoopBlock);
 
 				builder->SetInsertPoint(newInstanceBlock);
+				if (NomCastStats)
+				{
+					builder->CreateCall(GetIncTypeInstanceAlloactionsFunction(*fun->getParent()), {});
+				}
 				static auto uniqueInstantiationFun = NomInterface::GetGetUniqueInstantiationFunction(mod);
 				auto uniquedResult = builder->CreateCall(uniqueInstantiationFun, { RTInterface::GenerateReadIRPtr(builder, iface), iface, newTypeArgsArr, hashArr, targcount });
 				uniquedResult->setCallingConv(uniqueInstantiationFun->getCallingConv());

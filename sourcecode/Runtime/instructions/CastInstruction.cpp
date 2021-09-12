@@ -33,18 +33,18 @@ namespace Nom
 				return val;
 			}
 			Function* fun = builder->GetInsertBlock()->getParent();
-			BasicBlock* success = BasicBlock::Create(LLVMCONTEXT, "castSuccess", fun);
-			BasicBlock* fail = BasicBlock::Create(LLVMCONTEXT, "castFail", fun);
+			//BasicBlock* success = BasicBlock::Create(LLVMCONTEXT, "castSuccess", fun);
+			//BasicBlock* fail = BasicBlock::Create(LLVMCONTEXT, "castFail", fun);
 			auto castResult = RTCast::GenerateCast(builder, env, val, type);
-			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
-			builder->CreateCondBr(castResult, success, fail, GetLikelyFirstBranchMetadata());
+			//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
+			//builder->CreateCondBr(castResult, success, fail, GetLikelyFirstBranchMetadata());
 
-			builder->SetInsertPoint(fail);
-			static const char* cast_errorMessage = "Cast failed";
-			builder->CreateCall(RTOutput_Fail::GetLLVMElement(*(env->Module)), GetLLVMPointer(cast_errorMessage))->setCallingConv(RTOutput_Fail::GetLLVMElement(*(env->Module))->getCallingConv());
-			CreateDummyReturn(builder, env->Function);
+			//builder->SetInsertPoint(fail);
+			//static const char* cast_errorMessage = "Cast failed";
+			//builder->CreateCall(RTOutput_Fail::GetLLVMElement(*(env->Module)), GetLLVMPointer(cast_errorMessage))->setCallingConv(RTOutput_Fail::GetLLVMElement(*(env->Module))->getCallingConv());
+			//CreateDummyReturn(builder, env->Function);
 
-			builder->SetInsertPoint(success);
+			//builder->SetInsertPoint(success);
 			return NomValue(val, type, true);
 			////if (val->getType()->isIntegerTy() || val->getType()->isFloatingPointTy())
 			////{

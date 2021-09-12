@@ -22,6 +22,7 @@
 #include "RefValueHeader.h"
 #include "NomLambdaCallTag.h"
 #include "Metadata.h"
+#include "CastStats.h"
 
 using namespace std;
 using namespace llvm;
@@ -151,6 +152,10 @@ namespace Nom
 			BasicBlock* castFailBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, castfail_msg);
 			BasicBlock* singleCastBlock = BasicBlock::Create(LLVMCONTEXT, "singleCastCast", fun);
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "out", fun);
+			BasicBlock* curBlock = builder->GetInsertBlock();
+			builder->SetInsertPoint(outBlock);
+			auto outPHI = builder->CreatePHI(actualResult->getType(), 2);
+			builder->SetInsertPoint(curBlock);
 
 			builder->CreateCondBr(structCastTypeTag, multiCastListBlock, singleCastBlock, GetLikelySecondBranchMetadata());
 			{
@@ -166,17 +171,27 @@ namespace Nom
 
 				builder->SetInsertPoint(bestMatchBlock);
 				{
-					CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreatePointerCast(builder->CreateGEP(builder->CreatePointerCast(structCastType, RTClassType::GetLLVMPointerType()), { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), TYPETYPE->getPointerTo()));
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncPerfectCallTagTypeMatchesFunction(*fun->getParent()), {});
+					}
+					CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreatePointerCast(builder->CreateGEP(builder->CreatePointerCast(structCastType, RTClassType::GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), TYPETYPE->getPointerTo()));
 					auto castResult = RTCast::GenerateCast(builder, &cvce, actualResult, method->GetReturnType());
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
-					builder->CreateCondBr(castResult, outBlock, castFailBlock, GetLikelyFirstBranchMetadata());
+					//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
+					//builder->CreateCondBr(castResult, outBlock, castFailBlock, GetLikelyFirstBranchMetadata());
+					outPHI->addIncoming(castResult, builder->GetInsertBlock());
+					builder->CreateBr(outBlock);
 				}
 
 				{
 					builder->SetInsertPoint(mismatchBlock);
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncCallTagTypeMismatchesFunction(*fun->getParent()), {});
+					}
 					auto typeArgRefStore = builder->CreateAlloca(TYPETYPE->getPointerTo(), MakeUInt(64, 1));
 					builder->CreateIntrinsic(Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
-					MakeInvariantStore(builder, builder->CreatePointerCast(builder->CreateGEP(builder->CreatePointerCast(structCastType, RTClassType::GetLLVMPointerType()), { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), TYPETYPE->getPointerTo()), typeArgRefStore, AtomicOrdering::NotAtomic);
+					MakeInvariantStore(builder, builder->CreatePointerCast(builder->CreateGEP(builder->CreatePointerCast(structCastType, RTClassType::GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), TYPETYPE->getPointerTo()), typeArgRefStore, AtomicOrdering::NotAtomic);
 					auto invariantID =	builder->CreateIntrinsic(Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 					argbuf--;
 					argbuf[0] = builder->CreatePointerCast(fun, POINTERTYPE);
@@ -187,12 +202,13 @@ namespace Nom
 
 					builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 					builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+					outPHI->addIncoming(actualResult, builder->GetInsertBlock());
 					builder->CreateBr(outBlock);
 				}
 			}
 
 			builder->SetInsertPoint(outBlock);
-			llvm::Value* retval = EnsurePackedUnpacked(builder, EnsurePackedUnpacked(builder, actualResult, calledFunctionType->getReturnType()), POINTERTYPE);
+			llvm::Value* retval = EnsurePackedUnpacked(builder, EnsurePackedUnpacked(builder, outPHI, calledFunctionType->getReturnType()), POINTERTYPE);
 			builder->CreateRet(retval);
 
 			llvm::raw_os_ostream out(std::cout);

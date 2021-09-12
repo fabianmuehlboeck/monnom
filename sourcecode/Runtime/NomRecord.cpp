@@ -78,7 +78,7 @@ namespace Nom
 
 			auto ddreftable = ConstantArray::get(arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(ddarr, IMTsize));
 
-			auto constant = RTRecord::CreateConstant(this, GetDynamicFieldLookup(mod, linkage), GetDynamicFieldStore(mod, linkage), UndefValue::get(arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize)), ddreftable);
+			auto constant = RTRecord::CreateConstant(this, GetDynamicFieldLookup(mod, linkage), GetDynamicFieldStore(mod, linkage), GetInterfaceTableLookup(mod, linkage), ddreftable);
 			gv->setInitializer(ConstantStruct::get(gvartype, { ConstantArray::get(arrtype(inttype(64), hasRawInvoke ? 1 : 0), ArrayRef<Constant*>(pushArr, hasRawInvoke ? 1 : 0)), constant, ddtable }));
 
 			StructInstantiationCompileEnv sice = StructInstantiationCompileEnv(regcount, fun, GetAllTypeParameters(), GetArgumentTypes(nullptr), this, EndArgRegisterCount);
@@ -216,7 +216,9 @@ namespace Nom
 					BasicBlock* fieldWriteBlock = BasicBlock::Create(LLVMCONTEXT, "fieldWrite:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					builder->CreateCondBr(RTCast::GenerateCast(builder, &scce, newValue, field->GetType()), fieldWriteBlock, errorBlock);
+					RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
+					builder->CreateBr(fieldWriteBlock);
+					//builder->CreateCondBr(RTCast::GenerateCast(builder, &scce, newValue, field->GetType()), fieldWriteBlock, errorBlock);
 
 					builder->SetInsertPoint(fieldWriteBlock);
 					auto writeValue = newValue;
@@ -288,7 +290,11 @@ namespace Nom
 
 						auto implFunctionType = meth->GetLLVMFunctionType();
 						auto paramCount = implFunctionType->getNumParams();
-						auto argsarr = makealloca(Value*, paramCount);
+						auto argsarr = makealloca(Value*, paramCount);		
+
+						NomSubstitutionContextMemberContext nscmc(meth);
+						CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, ObjectHeader::GeneratePointerToTypeArguments(builder, varargs[0]));
+
 						for (decltype(paramCount) j = 0; j < paramCount; j++)
 						{
 							Value* curArg = nullptr;
@@ -300,9 +306,15 @@ namespace Nom
 							{
 								curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 							}
-							auto calledType = REFTYPE;
 							auto expectedType = implFunctionType->getParamType(j);
-							curArg = EnsurePackedUnpacked(builder, curArg, calledType);
+							if (j >= meth->GetDirectTypeParametersCount())
+							{
+								curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
+								if (j > meth->GetDirectTypeParametersCount())
+								{
+									curArg = RTCast::GenerateCast(builder, &cvce, curArg, meth->GetArgumentTypes(&nscmc)[j - (meth->GetDirectTypeParametersCount() + 1)]);
+								}
+							}
 							curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
 							argsarr[j] = curArg;
 						}
@@ -315,8 +327,8 @@ namespace Nom
 					}
 				}
 
-				auto callTagFun = builder->CreatePointerCast(callTag, GetIMTCastFunctionType());
-				auto tagCall = builder->CreateCall(GetIMTCastFunctionType(), callTag, ArrayRef<Value*>(argarr, 2 + RTConfig_NumberOfVarargsArguments));
+				auto callTagFun = builder->CreatePointerCast(callTag, GetIMTCastFunctionType()->getPointerTo());
+				auto tagCall = builder->CreateCall(GetIMTCastFunctionType(), callTagFun, ArrayRef<Value*>(argarr, 2 + RTConfig_NumberOfVarargsArguments));
 				tagCall->setCallingConv(NOMCC);
 				tagCall->setTailCallKind(CallInst::TailCallKind::TCK_MustTail);
 				builder->CreateRet(tagCall);

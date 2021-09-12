@@ -171,6 +171,7 @@ namespace Nom
 			auto argiter = function->arg_begin();
 			argiter++;
 			registers[0] = NomValue(argiter, thisType);
+			argiter++;
 			auto argpos = 0;
 			auto valargpos = 0;
 			for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i < RTConfig_NumberOfVarargsArguments; i++)

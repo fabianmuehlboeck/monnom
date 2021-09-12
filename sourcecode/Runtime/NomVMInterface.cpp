@@ -155,7 +155,7 @@ extern "C" DLLEXPORT void* CPP_NOM_CLASSTYPEALLOC(size_t numtargs)
 	{
 		RT_NOM_STATS_IncAllocations(AllocationType::ClassType);
 	}
-	auto ret = (void*)(((char**)gcalloc(RTClassType::SizeOf() + (sizeof(char*) * (numtargs)))) + numtargs);
+	auto ret = (void*)(((char**)gcalloc(GetNomJITDataLayout().getTypeAllocSize(RTClassType::GetLLVMType()).getFixedSize() + (sizeof(char*) * (numtargs)))) + numtargs);
 	return ret;
 }
 

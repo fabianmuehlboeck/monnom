@@ -612,5 +612,9 @@ namespace Nom
 		{
 			return builder->CreateICmpEQ(builder->CreatePtrToInt(left, numtype(intptr_t)), builder->CreatePtrToInt(right, numtype(intptr_t)), name);
 		}
+		void CreateExpect(NomBuilder& builder, llvm::Value* value, llvm::Value* expected)
+		{
+			builder->CreateIntrinsic(Intrinsic::expect, { value->getType() }, { value,expected });
+		}
 	}
 }

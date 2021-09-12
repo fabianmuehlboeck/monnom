@@ -100,5 +100,6 @@ namespace Nom
 		llvm::Constant* GetMask(int length, int leadingZeroes, int trailingZeroes);
 
 		llvm::Value* CreatePointerEq(NomBuilder& builder, llvm::Value* left, llvm::Value* right, const llvm::Twine& name = "");
+		void CreateExpect(NomBuilder& builder, llvm::Value* value, llvm::Value* expected);
 	}
 }

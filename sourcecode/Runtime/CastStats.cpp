@@ -17,10 +17,10 @@ static size_t castCount = 0;
 static size_t monoCastCount = 0;
 static size_t subtypingChecksCount = 0;
 static size_t typeArgumentRecursionsCount = 0;
-static size_t vtableAllocationsCount = 0;
-static size_t enoughSpaceCastsCount = 0;
-static size_t castingMonoCastsCount = 0;
-static size_t checkedMonoCastsCount = 0;
+static size_t typeInstanceAllocationsCount = 0;
+static size_t perfectCallTagTypeMatches = 0;
+static size_t callTagTypeMismatches = 0;
+static size_t impositionsCount = 0;
 static size_t intPacksCount = 0;
 static size_t intUnpacksCount = 0;
 static size_t intBoxesCount = 0;
@@ -79,24 +79,24 @@ DLLEXPORT void RT_NOM_STATS_IncTypeArgumentRecursions()
 	typeArgumentRecursionsCount++;
 }
 
-DLLEXPORT void RT_NOM_STATS_IncVTableAlloactions()
+DLLEXPORT void RT_NOM_STATS_IncTypeInstanceAlloactions()
 {
-	vtableAllocationsCount++;
+	typeInstanceAllocationsCount++;
 }
 
-DLLEXPORT void RT_NOM_STATS_IncEnoughSpaceCasts()
+DLLEXPORT void RT_NOM_STATS_IncPerfectCallTagTypeMatches()
 {
-	enoughSpaceCastsCount++;
+	perfectCallTagTypeMatches++;
 }
 
-DLLEXPORT void RT_NOM_STATS_IncCastingMonoCasts()
+DLLEXPORT void RT_NOM_STATS_IncCallTagTypeMismatches()
 {
-	castingMonoCastsCount++;
+	callTagTypeMismatches++;
 }
 
-DLLEXPORT void RT_NOM_STATS_IncCheckedMonoCasts()
+DLLEXPORT void RT_NOM_STATS_IncImpositions()
 {
-	checkedMonoCastsCount++;
+	impositionsCount++;
 }
 
 DLLEXPORT void RT_NOM_STATS_IncIntPacks()
@@ -520,10 +520,10 @@ namespace Nom
 			outstream << "\n#Monotonic Casts: " << std::dec << monoCastCount;
 			outstream << "\n#Subtyping Checks: " << std::dec << subtypingChecksCount;
 			outstream << "\n#Type-Arg Recursions: " << std::dec << typeArgumentRecursionsCount;
-			outstream << "\n#VTable Allocations: " << std::dec << vtableAllocationsCount;
-			outstream << "\n#Mono casts using preallocation: " << std::dec << enoughSpaceCastsCount;
-			outstream << "\n#Casting Mono Casts: " << std::dec << castingMonoCastsCount;
-			outstream << "\n#Checked Mono Casts: " << std::dec << checkedMonoCastsCount;
+			outstream << "\n#Type Instance Allocations: " << std::dec << typeInstanceAllocationsCount;
+			outstream << "\n#Perfect Call Tag Matches: " << std::dec << perfectCallTagTypeMatches;
+			outstream << "\n#Call Tag Mismatches: " << std::dec << callTagTypeMismatches;
+			outstream << "\n#Impositions: " << std::dec << impositionsCount;
 			outstream << "\n#Int Packs: " << std::dec << intPacksCount;
 			outstream << "\n#Int Unpacks: " << std::dec << intUnpacksCount;
 			outstream << "\n#Int Boxes: " << std::dec << intBoxesCount;
@@ -638,39 +638,39 @@ namespace Nom
 			}
 			return fun;
 		}
-		llvm::Function* GetIncVTableAlloactionsFunction(llvm::Module& mod)
+		llvm::Function* GetIncTypeInstanceAlloactionsFunction(llvm::Module& mod)
 		{
-			auto fun = mod.getFunction("RT_NOM_STATS_IncVTableAlloactions");
+			auto fun = mod.getFunction("RT_NOM_STATS_IncTypeInstanceAlloactions");
 			if (fun == nullptr)
 			{
-				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncVTableAlloactions", &mod);
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncTypeInstanceAlloactions", &mod);
 			}
 			return fun;
 		}
-		llvm::Function* GetIncEnoughSpaceCastsFunction(llvm::Module& mod)
+		llvm::Function* GetIncPerfectCallTagTypeMatchesFunction(llvm::Module& mod)
 		{
-			auto fun = mod.getFunction("RT_NOM_STATS_IncEnoughSpaceCasts");
+			auto fun = mod.getFunction("RT_NOM_STATS_IncPerfectCallTagTypeMatches");
 			if (fun == nullptr)
 			{
-				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncEnoughSpaceCasts", &mod);
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncPerfectCallTagTypeMatches", &mod);
 			}
 			return fun;
 		}
-		llvm::Function* GetIncCastingMonoCastsFunction(llvm::Module& mod)
+		llvm::Function* GetIncCallTagTypeMismatchesFunction(llvm::Module& mod)
 		{
-			auto fun = mod.getFunction("RT_NOM_STATS_IncCastingMonoCasts");
+			auto fun = mod.getFunction("RT_NOM_STATS_IncCallTagTypeMismatches");
 			if (fun == nullptr)
 			{
-				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncCastingMonoCasts", &mod);
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncCallTagTypeMismatches", &mod);
 			}
 			return fun;
 		}
-		llvm::Function* GetIncCheckedMonoCastsFunction(llvm::Module& mod)
+		llvm::Function* GetIncImpositionsFunction(llvm::Module& mod)
 		{
-			auto fun = mod.getFunction("RT_NOM_STATS_IncCheckedMonoCasts");
+			auto fun = mod.getFunction("RT_NOM_STATS_IncImpositions");
 			if (fun == nullptr)
 			{
-				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncCheckedMonoCasts", &mod);
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncImpositions", &mod);
 			}
 			return fun;
 		}

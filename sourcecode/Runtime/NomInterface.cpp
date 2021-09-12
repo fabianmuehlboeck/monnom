@@ -255,6 +255,7 @@ namespace Nom
 				fieldArr[0] = ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize));
 				typeArr[0] = arrtype(TYPETYPE, instasize);
 			}
+			typeArr--;
 			if (stetype->isOpaque())
 			{
 				stetype->setBody(ArrayRef<Type*>(typeArr, instaCount + 2), false);
@@ -276,7 +277,6 @@ namespace Nom
 					ConstantExpr::getGetElementPtr(gvar->getValueType(), gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(gvar->getValueType()->getStructNumElements() - 1), MakeInt32(1), MakeInt32(instasize) })));
 			}
 			fieldArr--;
-			typeArr--;
 			fieldArr[0] = ConstantArray::get(arrtype(SuperInstanceEntryType(), instaCount + 1), ArrayRef<Constant*>(entryArr, instaCount + 1));
 			return ConstantStruct::get(stetype, ArrayRef<Constant*>(fieldArr, instaCount + 2));
 		}
@@ -670,8 +670,9 @@ namespace Nom
 					{
 						CastedValueCompileEnv cvce = CastedValueCompileEnv(crtp.second->Method->GetDirectTypeParameters(), crtp.second->Method->GetParent()->GetAllTypeParameters(), fun, 3, crtp.second->Method->GetArgumentCount(), typeArgsPtrArg);
 						auto castResult = RTCast::GenerateCast(builder, &cvce, checkValue, crtp.second->Method->GetReturnType(nullptr));
-						builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
-						builder->CreateCondBr(castResult, nextBlock, castFailBlock, GetLikelyFirstBranchMetadata());
+						//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
+						//builder->CreateCondBr(castResult, nextBlock, castFailBlock, GetLikelyFirstBranchMetadata());
+						builder->CreateBr(nextBlock);
 					}
 				}
 
@@ -684,7 +685,7 @@ namespace Nom
 		}
 		llvm::Constant* NomInterface::GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			return nullptr;
+			return ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 		}
 		llvm::Constant* NomInterface::GetInterfaceDescriptor(llvm::Module& mod) const
 		{

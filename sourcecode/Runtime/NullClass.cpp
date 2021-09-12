@@ -35,7 +35,7 @@ namespace Nom
 			//NomClass(NomConstants::AddString(NomString("Null")), 0, 0, 0, nullptr)
 		{
 			this->SetDirectTypeParameters();
-			this->SetSuperClass();
+			//this->SetSuperClass();
 			this->SetSuperInterfaces();
 			this->compiled = true;
 			this->preprocessed = true;

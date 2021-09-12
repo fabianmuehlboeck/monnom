@@ -40,7 +40,19 @@ namespace Nom
 		llvm::Constant* RTInterface::CreateConstant(const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superClassCount, llvm::Constant* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* checkReturnValueFunction, llvm::Constant* instantiationDictionary, llvm::Constant* signature, llvm::Constant* castFunction)
 		{
 			auto STEs = ConstantExpr::getPointerCast(superTypeEntries, SuperInstanceEntryType()->getPointerTo());
-			return ConstantStruct::get(GetLLVMType(), GetLLVMPointer(irptr), MakeInt<RTInterfaceFlags>(flags), EnsureIntegerSize(typeArgCount, 32), EnsureIntegerSize(ConstantExpr::getAdd(superClassCount, superInterfaceCount), bitsin(size_t)), EnsureIntegerSize(superClassCount, bitsin(size_t)), EnsureIntegerSize(superInterfaceCount, bitsin(size_t)), STEs, ConstantExpr::getGetElementPtr(SuperInstanceEntryType(), STEs, ArrayRef<Constant*>({ superClassCount })), checkReturnValueFunction, instantiationDictionary, (signature == nullptr ? ConstantPointerNull::get(RTSignature::GetLLVMType()->getPointerTo()) : signature), castFunction);
+			return ConstantStruct::get(GetLLVMType(), 
+				GetLLVMPointer(irptr), 
+				MakeInt<RTInterfaceFlags>(flags), 
+				EnsureIntegerSize(typeArgCount, 32), 
+				EnsureIntegerSize(ConstantExpr::getAdd(superClassCount, superInterfaceCount), bitsin(size_t)), 
+				EnsureIntegerSize(superClassCount, bitsin(size_t)), 
+				EnsureIntegerSize(superInterfaceCount, bitsin(size_t)), 
+				STEs, 
+				ConstantExpr::getGetElementPtr(SuperInstanceEntryType(), STEs, ArrayRef<Constant*>({ superClassCount })), 
+				checkReturnValueFunction, 
+				instantiationDictionary, 
+				(signature == nullptr ? ConstantPointerNull::get(RTSignature::GetLLVMType()->getPointerTo()) : signature), 
+				castFunction);
 		}
 
 		llvm::Value* RTInterface::GenerateReadSignature(NomBuilder& builder, llvm::Value* descriptorPtr)

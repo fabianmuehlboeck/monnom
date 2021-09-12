@@ -61,10 +61,10 @@ namespace Nom
 		}
 		llvm::Constant* NomRecordCallTag::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			Function* fun = mod.getFunction("MONNOM_RT_RCT_" + name);
+			Function* fun = mod.getFunction("MONNOM_RT_RCT_" + name + "/" + to_string(typeargcount) + "/" + to_string(argcount));
 			if (fun == nullptr)
 			{
-				fun = Function::Create(GetIMTFunctionType(), linkage, "MONNOM_RT_RCT_" + name, mod);
+				fun = Function::Create(GetIMTFunctionType(), linkage, "MONNOM_RT_RCT_" + name + "/" + to_string(typeargcount) + "/" + to_string(argcount), mod);
 				fun->setCallingConv(NOMCC);
 
 				NomBuilder builder;
@@ -116,7 +116,7 @@ namespace Nom
 		}
 		llvm::Constant* NomRecordCallTag::findLLVMElement(llvm::Module& mod) const
 		{
-			return mod.getFunction("MONNOM_RT_RCT_" + name);
+			return mod.getFunction("MONNOM_RT_RCT_" + name + "/" + to_string(typeargcount) + "/" + to_string(argcount));
 		}
 	}
 }

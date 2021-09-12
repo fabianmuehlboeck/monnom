@@ -412,7 +412,8 @@ namespace Nom
 		}
 		llvm::FunctionType* GetCastFunctionType()
 		{
-			return GetIMTFunctionType();
+			static FunctionType* ft = FunctionType::get(REFTYPE, { TYPETYPE, REFTYPE }, false);
+			return ft;
 		}
 		llvm::FunctionType* GetIsDisjointFunctionType()
 		{

@@ -14,6 +14,7 @@
 #include "RTLambda.h"
 #include "RTRecord.h"
 #include "RTVTable.h"
+#include "CastStats.h"
 
 using namespace llvm;
 using namespace std;
@@ -98,7 +99,15 @@ namespace Nom
 
 			builder->SetInsertPoint(startBlock);
 			auto castData = StructuralValueHeader::GenerateReadCastData(builder, value);
-			builder->CreateBr(cmpxLoopBlock);
+			if (!rightType->ContainsVariables())
+			{
+				auto immediateMatch = CreatePointerEq(builder, castData, rightType->GetLLVMElement(*fun->getParent()));
+				builder->CreateCondBr(immediateMatch, successBlock, cmpxLoopBlock);
+			}
+			else
+			{
+				builder->CreateBr(cmpxLoopBlock);
+			}
 
 			builder->SetInsertPoint(cmpxLoopBlock);
 			auto currentCastData = builder->CreatePHI(castData->getType(), 2, "castDataPHI");
@@ -152,6 +161,10 @@ namespace Nom
 				{
 					BasicBlock* cmpxchgFailBlock = BasicBlock::Create(LLVMCONTEXT, "cmpxchgfail", fun);
 					builder->SetInsertPoint(doWriteCastTypeBlock);
+					if (NomCastStats)
+					{
+						builder->CreateCall(GetIncImpositionsFunction(*fun->getParent()), {});
+					}
 					Value* castWriteType = nullptr;
 					if (rightType->ContainsVariables())
 					{
@@ -276,7 +289,10 @@ namespace Nom
 				builder->SetInsertPoint(tryWriteTypeCastBlock);
 				auto uniquedType = builder->CreateCall(typeUniqueFun, { rightType, outerStack });
 				uniquedType->setCallingConv(typeUniqueFun->getCallingConv());
-
+				if (NomCastStats)
+				{
+					builder->CreateCall(GetIncImpositionsFunction(*fun->getParent()), {});
+				}
 				auto cmpxresult = StructuralValueHeader::GenerateWriteCastTypePointerCMPXCHG(builder, value, builder->CreatePointerCast(uniquedType, POINTERTYPE), currentCastData);
 				auto updateSuccess = builder->CreateExtractValue(cmpxresult, ArrayRef<unsigned int>(extractIndex + 1, 1));
 				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { updateSuccess, MakeUInt(1,1) });

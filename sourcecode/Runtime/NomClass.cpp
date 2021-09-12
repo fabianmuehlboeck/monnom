@@ -227,6 +227,7 @@ namespace Nom
 				}
 				fieldArr[pos + 1] = ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize));
 				orderedInstas[pos] = curSuper.Elem;
+				curSuper = curSuper.Elem->GetSuperClass();
 			}
 			pos = GetSuperClassCount();
 			for (auto& instantiation : instantiations)
@@ -242,8 +243,8 @@ namespace Nom
 					}
 					fieldArr[pos + 1] = ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize));
 					orderedInstas[pos] = instantiation.first;
+					pos++;
 				}
-				pos++;
 			}
 			if (stetype->isOpaque())
 			{
@@ -306,8 +307,8 @@ namespace Nom
 					GetDynamicDispatcherLookup(mod, linkage, clsStructType),
 					MakeInt(GetFieldCount()),
 					MakeInt(this->GetTypeParametersCount()),
-					MakeInt(superClassCount),
-					MakeInt(GetInstantiations().size() - superClassCount),
+					MakeInt<size_t>(superClassCount),
+					MakeInt<size_t>(GetInstantiations().size() - superClassCount),
 					GetSuperInstances(mod, linkage, gvar, clsSupersStructType),
 					GetMethodTable(mod, linkage),
 					ConstantPointerNull::get(GetCheckReturnValueFunctionType()->getPointerTo()),
@@ -471,6 +472,8 @@ namespace Nom
 				auto paramCount = implFunctionType->getNumParams();
 				auto argsarr = makealloca(Value*, paramCount);
 
+				NomSubstitutionContextMemberContext nscmc(method);
+				CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, ObjectHeader::GeneratePointerToTypeArguments(builder, varargs[0]));
 				for (decltype(paramCount) j = 0; j < paramCount; j++)
 				{
 					Value* curArg = nullptr;
@@ -483,7 +486,14 @@ namespace Nom
 						curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 					}
 					auto expectedType = implFunctionType->getParamType(j);
-					curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
+					if (j >= method->GetDirectTypeParametersCount())
+					{
+						curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
+						if (j > method->GetDirectTypeParametersCount())
+						{
+							curArg = RTCast::GenerateCast(builder, &cvce, curArg, method->GetArgumentTypes(&nscmc)[j - (method->GetDirectTypeParametersCount() + 1)]);
+						}
+					}
 					curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
 					argsarr[j] = curArg;
 				}
@@ -601,9 +611,10 @@ namespace Nom
 					BasicBlock* fieldWriteBlock = BasicBlock::Create(LLVMCONTEXT, "fieldWrite:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					auto castResult = RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
-					builder->CreateCondBr(castResult, fieldWriteBlock, errorBlock, GetLikelyFirstBranchMetadata());
+					/*auto castResult =*/ RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
+					//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
+					//builder->CreateCondBr(castResult, fieldWriteBlock, errorBlock, GetLikelyFirstBranchMetadata());
+					builder->CreateBr(fieldWriteBlock);
 
 					builder->SetInsertPoint(fieldWriteBlock);
 					auto writeValue = newValue;
@@ -671,7 +682,7 @@ namespace Nom
 
 		llvm::Constant* NomClass::GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			return nullptr;
+			return ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 		}
 
 		llvm::Constant* NomClass::GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::StructType* stype) const
@@ -765,12 +776,14 @@ namespace Nom
 							curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 						}
 						auto expectedType = implFunctionType->getParamType(j);
-						curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
-						BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
-						auto castSuccess = RTCast::GenerateCast(builder, &cvce, curArg, meth->GetArgumentTypes(&nscmc)[j]);
-						builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castSuccess, MakeUInt(1,1) });
-						builder->CreateCondBr(castSuccess, nextBlock, invalidArgumentBlock, GetLikelyFirstBranchMetadata());
-						builder->SetInsertPoint(nextBlock);
+						if (j >= meth->GetDirectTypeParametersCount())
+						{
+							curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
+							if (j > meth->GetDirectTypeParametersCount())
+							{
+								curArg = RTCast::GenerateCast(builder, &cvce, curArg, meth->GetArgumentTypes(&nscmc)[j - (meth->GetDirectTypeParametersCount() + 1)]);
+							}
+						}
 						curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
 						argsarr[j] = curArg;
 					}

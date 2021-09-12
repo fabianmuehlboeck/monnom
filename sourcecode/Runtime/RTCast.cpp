@@ -109,23 +109,15 @@ namespace Nom
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
 
-			BasicBlock* outTrueBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOutTrue", fun);
-			BasicBlock* outFalseBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOutFalse", fun);
+			BasicBlock* outFalseBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Cast failed!");
 
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOut", fun);
+			BasicBlock* outTrueBlock = outBlock;
 
-			PHINode* outPHI;
+			//PHINode* outPHI;
 			{
 				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(BOOLTYPE, 2, "castSuccess");
-
-				builder->SetInsertPoint(outTrueBlock);
-				builder->CreateBr(outBlock);
-				outPHI->addIncoming(MakeUInt(1, 1), outTrueBlock);
-
-				builder->SetInsertPoint(outFalseBlock);
-				builder->CreateBr(outBlock);
-				outPHI->addIncoming(MakeUInt(1, 0), outFalseBlock);
+				//outPHI = builder->CreatePHI(value->getType(), 2, "castSuccess");
 			}
 
 			BasicBlock* refValueBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
@@ -146,16 +138,135 @@ namespace Nom
 			if (refValueBlock != nullptr)
 			{
 				builder->SetInsertPoint(refValueBlock);
+				if (!type->Named->IsInterface())
+				{
+					BasicBlock* directMatchBlock = BasicBlock::Create(LLVMCONTEXT, "directClassMatch", fun);
+					BasicBlock* noDirectMatchBlock = BasicBlock::Create(LLVMCONTEXT, "noDirectClassMatch", fun);
+					vtableVar = RefValueHeader::GenerateReadVTablePointer(builder, value);
+					auto clsptr = RTClass::GetInterfaceReference(builder, vtableVar);
+					auto clsMatch = CreatePointerEq(builder, clsptr, type->Named->GetInterfaceDescriptor(*fun->getParent()));
+					builder->CreateCondBr(clsMatch, directMatchBlock, noDirectMatchBlock);
 
+					builder->SetInsertPoint(directMatchBlock);
+					BasicBlock* outBlocks[2] = { outTrueBlock,outFalseBlock };
+					if (type->Arguments.size() != 0)
+					{
+						auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
+						int argpos = 0;
+						for (auto& arg : type->Arguments)
+						{
+							BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
+							auto targ = ObjectHeader::GenerateReadTypeArgument(builder, value, argpos);
+							RTTypeEq::CreateInlineTypeEqCheck(builder, targ, arg, ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()), substStack, nextBlock, outBlocks[1], outBlocks[1]);
+							builder->SetInsertPoint(nextBlock);
+							argpos++;
+						}
+					}
+					builder->CreateBr(outBlocks[0]);
+
+					builder->SetInsertPoint(noDirectMatchBlock);
+				}
 				BasicBlock* classBlock = nullptr, * structuralValueBlock = nullptr;
 
-				int vtableCases = RefValueHeader::GenerateNominalStructuralSwitch(builder, value, &vtableVar, &classBlock, &structuralValueBlock);
-
-				//Nominally typed objects; just collecting blocks here for unified treatments with ints/floats/bools outside
+				RefValueHeader::GenerateNominalStructuralSwitch(builder, value, &vtableVar, &classBlock, (type->Named->IsInterface()?&structuralValueBlock:&outFalseBlock));
 				if (classBlock != nullptr)
 				{
-					targsInObjectSources.push_back(make_tuple(classBlock, *value, vtableVar));
+					builder->SetInsertPoint(classBlock);
+					PHINode* typeArgsPHI = nullptr;
+					BasicBlock* foundMatchBlock = nullptr;
+					BasicBlock* outBlocks[2] = { outTrueBlock,outFalseBlock };
+					if (type->Arguments.size() > 0)
+					{
+						foundMatchBlock = BasicBlock::Create(LLVMCONTEXT, "foundMatch", fun);
+						builder->SetInsertPoint(foundMatchBlock);
+						typeArgsPHI = builder->CreatePHI(SuperInstanceEntryType()->getPointerTo(), 2, "matchingEntry");
+						auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
+						auto origTypeArgs = ObjectHeader::GeneratePointerToTypeArguments(builder, value);
+						auto typeArgs = MakeInvariantLoad(builder, typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic);
+						auto typeEqFun = RTTypeEq::Instance(false).GetLLVMElement(*fun->getParent());
+						RTSubstStackValue rssv = RTSubstStackValue(builder, origTypeArgs);
+						BasicBlock* outBlock[2];
+						rssv.MakeReleaseBlocks(builder, outBlocks[0], &outBlock[0], outBlocks[1], &outBlock[1]);
+						int pos = 0;
+						for (auto& arg : type->Arguments)
+						{
+							auto targ = MakeInvariantLoad(builder, builder->CreateGEP(typeArgs, { MakeInt32(-(pos + 1)) }), "typeArg", AtomicOrdering::NotAtomic);
+							auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ, rssv, arg->GetLLVMElement(*fun->getParent()), substStack });
+							isTypeEq->setCallingConv(NOMCC);
+							CreateExpect(builder, isTypeEq, MakeUInt(1, 1));
+
+							BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "nextArg", fun);
+
+							builder->CreateCondBr(isTypeEq, nextBlock, outBlock[1], GetLikelyFirstBranchMetadata());
+
+							builder->SetInsertPoint(nextBlock);
+						}
+						builder->CreateBr(outBlock[0]);
+
+						builder->SetInsertPoint(classBlock);
+					}
+					else
+					{
+						foundMatchBlock = outTrueBlock;
+					}
+					if (type->Named->IsInterface())
+					{
+						auto clsptr = RTClass::GetInterfaceReference(builder, vtableVar);
+						auto supercount = RTInterface::GenerateReadSuperInterfaceCount(builder, clsptr);
+						auto supers = RTInterface::GenerateReadSuperInterfaces(builder, clsptr);
+						BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$head", fun);
+						BasicBlock* loopBodyBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$body", fun);
+						auto origBlock = builder->GetInsertBlock();
+						builder->CreateBr(loopHeadBlock);
+
+						builder->SetInsertPoint(loopHeadBlock);
+						auto posPHI = builder->CreatePHI(supercount->getType(), 2, "superIndex");
+						posPHI->addIncoming(MakeIntLike(supercount, 0), origBlock);
+
+						auto stillEntriesLeft = builder->CreateICmpULT(posPHI, supercount);
+						CreateExpect(builder, stillEntriesLeft, MakeUInt(1, 1));
+						builder->CreateCondBr(stillEntriesLeft, loopBodyBlock, outFalseBlock, GetLikelyFirstBranchMetadata());
+
+						builder->SetInsertPoint(loopBodyBlock);
+						auto entry = builder->CreateGEP(supers, posPHI);
+						auto superIface = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superInterface", AtomicOrdering::NotAtomic);
+						auto superMatch = CreatePointerEq(builder, superIface, type->Named->GetInterfaceDescriptor(*fun->getParent()));
+						posPHI->addIncoming(builder->CreateAdd(posPHI, MakeIntLike(posPHI, 1)), builder->GetInsertBlock());
+						builder->CreateCondBr(superMatch, foundMatchBlock, loopHeadBlock);
+						if (typeArgsPHI != nullptr)
+						{
+							typeArgsPHI->addIncoming(entry, builder->GetInsertBlock());
+						}
+					}
+					else
+					{
+						auto clsptr = RTClass::GetInterfaceReference(builder, vtableVar);
+						auto supers = RTInterface::GenerateReadSuperInstances(builder, clsptr);
+						BasicBlock* checkSuperClassBlock = BasicBlock::Create(LLVMCONTEXT, "checkSuperClass", fun);
+						auto supercount = RTInterface::GenerateReadSuperClassCount(builder, clsptr);
+						auto superIndex = MakeIntLike(supercount, type->Named->GetSuperClassCount());
+						auto lessThan = builder->CreateICmpULT(superIndex, supercount);
+						CreateExpect(builder, lessThan, MakeUInt(1, 1));
+						builder->CreateCondBr(lessThan, checkSuperClassBlock, outFalseBlock, GetLikelyFirstBranchMetadata());
+
+						builder->SetInsertPoint(checkSuperClassBlock);
+						auto entry = builder->CreateGEP(supers, superIndex);
+						auto superClass = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superClass", AtomicOrdering::NotAtomic);
+						auto superMatch = CreatePointerEq(builder, superClass, type->Named->GetInterfaceDescriptor(*fun->getParent()));
+						CreateExpect(builder, lessThan, MakeUInt(1, 1));
+						builder->CreateCondBr(superMatch, foundMatchBlock, outFalseBlock, GetLikelyFirstBranchMetadata());
+						if (typeArgsPHI != nullptr)
+						{
+							typeArgsPHI->addIncoming(entry, builder->GetInsertBlock());
+						}
+					}
 				}
+
+				////Nominally typed objects; just collecting blocks here for unified treatments with ints/floats/bools outside
+				//if (classBlock != nullptr)
+				//{
+				//	targsInObjectSources.push_back(make_tuple(classBlock, *value, vtableVar));
+				//}
 
 				if (structuralValueBlock != nullptr)
 				{
@@ -271,7 +382,7 @@ namespace Nom
 				{
 					builder->SetInsertPoint(std::get<0>(tpl));
 					auto typeArgsCast = builder->CreatePointerCast(std::get<1>(tpl), TYPETYPE->getPointerTo());
-					auto ifaceCast = RTClass::GetInterfaceReference(builder,std::get<2>(tpl));
+					auto ifaceCast = RTClass::GetInterfaceReference(builder, std::get<2>(tpl));
 
 					if (nominalSubtypingCases > 1)
 					{
@@ -298,7 +409,7 @@ namespace Nom
 
 			builder->SetInsertPoint(outBlock);
 			builder->CreateIntrinsic(Intrinsic::stackrestore, {}, { stackPtr });
-			return outPHI;
+			return value;
 		}
 
 		llvm::Value* RTCast::GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, NomValue& value, llvm::Value* type)
@@ -306,22 +417,14 @@ namespace Nom
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
 
-			BasicBlock* outTrueBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOutTrue", fun);
-			BasicBlock* outFalseBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOutFalse", fun);
+			BasicBlock* outFalseBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Cast failed!");
 
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOut", fun);
+			BasicBlock* outTrueBlock = outBlock;
 			PHINode* outPHI;
 			{
 				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(BOOLTYPE, 2, "castSuccess");
-
-				builder->SetInsertPoint(outTrueBlock);
-				builder->CreateBr(outBlock);
-				outPHI->addIncoming(MakeUInt(1, 1), outTrueBlock);
-
-				builder->SetInsertPoint(outFalseBlock);
-				builder->CreateBr(outBlock);
-				outPHI->addIncoming(MakeUInt(1, 0), outFalseBlock);
+				outPHI = builder->CreatePHI(value->getType(), 2, "castSuccess");
 			}
 
 			BasicBlock* refValueBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
@@ -341,43 +444,47 @@ namespace Nom
 			{
 				builder->SetInsertPoint(refValueBlock);
 
+				auto castFun = RTTypeHead::GenerateReadCastFun(builder, type);
+				auto castFunCall = builder->CreateCall(GetCastFunctionType(), castFun, { type, value });
+				castFunCall->setCallingConv(NOMCC);
+				outPHI->addIncoming(castFunCall, builder->GetInsertBlock());
+				builder->CreateBr(outTrueBlock);
 
+				//BasicBlock* classBlock = nullptr, * structuralValueBlock = nullptr;
 
-				BasicBlock* classBlock = nullptr, * structuralValueBlock = nullptr;
+				//int vtableCases = RefValueHeader::GenerateNominalStructuralSwitch(builder, value, &vtableVar, &classBlock, &structuralValueBlock);
 
-				int vtableCases = RefValueHeader::GenerateNominalStructuralSwitch(builder, value, &vtableVar, &classBlock, &structuralValueBlock);
+				////Nominal objects; just collecting blocks here for unified treatments with ints/floats/bools outside
+				//if (classBlock != nullptr)
+				//{
+				//	targsInObjectSources.push_back(make_tuple(classBlock, *value, vtableVar));
+				//}
 
-				//Nominal objects; just collecting blocks here for unified treatments with ints/floats/bools outside
-				if (classBlock != nullptr)
-				{
-					targsInObjectSources.push_back(make_tuple(classBlock, *value, vtableVar));
-				}
+				////STRUCTURAL VALUE - note difference to inlined version above: there we know we have a class type, here we can get any type
+				//if (structuralValueBlock != nullptr)
+				//{
+				//	builder->SetInsertPoint(structuralValueBlock);
+				//	BasicBlock* outBlocks[2] = { outTrueBlock, outFalseBlock };
+				//	auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2);
+				//	BasicBlock* rightClassTypeBlock = nullptr, * rightInstanceTypeBlock = nullptr;
+				//	Value* rightPHI = nullptr;
+				//	Value* rightSubstPHI = nullptr;
+				//	RTTypeHead::GenerateTypeKindSwitchRecurse(builder, type, substStack, &rightPHI, &rightSubstPHI, &rightClassTypeBlock, &(outBlocks[0]), &(outBlocks[1]), &(outBlocks[1]), &rightInstanceTypeBlock, &(outBlocks[0]), nullptr, outBlocks[1]);
 
-				//STRUCTURAL VALUE - note difference to inlined version above: there we know we have a class type, here we can get any type
-				if (structuralValueBlock != nullptr)
-				{
-					builder->SetInsertPoint(structuralValueBlock);
-					BasicBlock* outBlocks[2] = { outTrueBlock, outFalseBlock };
-					auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2);
-					BasicBlock* rightClassTypeBlock = nullptr, * rightInstanceTypeBlock = nullptr;
-					Value* rightPHI = nullptr;
-					Value* rightSubstPHI = nullptr;
-					RTTypeHead::GenerateTypeKindSwitchRecurse(builder, type, substStack, &rightPHI, &rightSubstPHI, &rightClassTypeBlock, &(outBlocks[0]), &(outBlocks[1]), &(outBlocks[1]), &rightInstanceTypeBlock, &(outBlocks[0]), nullptr, outBlocks[1]);
+				//	if (rightClassTypeBlock)
+				//	{
+				//		builder->SetInsertPoint(rightClassTypeBlock);
+				//		auto iface = RTClassType::GenerateReadClassDescriptorLink(builder, rightPHI);
+				//		StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTClassType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
+				//	}
 
-					if (rightClassTypeBlock)
-					{
-						builder->SetInsertPoint(rightClassTypeBlock);
-						auto iface = RTClassType::GenerateReadClassDescriptorLink(builder, rightPHI);
-						StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTClassType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
-					}
-
-					if (rightInstanceTypeBlock)
-					{
-						builder->SetInsertPoint(rightInstanceTypeBlock);
-						auto iface = RTInstanceType::GenerateReadClassDescriptorLink(builder, rightPHI);
-						StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTInstanceType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
-					}
-				}
+				//	if (rightInstanceTypeBlock)
+				//	{
+				//		builder->SetInsertPoint(rightInstanceTypeBlock);
+				//		auto iface = RTInstanceType::GenerateReadClassDescriptorLink(builder, rightPHI);
+				//		StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTInstanceType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
+				//	}
+				//}
 			}
 
 			if (intBlock != nullptr)
@@ -431,7 +538,7 @@ namespace Nom
 				{
 					builder->SetInsertPoint(std::get<0>(tpl));
 					auto typeArgsCast = builder->CreatePointerCast(std::get<1>(tpl), TYPETYPE->getPointerTo());
-					auto ifaceCast = RTClass::GetInterfaceReference(builder,std::get<2>(tpl));
+					auto ifaceCast = RTClass::GetInterfaceReference(builder, std::get<2>(tpl));
 
 					if (nominalSubtypingCases > 1)
 					{
@@ -457,6 +564,7 @@ namespace Nom
 				auto subtypingFailed = builder->CreateICmpEQ(subtypingResult, MakeUInt(2, 0));
 				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { subtypingFailed, MakeUInt(1,0) });
 				builder->CreateCondBr(subtypingFailed, outBlocks[1], outBlocks[0], GetLikelySecondBranchMetadata());
+				outPHI->addIncoming(value, outBlocks[0]);
 			}
 
 			builder->SetInsertPoint(outBlock);
@@ -475,9 +583,13 @@ namespace Nom
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
+			BasicBlock* castOutBlock = BasicBlock::Create(LLVMCONTEXT, "castOut", fun);
+			PHINode* castOutPHI = nullptr;
 			if (value.GetNomType()->IsSubtype(type, false))
 			{
-				return MakeInt(1, (uint64_t)1);
+				builder->CreateBr(castOutBlock);
+				builder->SetInsertPoint(castOutBlock);
+				return value;
 			}
 			if (NomCastStats)
 			{
@@ -486,7 +598,9 @@ namespace Nom
 			switch (value.GetNomType()->GetKind())
 			{
 			case TypeKind::TKBottom:
-				return MakeInt(1, (uint64_t)1); //this means we're in dead code, as actual values can't have this type
+				builder->CreateBr(castOutBlock);
+				builder->SetInsertPoint(castOutBlock);
+				return value; //this means we're in dead code, as actual values can't have this type
 			case TypeKind::TKMaybe:
 				if (NomNullClass::GetInstance()->GetType()->IsSubtype(type))
 				{
@@ -501,7 +615,17 @@ namespace Nom
 					{
 						builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
 					}
-					return tpeq;
+					BasicBlock* checkNormalBlock = BasicBlock::Create(LLVMCONTEXT, "checkNonNull", fun);
+					builder->CreateCondBr(tpeq, castOutBlock, checkNormalBlock, GetLikelySecondBranchMetadata());
+
+					if (castOutPHI == nullptr)
+					{
+						builder->SetInsertPoint(castOutBlock);
+						castOutPHI = builder->CreatePHI(value->getType(), 3);
+					}
+					castOutPHI->addIncoming(value, origBlock);
+
+					builder->SetInsertPoint(checkNormalBlock);
 				}
 				//else, fall through (note, if class types don't fall through anymore, their case needs to be moved)
 			case TypeKind::TKClass:
@@ -510,7 +634,11 @@ namespace Nom
 				switch (type->GetKind())
 				{
 				case TypeKind::TKBottom:
-					return MakeInt(1, (uint64_t)0);
+				{
+					BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Tried to cast value to bottom type!");
+					builder->CreateBr(errorBlock);
+					return value;
+				}
 				case TypeKind::TKTop:
 				case TypeKind::TKDynamic:
 					throw new std::exception(); //the subtyping check at the beginning should have caught that; something's wrong if this execption is thrown
@@ -521,6 +649,7 @@ namespace Nom
 					{
 						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
 					}
+					origBlock = builder->GetInsertBlock();
 					BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "outBlock", fun);
 					BasicBlock* IsNotNullBlock = BasicBlock::Create(LLVMCONTEXT, "isNotNull", fun);
 					auto nullobjptr = builder->CreatePtrToInt(NomNullObject::GetInstance()->GetLLVMElement(*env->Module), INTTYPE);
@@ -534,18 +663,26 @@ namespace Nom
 					builder->CreateBr(outBlock);
 
 					builder->SetInsertPoint(outBlock);
-					auto resultPHI = builder->CreatePHI(BOOLTYPE, 2, "subtypingResult");
-					resultPHI->addIncoming(MakeInt(1, (uint64_t)1), origBlock);
+					auto resultPHI = builder->CreatePHI(value->getType(), 2, "subtypingResult");
+					resultPHI->addIncoming(value, origBlock);
 					resultPHI->addIncoming(castresult, notNullBlock);
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { resultPHI,MakeUInt(1,1) });
 					if (NomCastStats)
 					{
 						builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
+					}
+					builder->CreateBr(castOutBlock);
+
+					builder->SetInsertPoint(castOutBlock);
+					if (castOutPHI != nullptr)
+					{
+						castOutPHI->addIncoming(resultPHI, outBlock);
+						return castOutPHI;
 					}
 					return resultPHI;
 				}
 				case TypeKind::TKClass:
 				{
+					origBlock = builder->GetInsertBlock();
 					Value* castTimeStamp = nullptr;
 					if (NomCastStats)
 					{
@@ -553,25 +690,42 @@ namespace Nom
 					}
 					auto itype = (NomClassTypeRef)type;
 					auto monoCastResult = GenerateMonotonicCast(builder, env, value, itype);
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { monoCastResult,MakeUInt(1,1) });
+					//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { monoCastResult,MakeUInt(1,1) });
 					if (NomCastStats)
 					{
 						builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
+					}
+					builder->CreateBr(castOutBlock);
+
+					builder->SetInsertPoint(castOutBlock);
+					if (castOutPHI != nullptr)
+					{
+						castOutPHI->addIncoming(monoCastResult, origBlock);
+						return castOutPHI;
 					}
 					return monoCastResult;
 				}
 				case TypeKind::TKVariable:
 				{
+					origBlock = builder->GetInsertBlock();
 					Value* castTimeStamp = nullptr;
 					if (NomCastStats)
 					{
 						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
 					}
 					auto monoCastResult = GenerateMonotonicCast(builder, env, value, env->GetTypeArgument(builder, ((NomTypeVarRef)type)->GetIndex()));
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { monoCastResult,MakeUInt(1,1) });
+					//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { monoCastResult,MakeUInt(1,1) });
 					if (NomCastStats)
 					{
 						builder->CreateCall(GetIncCastTimeFunction(*fun->getParent()), { castTimeStamp });
+					}
+					builder->CreateBr(castOutBlock);
+
+					builder->SetInsertPoint(castOutBlock);
+					if (castOutPHI != nullptr)
+					{
+						castOutPHI->addIncoming(monoCastResult, origBlock);
+						return castOutPHI;
 					}
 					return monoCastResult;
 				}

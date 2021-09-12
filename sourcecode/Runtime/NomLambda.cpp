@@ -24,6 +24,7 @@
 #include "NomLambdaCallTag.h"
 #include "CallingConvConf.h"
 #include "Metadata.h"
+#include "RTCast.h"
 
 using namespace llvm;
 using namespace std;
@@ -282,6 +283,14 @@ namespace Nom
 			InitializePhis(builder, fun, env);
 
 			builder->SetInsertPoint(matchBlock);
+			NomSubstitutionContextMemberContext nscmc(this);
+			auto argpos = 1;
+			for (auto& arg : this->GetArgumentTypes(&nscmc))
+			{
+				auto val = (*env)[argpos];
+				RTCast::GenerateCast(builder, env, val, arg);
+				argpos++;
+			}
 
 			const std::vector<NomInstruction*>* instructions = GetInstructions();
 #ifdef INSTRUCTIONMESSAGES

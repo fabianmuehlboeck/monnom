@@ -92,7 +92,7 @@ namespace Nom
 			auto dispatcherCallInst = builder->CreateCall(GetIMTFunctionType(), builder->CreateExtractValue(dispatcherPair, { 0 }), llvm::ArrayRef<Value*>(argbuf, 2 + RTConfig_NumberOfVarargsArguments), methodName + "()");
 			dispatcherCallInst->setCallingConv(NOMCC);
 			env->ClearArguments();
-			RegisterValue(env, NomValue(dispatcherCallInst, &NomDynamicType::Instance(), true));
+			RegisterValue(env, NomValue(EnsurePackedUnpacked(builder, dispatcherCallInst, REFTYPE), &NomDynamicType::Instance(), true));
 		}
 
 

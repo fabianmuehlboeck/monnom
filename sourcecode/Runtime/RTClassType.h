@@ -13,12 +13,15 @@ namespace Nom
 		class NomClassType;
 		class RTClassType;
 		enum class RTClassTypeFields : unsigned char { TypeArgs=0, Head = 1, Class = 2 };
-		class RTClassType : public ARTRep<RTClassType, RTClassTypeFields>, public AvailableExternally<llvm::Function>
+		class RTClassType : public AvailableExternally<llvm::Function>
 		{
+		private:
+			RTClassType() {}
 		public:
+			static RTClassType& Instance() { static RTClassType rtct; return rtct; }
 			static llvm::StructType *GetLLVMType();
 			static llvm::StructType * GetLLVMType(size_t size);
-			static llvm::Constant *GetConstant(llvm::Module &mod, const NomClassType *cls, llvm::Constant* castFun);
+			static llvm::Constant *GetConstant(llvm::Module &mod, const NomClassType *cls, llvm::Constant* subt);
 
 			static llvm::Value* GenerateReadClassDescriptorLink(NomBuilder& builder, llvm::Value* type);
 			static llvm::Value* GetTypeArgumentsPtr(NomBuilder& builder, llvm::Value* type);
