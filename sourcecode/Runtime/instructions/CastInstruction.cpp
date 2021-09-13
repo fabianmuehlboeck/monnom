@@ -45,7 +45,7 @@ namespace Nom
 			//CreateDummyReturn(builder, env->Function);
 
 			//builder->SetInsertPoint(success);
-			return NomValue(val, type, true);
+			return NomValue(castResult, type, true);
 			////if (val->getType()->isIntegerTy() || val->getType()->isFloatingPointTy())
 			////{
 			////	//TODO: make sure to handle unpacked ints/floats/bools?

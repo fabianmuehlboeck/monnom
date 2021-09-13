@@ -608,15 +608,9 @@ namespace Nom
 				{
 					std::string fieldName = field->GetName()->ToStdString();
 					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "field:" + fieldName, fun);
-					BasicBlock* fieldWriteBlock = BasicBlock::Create(LLVMCONTEXT, "fieldWrite:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					/*auto castResult =*/ RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
-					//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
-					//builder->CreateCondBr(castResult, fieldWriteBlock, errorBlock, GetLikelyFirstBranchMetadata());
-					builder->CreateBr(fieldWriteBlock);
-
-					builder->SetInsertPoint(fieldWriteBlock);
+					RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
 					auto writeValue = newValue;
 					if (field->GetType()->IsSubtype(NomIntClass::GetInstance()->GetType(), false))
 					{

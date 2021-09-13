@@ -24,10 +24,36 @@ namespace Nom
 		{
 			if (ReceiverType != 0)
 			{
-				auto reccls = NomConstants::GetClass(ReceiverType)->GetClass();
-				auto field = reccls->GetField(NomConstants::GetString(FieldName)->GetText());
-				field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
+				NomConstant* receiverConstant = NomConstants::Get(ReceiverType);
+				switch (receiverConstant->Type)
+				{
+				case NomConstantType::CTClass: {
 
+					auto reccls = ((NomClassConstant*)receiverConstant)->GetClass();
+					auto field = reccls->GetField(NomConstants::GetString(FieldName)->GetText());
+					field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
+					break;
+				}
+				case NomConstantType::CTLambda: {
+					//auto reclambda = ((NomLambdaConstant*)receiverConstant)->GetLambda();
+					//auto field = reclambda->GetField(NomConstants::GetString(FieldName)->GetText());
+					//field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
+					//this should never happen, but if it does, we'll get the appropriate error by calling the dynamic field write function
+					NomDictField::GetInstance(NomConstants::GetString(FieldName)->GetText())->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
+					break;
+				}
+				case NomConstantType::CTRecord: {
+					auto recstruct = ((NomRecordConstant*)receiverConstant)->GetRecord();
+					auto field = recstruct->GetField(NomConstants::GetString(FieldName)->GetText());
+					field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
+					break;
+				}
+				default:
+					throw new std::exception();
+				}
+				//auto reccls = NomConstants::GetClass(ReceiverType)->GetClass();
+				//auto field = reccls->GetField(NomConstants::GetString(FieldName)->GetText());
+				//field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
 			}
 			else
 			{

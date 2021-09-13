@@ -1216,7 +1216,17 @@ namespace Nom.BenchmarkGenerator
             public static new FullDevolutionVisitorUntyped Instance { get; } = new FullDevolutionVisitorUntyped();
             private FullDevolutionVisitorUntyped() { }
 
-            public override Func<Parser.ClassType, IFullDevolutionData, Parser.IType> VisitClassType => (ct, data) => new Parser.DynamicType(ct.Locs) { Annotation = new Language.DynamicType() };
+            public override Func<Parser.ClassType, IFullDevolutionData, Parser.IType> VisitClassType =>
+                (ct, data) =>
+                {
+                    var ifc = (ct.Annotation as Nom.Language.INamedType)?.Element;
+                    if (ifc == null || !data.Versions.ContainsKey(ifc) || !data.Versions[ifc].IsRelevantForInheritance)
+                    {
+                        return new Parser.DynamicType(ct.Locs) { Annotation = new Language.DynamicType() };
+                    }
+                    return ct; //base.VisitClassType(ct, data);
+                };
+            //new Parser.DynamicType(ct.Locs) { Annotation = new Language.DynamicType() };
 
             public override Func<ClassDef, IFullDevolutionData, ClassDef> VisitClassDef => (cd, data) =>
             {

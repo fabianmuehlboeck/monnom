@@ -162,54 +162,54 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
+			auto vTableVar = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+			//BasicBlock* classBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr;
+			//Value* vTableVar = nullptr, *sTableVar = nullptr;
+			//Function* fun = builder->GetInsertBlock()->getParent();
 
-			BasicBlock* classBlock = nullptr, * lambdaBlock = nullptr, * structBlock = nullptr, * partialAppBlock = nullptr;
-			Value* vTableVar = nullptr, *sTableVar = nullptr;
-			Function* fun = builder->GetInsertBlock()->getParent();
+			//RefValueHeader::GenerateRefValueKindSwitch(builder, receiver, &vTableVar, &classBlock, &lambdaBlock, &structBlock, &partialAppBlock);
+			//BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "DictLoadOut", fun);
 
-			RefValueHeader::GenerateRefValueKindSwitch(builder, receiver, &vTableVar, &classBlock, &lambdaBlock, &structBlock, &partialAppBlock);
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "DictLoadOut", fun);
-
-			builder->SetInsertPoint(outBlock);
-			auto outPHI = builder->CreatePHI(REFTYPE, 2, "dictLoadValue");
-			
-			if (classBlock != nullptr)
-			{
-				builder->SetInsertPoint(classBlock);
-				vTableVar->setName("classDescriptor");
+			//builder->SetInsertPoint(outBlock);
+			//auto outPHI = builder->CreatePHI(REFTYPE, 2, "dictLoadValue");
+			//
+			//if (classBlock != nullptr)
+			//{
+			//	builder->SetInsertPoint(classBlock);
+			//	vTableVar->setName("classDescriptor");
 				auto fieldLookupFun = RTVTable::GenerateReadReadFieldFunction(builder, vTableVar);
 				auto fieldValue = builder->CreateCall(GetFieldReadFunctionType(), fieldLookupFun, { key, receiver }, "fieldValue");
 				fieldValue->setCallingConv(NOMCC);
-				outPHI->addIncoming(fieldValue, builder->GetInsertBlock());
-				builder->CreateBr(outBlock);
-			}
+			//	outPHI->addIncoming(fieldValue, builder->GetInsertBlock());
+			//	builder->CreateBr(outBlock);
+			//}
 
-			if (structBlock != nullptr)
-			{
-				builder->SetInsertPoint(structBlock);
-				auto structFieldLookupFun = RTVTable::GenerateReadReadFieldFunction(builder, vTableVar);
-				auto structFieldValue = builder->CreateCall(GetFieldReadFunctionType(), structFieldLookupFun, { key, receiver }, "structFieldValue");
-				structFieldValue->setCallingConv(NOMCC);
-				outPHI->addIncoming(structFieldValue, builder->GetInsertBlock());
-				builder->CreateBr(outBlock);
-			}
+			//if (structBlock != nullptr)
+			//{
+			//	builder->SetInsertPoint(structBlock);
+			//	auto structFieldLookupFun = RTVTable::GenerateReadReadFieldFunction(builder, vTableVar);
+			//	auto structFieldValue = builder->CreateCall(GetFieldReadFunctionType(), structFieldLookupFun, { key, receiver }, "structFieldValue");
+			//	structFieldValue->setCallingConv(NOMCC);
+			//	outPHI->addIncoming(structFieldValue, builder->GetInsertBlock());
+			//	builder->CreateBr(outBlock);
+			//}
 
-			static const char* structnotImplementedMsg = "Wrong kind of entity for dictionary lookup!";
-			BasicBlock* wrongTag = RTOutput_Fail::GenerateFailOutputBlock(builder, structnotImplementedMsg);
+			//static const char* structnotImplementedMsg = "Wrong kind of entity for dictionary lookup!";
+			//BasicBlock* wrongTag = RTOutput_Fail::GenerateFailOutputBlock(builder, structnotImplementedMsg);
 
-			if (lambdaBlock != nullptr)
-			{
-				builder->SetInsertPoint(lambdaBlock);
-				builder->CreateBr(wrongTag);
-			}
-			if (partialAppBlock != nullptr)
-			{
-				builder->SetInsertPoint(partialAppBlock);
-				builder->CreateBr(wrongTag);
-			}
+			//if (lambdaBlock != nullptr)
+			//{
+			//	builder->SetInsertPoint(lambdaBlock);
+			//	builder->CreateBr(wrongTag);
+			//}
+			//if (partialAppBlock != nullptr)
+			//{
+			//	builder->SetInsertPoint(partialAppBlock);
+			//	builder->CreateBr(wrongTag);
+			//}
 
-			builder->SetInsertPoint(outBlock);
-			return outPHI;
+			//builder->SetInsertPoint(outBlock);
+			return fieldValue;
 
 	
 		}

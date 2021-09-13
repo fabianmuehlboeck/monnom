@@ -112,7 +112,7 @@ namespace Nom.TypeChecker
                     }
                     else
                     {
-                        references.Add(new OptimisticInstanceMethodReference());
+                        references.Add(new OptimisticInstanceMethodReference(method, typeArguments, formalTypes, env));
                     }
                 }
                 if (references.Count == 1)
@@ -202,11 +202,32 @@ namespace Nom.TypeChecker
         }
         private class OptimisticInstanceMethodReference : IInstanceMethodReference
         {
+            public readonly IEnumerable<Language.ITypeArgument> TypeArguments;
+            public readonly IMethodSpec Method;
+            public readonly ITypeEnvironment<Language.ITypeArgument> Substitutions;
+            public readonly IEnumerable<Language.IType> ParamTypes;
+            public OptimisticInstanceMethodReference(IMethodSpec method, IEnumerable<Language.ITypeArgument> typeArguments, IEnumerable<Language.IType> paramTypes, ITypeEnvironment<Language.ITypeArgument> substitutions)
+            {
+                TypeArguments = typeArguments;
+                Substitutions = substitutions;
+                Method = method;
+                ParamTypes = paramTypes;
+            }
             public IInstanceMethodReference OptimisticVersion => throw new NotImplementedException();
 
             public ICallReceiverTransformResult GenerateCall(IExprTransformResult receiver, IEnumerable<IExprTransformResult> arguments, ICodeTransformEnvironment env)
             {
-                throw new NotImplementedException();
+                List<IInstruction> instructions = receiver.Snoc(new EnsureCheckedMethodInstruction(receiver.Register, Method.Name)).ToList();
+                List<IRegister> argRegs = new List<IRegister>();
+                foreach ((IExprTransformResult, Language.IType) argpair in arguments.Zip(Method.Parameters.Entries.Select(ps => ((ISubstitutable<Language.IType>)ps.Type).Substitute(Substitutions)), (x, y) => (x, y)))
+                {
+                    IExprTransformResult actualArgument = argpair.Item1.EnsureType(argpair.Item2, env);
+                    instructions.AddRange(actualArgument);
+                    argRegs.Add(actualArgument.Register);
+
+                }
+                CallInstanceMethodCheckedInstruction cmi = new CallInstanceMethodCheckedInstruction(Method.GetAsTypedRef().Substitute(Substitutions), receiver.Register, argRegs, env.CreateRegister());
+                return new CallReceiverTransformResult(((ISubstitutable<Language.IType>)Method.ReturnType).Substitute(Substitutions), cmi.Register, instructions.Snoc(cmi));
             }
         }
         private class BottomInstanceMethodReference : IInstanceMethodReference

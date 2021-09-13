@@ -213,14 +213,9 @@ namespace Nom
 				{
 					std::string fieldName = field->GetName()->ToStdString();
 					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "field:" + fieldName, fun);
-					BasicBlock* fieldWriteBlock = BasicBlock::Create(LLVMCONTEXT, "fieldWrite:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
 					RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
-					builder->CreateBr(fieldWriteBlock);
-					//builder->CreateCondBr(RTCast::GenerateCast(builder, &scce, newValue, field->GetType()), fieldWriteBlock, errorBlock);
-
-					builder->SetInsertPoint(fieldWriteBlock);
 					auto writeValue = newValue;
 					writeValue = EnsurePacked(builder, writeValue);
 					field->GenerateWrite(builder, &scce, NomValue(thisarg, thisType), NomValue(writeValue, field->GetType()));

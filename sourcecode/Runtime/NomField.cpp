@@ -156,7 +156,7 @@ namespace Nom
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "DictWriteOut", fun);
+			//BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "DictWriteOut", fun);
 
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
@@ -165,34 +165,36 @@ namespace Nom
 			if (refValueBlock != nullptr)
 			{
 				builder->SetInsertPoint(refValueBlock);
-				BasicBlock* realVtableBlock = nullptr, * pureLambdaBlock = nullptr, * pureStructBlock = nullptr, * purePartialAppBlock = nullptr;
-				Value* vtableVar = nullptr;
-				RefValueHeader::GenerateRefValueKindSwitch(builder, receiver, &vtableVar, &realVtableBlock, &pureLambdaBlock, &pureStructBlock, &purePartialAppBlock);
+				auto vtableVar = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+				//BasicBlock* realVtableBlock = nullptr, * pureLambdaBlock = nullptr, * pureStructBlock = nullptr, * purePartialAppBlock = nullptr;
+				//Value* vtableVar = nullptr;
+				//RefValueHeader::GenerateRefValueKindSwitch(builder, receiver, &vtableVar, &realVtableBlock, &pureLambdaBlock, &pureStructBlock, &purePartialAppBlock);
 
-				if (realVtableBlock != nullptr)
-				{
-					builder->SetInsertPoint(realVtableBlock);
-					auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtableVar);
-					builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver,  EnsurePacked(builder, value) })->setCallingConv(NOMCC);
-					builder->CreateBr(outBlock);
-				}
+				//if (realVtableBlock != nullptr)
+				//{
+				//	builder->SetInsertPoint(realVtableBlock);
+				auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtableVar);
+				builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver,  EnsurePacked(builder, value) })->setCallingConv(NOMCC);
+				//	builder->CreateBr(outBlock);
+				//}
 
-				if (pureLambdaBlock != nullptr)
-				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Lambdas have no dictionary fields to write to!", pureLambdaBlock);
-				}
-				if (pureStructBlock != nullptr)
-				{
-					builder->SetInsertPoint(pureStructBlock);
-					auto vtable = vtableVar;
-					auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtable);
-					builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver, EnsurePacked(builder, value) })->setCallingConv(NOMCC);
-					builder->CreateBr(outBlock);
-				}
-				if (purePartialAppBlock != nullptr)
-				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Partial Applications have no dictionary fields to write to!", purePartialAppBlock);
-				}
+				//if (pureLambdaBlock != nullptr)
+				//{
+				//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Lambdas have no dictionary fields to write to!", pureLambdaBlock);
+				//}
+				//if (pureStructBlock != nullptr)
+				//{
+				//	builder->SetInsertPoint(pureStructBlock);
+				//	auto vtable = vtableVar;
+				//	auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtable);
+				//	builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver, EnsurePacked(builder, value) })->setCallingConv(NOMCC);
+				//	builder->CreateBr(outBlock);
+				//}
+				//if (purePartialAppBlock != nullptr)
+				//{
+				//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Partial Applications have no dictionary fields to write to!", purePartialAppBlock);
+				//}
+				refValueBlock = builder->GetInsertBlock();
 
 			}
 			if (packedIntBlock != nullptr)
@@ -215,10 +217,13 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			builder->SetInsertPoint(outBlock);
+			if (refValueBlock != nullptr)
+			{
+				builder->SetInsertPoint(refValueBlock);
+			}
 		}
 
-	
+
 		NomClosureField::NomClosureField(NomLambda* lambda, const ConstantID name, const ConstantID type, const int index) : Name(name), Type(type), Lambda(lambda), Index(index)
 		{
 		}

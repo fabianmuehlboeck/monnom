@@ -50,8 +50,12 @@ namespace Nom.TypeChecker
         public Func<ForeachStmt, ICodeTransformEnvironment, IStmtTransformResult> VisitForeachStmt => (stmt, env) =>
         {
             IExprTransformResult rangeOrig = stmt.Range.Visit(this, env);
-            IOptional<INamedType> enumerableInstantiation = rangeOrig.Type.Visit(new Language.TypeVisitor<object, IOptional<INamedType>>() { VisitClassType = (ct, o) => ct.Instantiate(StdLib.IEnumerableInterface.Instance),
-                VisitInterfaceType = (it, o) => it.Instantiate(StdLib.IEnumerableInterface.Instance), DefaultAction = (t, o) => Optional<INamedType>.Empty });
+            IOptional<INamedType> enumerableInstantiation = rangeOrig.Type.Visit(new Language.TypeVisitor<object, IOptional<INamedType>>()
+            {
+                VisitClassType = (ct, o) => ct.Instantiate(StdLib.IEnumerableInterface.Instance),
+                VisitInterfaceType = (it, o) => it.Instantiate(StdLib.IEnumerableInterface.Instance),
+                DefaultAction = (t, o) => Optional<INamedType>.Empty
+            });
 
             IExprTransformResult rangeEtr;
             var variableType = stmt.Var.Type.TransformType(env.Context);
@@ -229,6 +233,15 @@ namespace Nom.TypeChecker
                     if (!ret.HasElem)
                     {
                         throw new TypeCheckException("$0 does not contain a static field named $1", qn, stmt.Variable);
+                    }
+                    return ret.Elem;
+                },
+                etr=>
+                {
+                    IOptional<IVariableReference> ret = env[stmt.Variable];
+                    if (!ret.HasElem)
+                    {
+                        throw new TypeCheckException("Field or local variable $0 does not exist", stmt.Variable);
                     }
                     return ret.Elem;
                 });
@@ -494,7 +507,7 @@ namespace Nom.TypeChecker
             }
             expr.Annotation = classref;
             var result = callref.Elem.GenerateCall(argResults, env);
-            expr.TypeAnnotation = result.Type.GetParserType(); 
+            expr.TypeAnnotation = result.Type.GetParserType();
             return result;
         };
 
@@ -572,10 +585,11 @@ namespace Nom.TypeChecker
 
         public Func<RefIdentExpr, ICodeTransformEnvironment, IExprTransformResult> VisitRefIdentExpr => (expr, env) =>
         {
-            var ret= expr.Accessor.Visit(AccessorVisitor<IExprTransformResult>.Instance, new AccessorTransformEnvironment<IExprTransformResult>(env,
+            var ret = expr.Accessor.Visit(AccessorVisitor<IExprTransformResult>.Instance, new AccessorTransformEnvironment<IExprTransformResult>(env,
                 etr =>
                 expr.Identifier.Arguments.Count() == 0 ? env.GetFieldAccessVariable(etr, expr.Identifier.Name).Elem.GenerateReadAccess(env) : throw new NotImplementedException(),
-                qn => throw new NotImplementedException()));
+                qn => throw new NotImplementedException(),
+                etr => expr.Identifier.Arguments.Count() == 0 ? env[expr.Identifier.Name].Elem.GenerateReadAccess(env) : throw new NotImplementedException()));
             expr.TypeAnnotation = ret.Type.GetParserType();
             return ret;
         };
@@ -585,7 +599,7 @@ namespace Nom.TypeChecker
         public Func<NullExpr, ICodeTransformEnvironment, IExprTransformResult> VisitNullExpr => (expr, env) =>
         {
             var ni = new NullInstruction(env.CreateRegister());
-            var ret= new ExprTransformResult(StdLib.StdLib.NullType, ni.Register, ni.Singleton(), expr.Locs);
+            var ret = new ExprTransformResult(StdLib.StdLib.NullType, ni.Register, ni.Singleton(), expr.Locs);
             expr.TypeAnnotation = ret.Type.GetParserType();
             return ret;
         };
@@ -597,7 +611,7 @@ namespace Nom.TypeChecker
         public Func<StringExpr, ICodeTransformEnvironment, IExprTransformResult> VisitStringExpr => (expr, env) =>
         {
             var lsc = new LoadStringConstantInstruction(expr.Value, env.CreateRegister());
-            var ret= new ExprTransformResult(StdLib.String.Instance.ClassType, lsc.Register, lsc.Singleton());
+            var ret = new ExprTransformResult(StdLib.String.Instance.ClassType, lsc.Register, lsc.Singleton());
             expr.TypeAnnotation = ret.Type.GetParserType();
             return ret;
         };
@@ -623,7 +637,7 @@ namespace Nom.TypeChecker
             {
                 throw new InternalException("Range constructor not found!");
             }
-            var ret= callref.Elem.GenerateCall(argResults, env);
+            var ret = callref.Elem.GenerateCall(argResults, env);
             expr.TypeAnnotation = ret.Type.GetParserType();
             return ret;
         };
@@ -651,7 +665,7 @@ namespace Nom.TypeChecker
             Language.IType targetType = expr.Type.TransformType(env.Context);
             IExprTransformResult etr = expr.Expr.Visit(this, env).EnsureType(targetType, env);
             expr.TypeAnnotation = etr.Type.GetParserType();
-            return etr; 
+            return etr;
         };
 
         public Func<RefIdentRootExpr, ICodeTransformEnvironment, IExprTransformResult> VisitRefIdentRootExpr => (expr, env) =>
@@ -663,7 +677,7 @@ namespace Nom.TypeChecker
         {
             var lenv = new LambdaTransformEnvironment(env, expr.Arguments.Select(arg => new ArgumentDeclDef(arg.Name, arg.Type.TransformType(env.Context))), expr.ReturnType.TransformType(env.Context), expr.Locs);
             expr.Annotation = lenv.Lambda.LambdaID;
-            var ret= lenv.Compile(expr.Code, expr.Locs);
+            var ret = lenv.Compile(expr.Code, expr.Locs);
             expr.TypeAnnotation = ret.Type.GetParserType();
             return ret;
         };
@@ -758,7 +772,7 @@ namespace Nom.TypeChecker
                 saetrs.Add(env.GetFieldAccessVariable(csetr, sass.Variable).Elem.GenerateWriteAccess(saetr, satenv));
             }
 
-            var ret= new ExprTransformResult(new Language.DynamicType(), csi.Register, argExprs.Flatten().Concat(closureReadResults.Flatten()).Snoc(csi).Concat(saetrs.Flatten()), expr.Locs);
+            var ret = new ExprTransformResult(new Language.DynamicType(), csi.Register, argExprs.Flatten().Concat(closureReadResults.Flatten()).Snoc(csi).Concat(saetrs.Flatten()), expr.Locs);
             expr.TypeAnnotation = ret.Type.GetParserType();
             return ret;
         };
@@ -967,24 +981,24 @@ namespace Nom.TypeChecker
                 var lvar = ste.AddLocalVariable(expr.Declaration.Ident, expr.Declaration.Type.TransformType(env.Context));
                 IStmtTransformResult assignInstrs = lvar.GenerateWriteAccess(bindExpr, ste);
                 var bodyExpr = expr.Body.Visit(this, ste);
-                var ret= new ExprTransformResult(bodyExpr.Type, bodyExpr.Register, assignInstrs.Concat(bodyExpr), expr.Locs);
+                var ret = new ExprTransformResult(bodyExpr.Type, bodyExpr.Register, assignInstrs.Concat(bodyExpr), expr.Locs);
                 expr.TypeAnnotation = ret.Type.GetParserType();
                 return ret;
             };
 
         public Func<LetVarExpr, ICodeTransformEnvironment, IExprTransformResult> VisitLetVarExpr => (expr, env) =>
         {
-                var bindExpr = expr.BindExpr.Visit(this, env);
-                ScopeTransformEnvironment ste = new ScopeTransformEnvironment(env);
-                var lvar = ste.AddLocalVariable(expr.Ident, bindExpr.Type);
-                IStmtTransformResult assignInstrs = lvar.GenerateWriteAccess(bindExpr, ste);
-                var bodyExpr = expr.Body.Visit(this, ste);
-                var ret = new ExprTransformResult(bodyExpr.Type, bodyExpr.Register, assignInstrs.Concat(bodyExpr), expr.Locs);
-                expr.TypeAnnotation = ret.Type.GetParserType();
-                return ret;
-            };
+            var bindExpr = expr.BindExpr.Visit(this, env);
+            ScopeTransformEnvironment ste = new ScopeTransformEnvironment(env);
+            var lvar = ste.AddLocalVariable(expr.Ident, bindExpr.Type);
+            IStmtTransformResult assignInstrs = lvar.GenerateWriteAccess(bindExpr, ste);
+            var bodyExpr = expr.Body.Visit(this, ste);
+            var ret = new ExprTransformResult(bodyExpr.Type, bodyExpr.Register, assignInstrs.Concat(bodyExpr), expr.Locs);
+            expr.TypeAnnotation = ret.Type.GetParserType();
+            return ret;
+        };
 
-    private class CallReceiverTransformEnvironment : AUnscopedChildCodeTransformEnvironment
+        private class CallReceiverTransformEnvironment : AUnscopedChildCodeTransformEnvironment
         {
             public IEnumerable<IExprTransformResult> Arguments { get; }
 
@@ -997,13 +1011,15 @@ namespace Nom.TypeChecker
 
         private class AccessorTransformEnvironment<T> : AUnscopedChildCodeTransformEnvironment
         {
-            public AccessorTransformEnvironment(ICodeTransformEnvironment env, Func<IExprTransformResult, T> valueResultHandler, Func<IQName<IArgIdentifier<string, Language.IType>>, T> typeResultHandler) : base(env)
+            public AccessorTransformEnvironment(ICodeTransformEnvironment env, Func<IExprTransformResult, T> valueResultHandler, Func<IQName<IArgIdentifier<string, Language.IType>>, T> typeResultHandler, Func<IExprTransformResult, T> thisHandler) : base(env)
             {
                 ValueResultHandler = valueResultHandler;
                 TypeResultHandler = typeResultHandler;
+                ThisHandler = thisHandler;
             }
             public Func<IExprTransformResult, T> ValueResultHandler { get; }
             public Func<IQName<IArgIdentifier<string, Language.IType>>, T> TypeResultHandler { get; }
+            public Func<IExprTransformResult, T> ThisHandler { get; }
 
         }
 
@@ -1043,6 +1059,10 @@ namespace Nom.TypeChecker
                 IOptional<IVariableReference> varref = env[expr.Name];
                 if (varref.HasElem)
                 {
+                    if(expr.Name.Name=="this")
+                    {
+                        return env.ThisHandler(varref.Elem.GenerateReadAccess(env));
+                    }
                     return env.ValueResultHandler(varref.Elem.GenerateReadAccess(env));
                 }
                 IArgIdentifier<string, Language.IType> argident = new RefIdentifier(expr.Name, new List<Parser.IType>(), expr.Locs).Transform(n => n.Name, t => t.TransformType(env.Context));
@@ -1096,6 +1116,19 @@ namespace Nom.TypeChecker
                                 }
                                 return env.ValueResultHandler(null);//TODO: implement static field access
                             }));
+                    },
+                    etr=>
+                    {
+                        if (expr.Identifier.Arguments.Count() > 0)
+                        {
+                            throw new TypeCheckException("Type variables in member accesses are only allowed in method calls (@0)", expr.Identifier);
+                        }
+                        IOptional<IVariableReference> varref = env[expr.Identifier.Name];
+                        if (!varref.HasElem)
+                        {
+                            throw new TypeCheckException("Current context does not have a field or variable named $0", expr.Identifier.Name);
+                        }
+                        return env.ValueResultHandler(varref.Elem.GenerateReadAccess(env));
                     }
                     ));
             };
@@ -1118,7 +1151,7 @@ namespace Nom.TypeChecker
 
             public Func<DefaultBoolExpr, AccessorTransformEnvironment<T>, T> VisitDefaultBoolExpr => (expr, env) => env.ValueResultHandler(expr.Visit(CodeTransformer.Instance, env));
 
-            public Func<DefaultIdentExpr, AccessorTransformEnvironment<T>, T> VisitDefaultIdentExpr => VisitIdentExpr; 
+            public Func<DefaultIdentExpr, AccessorTransformEnvironment<T>, T> VisitDefaultIdentExpr => VisitIdentExpr;
 
             public Func<DefaultFloatExpr, AccessorTransformEnvironment<T>, T> VisitDefaultFloatExpr => (expr, env) => env.ValueResultHandler(expr.Visit(CodeTransformer.Instance, env));
 
@@ -1213,7 +1246,6 @@ namespace Nom.TypeChecker
                 return expr.Accessor.Visit(AccessorVisitor<ICallReceiverTransformResult>.Instance, new AccessorTransformEnvironment<ICallReceiverTransformResult>(env,
                     etr =>
                     {
-
                         IOptional<ICallableReference> callableRef = env.GetMethod(etr, expr.Identifier.TransformArg(t => t.TransformType(env.Context)), env.Arguments.Select(arg => arg.Type)).Coalesce(() => (env.GetFieldAccessVariable(etr, expr.Identifier.Name).Join(fav => env.AsCallable(fav.GenerateReadAccess(env), env.Arguments.Select(arg => arg.Type)))));
                         if (callableRef.HasElem)
                         {
@@ -1235,6 +1267,15 @@ namespace Nom.TypeChecker
                                  }
                                  throw new TypeCheckException("Class $0 does not have a static method called $1", typeref, expr.Identifier);
                              }), null);
+                    },
+                    etr=>
+                    {
+                        IOptional<ICallableReference> callableRef = env.GetMethod(etr, expr.Identifier.TransformArg(t => t.TransformType(env.Context)), env.Arguments.Select(arg => arg.Type)).Coalesce(() => (env[expr.Identifier.Name].Join(fav => env.AsCallable(fav.GenerateReadAccess(env), env.Arguments.Select(arg => arg.Type)))));
+                        if (callableRef.HasElem)
+                        {
+                            return callableRef.Elem.GenerateCall(env.Arguments, env);
+                        }
+                        throw new TypeCheckException("$0 does not have a method $1 for given argument types", etr.Type, expr.Identifier);
                     }
                     ));
             };
