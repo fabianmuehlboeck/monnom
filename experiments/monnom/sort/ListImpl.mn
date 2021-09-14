@@ -11,21 +11,21 @@ class List<T> implements IList<T>
 	public fun Add(T val) : Void
 	{
 		ListNode newNode = new ListNode(val);
-		newNode.prev = first.prev;
-		newNode.next = first;
-		first.prev = newNode;
+		newNode.prev = this.first.prev;
+		newNode.next = this.first;
+		this.first.prev = newNode;
 		newNode.prev.next = newNode;
-		Size=Size+1;
+		this.Size=this.Size+1;
 	}
 	
 	public fun GetIterator() : IIterator<T>
 	{
-		IIterator<T> iter = this.MakeIterator(first);
+		IIterator<T> iter = this.MakeIterator(this.first);
 		return iter;
 	}
 	public fun GetSize() : Int
 	{
-		return Size;
+		return this.Size;
 	}
 
 	private class ListNode
@@ -59,33 +59,33 @@ class List<T> implements IList<T>
 	
 		public virtual fun MovePrev() : Bool
 		{
-			if(currentNode==parent.first)
+			if(this.currentNode==parent.first)
 			{
 				return false;
 			}
-			currentNode = currentNode.prev;
+			this.currentNode = this.currentNode.prev;
 			return true;
 		}
 		public fun MoveNext() : Bool
 		{
-			if(currentNode.next==parent.first)
+			if(this.currentNode.next==this.parent.first)
 			{
 				return false;
 			}
-			currentNode=currentNode.next;
+			this.currentNode=this.currentNode.next;
 			return true;
 		}
 		public fun Current() : T
 		{
-			return currentNode.value;
+			return this.currentNode.value;
 		}
 		public fun SetValue(T x) : Void
 		{
-			currentNode.value = x;
+			this.currentNode.value = x;
 		}
 		public fun Clone() : IIterator<T>
 		{
-			return parent.MakeIterator(currentNode);
+			return this.parent.MakeIterator(this.currentNode);
 		}
 	}
 }

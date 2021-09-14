@@ -3,7 +3,7 @@ class Main
 	public static fun Main() : Void
 	{
 		IList<Int> intlist = MakeIntList();
-		Main.Test<Int>(intlist);
+		Main.Test(intlist);
 		IIterator<Int> ilistIter = intlist.GetIterator();
 		ilistIter.MoveNext();
 		Int last = ilistIter.Current();
@@ -17,10 +17,10 @@ class Main
 		}
 	}
 
-	public static fun Test<T extends IComparable<T>>(IList<T> list) : Void
+	public static fun Test(IList<Int> list) : Void
 	{
 		Timer t = new Timer();
-		Sort.Quicksort<T>(list);
+		Sort.Quicksort(list);
 		t.PrintDifference();
 	}
 	

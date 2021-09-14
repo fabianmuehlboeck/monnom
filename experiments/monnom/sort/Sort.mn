@@ -1,9 +1,9 @@
 class Sort
 {
-	public static fun Quicksort<T extends IComparable<T>>(IList<T> l)
+	public static fun Quicksort(IList<Int> l)
 	{
-		IIterator<T> loIter = l.GetIterator();
-		IIterator<T> hiIter = l.GetIterator();
+		IIterator<Int> loIter = l.GetIterator();
+		IIterator<Int> hiIter = l.GetIterator();
 		if(loIter.MoveNext())
 		{
 			hiIter.MoveNext();
@@ -13,35 +13,35 @@ class Sort
 			{
 				hi=hi+1;
 			}
-			QuicksortRec<T>(loIter, hiIter, lo, hi);
+			QuicksortRec(loIter, hiIter, lo, hi);
 		}
 	}
 	
-    private static fun QuicksortRec<T extends IComparable<T>>(IIterator<T> loIter, IIterator<T> hiIter, Int lo, Int hi) : Void
+    private static fun QuicksortRec(IIterator<Int> loIter, IIterator<Int> hiIter, Int lo, Int hi) : Void
 	{
 		if(lo < hi)
 		{
-			IIterator<T> upper = hiIter.Clone();
-			IIterator<T> lower= loIter.Clone();
-			Int losize = Partition<T>(lower, upper, hi-lo);
-			QuicksortRec<T>(loIter, upper, lo, lo + losize-1);
-			QuicksortRec<T>(lower, hiIter, lo + losize, hi);
+			IIterator<Int> upper = hiIter.Clone();
+			IIterator<Int> lower= loIter.Clone();
+			Int losize = Partition(lower, upper, hi-lo);
+			QuicksortRec(loIter, upper, lo, lo + losize-1);
+			QuicksortRec(lower, hiIter, lo + losize, hi);
 		}
 	}
 	
-	private static fun Partition<T extends IComparable<T>>(IIterator<T> loIter, IIterator<T> hiIter, Int distance) : Int
+	private static fun Partition(IIterator<Int> loIter, IIterator<Int> hiIter, Int distance) : Int
 	{
-		T pivot = loIter.Current();
+		Int pivot = loIter.Current();
 		Int losize=0;
 		while(true)
 		{
-			while(loIter.Current().Compare(pivot)<0)
+			while(loIter.Current() < pivot)
 			{
 				loIter.MoveNext();
 				distance=distance-1;
 				losize=losize+1;
 			}
-			while(hiIter.Current().Compare(pivot)>0)
+			while(hiIter.Current() >pivot)
 			{
 				hiIter.MovePrev();
 				distance=distance-1;
@@ -50,7 +50,7 @@ class Sort
 			{
 				break;
 			}
-			T buffer=loIter.Current();
+			Int buffer=loIter.Current();
 			loIter.SetValue(hiIter.Current());
 			hiIter.SetValue(buffer);
 			loIter.MoveNext();
