@@ -27,7 +27,8 @@ namespace Nom
 				once = false;
 				shst->setBody(
 					StructuralValueHeader::GetLLVMType(),													//common structural value stuff
-					arrtype(llvm::Type::getInt8Ty(LLVMCONTEXT), GetConcurrentDictionarySize()),				//instance dictionary
+					//arrtype(llvm::Type::getInt8Ty(LLVMCONTEXT), GetConcurrentDictionarySize()),				//instance dictionary
+					POINTERTYPE,																			//instance dictionary
 					arrtype(REFTYPE, 0)																		//Fields
 				);
 			}
@@ -147,7 +148,9 @@ namespace Nom
 
 			auto vTablePtr = ConstantExpr::getPointerCast(descriptorRef, RTVTable::GetLLVMType()->getPointerTo());
 
-			builder->CreateCall(RTConcurrentDictionaryEmplace::Instance().GetLLVMElement(*fun->getParent()), { builder->CreateGEP(newmem,{MakeInt32(0), MakeInt32(StructHeaderFields::InstanceDictionary), MakeInt32(0)}) });
+			MakeInvariantStore(builder, ConstantPointerNull::get(POINTERTYPE), newmem, MakeInt32(StructHeaderFields::InstanceDictionary), AtomicOrdering::NotAtomic);
+
+			//builder->CreateCall(RTConcurrentDictionaryEmplace::Instance().GetLLVMElement(*fun->getParent()), { builder->CreateGEP(newmem,{MakeInt32(0), MakeInt32(StructHeaderFields::InstanceDictionary), MakeInt32(0)}) });
 
 			StructuralValueHeader::GenerateInitializationCode(builder, newmem, typeArguments, vTablePtr, rawInvokePtr);
 

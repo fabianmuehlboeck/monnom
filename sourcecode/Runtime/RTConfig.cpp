@@ -30,6 +30,7 @@ bool RTConfig_AlwaysEnsureMethod = false;
 bool RTConfig_RunUnncessesaryCallTagChecks = false;
 bool RTConfig_OmitLambdaCallTags = false;
 bool RTConfig_AdditionalOptPasses = false;
+bool RTConfig_OmitCallTagCasts = false;
 
 //using namespace llvm;
 using namespace std;
@@ -295,6 +296,10 @@ namespace Nom
 						else if (strncmp(args[argpos], "--omitlambdacalltags", 24) == 0)
 						{
 							RTConfig_OmitLambdaCallTags = true;
+						}
+						else if (strncmp(args[argpos], "--omitcalltagcasts", 24) == 0)
+						{
+							RTConfig_OmitCallTagCasts = true;
 						}
 						else if (strncmp(args[argpos], "--alwayscheckcalltags", 32) == 0)
 						{

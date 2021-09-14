@@ -11,3 +11,4 @@ extern bool RTConfig_AlwaysEnsureMethod;
 extern bool RTConfig_IgnoreEnsureMethod;
 extern bool RTConfig_RunUnncessesaryCallTagChecks;
 extern bool RTConfig_OmitLambdaCallTags;
+extern bool RTConfig_OmitCallTagCasts;

@@ -1218,15 +1218,15 @@ namespace Nom.BenchmarkGenerator
 
             public override Func<Parser.ClassType, IFullDevolutionData, Parser.IType> VisitClassType =>
                 (ct, data) =>
-                {
-                    var ifc = (ct.Annotation as Nom.Language.INamedType)?.Element;
-                    if (ifc == null || !data.Versions.ContainsKey(ifc) || !data.Versions[ifc].IsRelevantForInheritance)
-                    {
-                        return new Parser.DynamicType(ct.Locs) { Annotation = new Language.DynamicType() };
-                    }
-                    return ct; //base.VisitClassType(ct, data);
-                };
-            //new Parser.DynamicType(ct.Locs) { Annotation = new Language.DynamicType() };
+                //{
+                //    var ifc = (ct.Annotation as Nom.Language.INamedType)?.Element;
+                //    if (ifc == null || !data.Versions.ContainsKey(ifc) || !data.Versions[ifc].IsPresent || ifc.Visit(new NamespaceSpecVisitor<object, bool>((o,b)=>false,(o,b)=>true,(o,b)=>false)))
+                //    {
+                //        return new Parser.DynamicType(ct.Locs) { Annotation = new Language.DynamicType() };
+                //    }
+                //    return ct; //base.VisitClassType(ct, data);
+                //};
+            new Parser.DynamicType(ct.Locs) { Annotation = new Language.DynamicType() };
 
             public override Func<ClassDef, IFullDevolutionData, ClassDef> VisitClassDef => (cd, data) =>
             {

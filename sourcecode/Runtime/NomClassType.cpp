@@ -289,136 +289,168 @@ namespace Nom
 
 					BasicBlock* failBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Cast Failed!");
 					BasicBlock* successBlock = BasicBlock::Create(LLVMCONTEXT, "success", fun);
-					auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, castedValue);
-					auto clsptr = RTClass::GetInterfaceReference(builder, vtable);
-					if (!this->Named->IsInterface())
-					{
-						BasicBlock* directMatchBlock = BasicBlock::Create(LLVMCONTEXT, "directClassMatch", fun);
-						BasicBlock* noDirectMatchBlock = BasicBlock::Create(LLVMCONTEXT, "noDirectClassMatch", fun);
-						auto directClassMatch = CreatePointerEq(builder, clsptr, this->Named->GetInterfaceDescriptor(mod));
-						builder->CreateCondBr(directClassMatch, directMatchBlock, noDirectMatchBlock);
 
-						builder->SetInsertPoint(directMatchBlock);
-						if (this->Arguments.size() != 0)
+					BasicBlock* refValueBlock = nullptr, *intBlock = nullptr, * floatBlock = nullptr;
+					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, castedValue, &refValueBlock, &intBlock, &floatBlock, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+					if (refValueBlock != nullptr)
+					{
+						builder->SetInsertPoint(refValueBlock);
+						auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, castedValue);
+						auto clsptr = RTClass::GetInterfaceReference(builder, vtable);
+						if (!this->Named->IsInterface())
 						{
-							int argpos = 0;
-							for (auto& arg : this->Arguments)
+							BasicBlock* directMatchBlock = BasicBlock::Create(LLVMCONTEXT, "directClassMatch", fun);
+							BasicBlock* noDirectMatchBlock = BasicBlock::Create(LLVMCONTEXT, "noDirectClassMatch", fun);
+							auto directClassMatch = CreatePointerEq(builder, clsptr, this->Named->GetInterfaceDescriptor(mod));
+							builder->CreateCondBr(directClassMatch, directMatchBlock, noDirectMatchBlock);
+
+							builder->SetInsertPoint(directMatchBlock);
+							if (this->Arguments.size() != 0)
 							{
-								BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
-								auto targ = ObjectHeader::GenerateReadTypeArgument(builder, castedValue, argpos);
-								RTTypeEq::CreateInlineTypeEqCheck(builder, targ, arg, ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()), nextBlock, failBlock, failBlock);
-								builder->SetInsertPoint(nextBlock);
-								argpos++;
+								int argpos = 0;
+								for (auto& arg : this->Arguments)
+								{
+									BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
+									auto targ = ObjectHeader::GenerateReadTypeArgument(builder, castedValue, argpos);
+									RTTypeEq::CreateInlineTypeEqCheck(builder, targ, arg, ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()), nextBlock, failBlock, failBlock);
+									builder->SetInsertPoint(nextBlock);
+									argpos++;
+								}
+							}
+							builder->CreateRet(castedValue);
+
+							builder->SetInsertPoint(noDirectMatchBlock);
+						}
+						BasicBlock* nominalObjectBlock = BasicBlock::Create(LLVMCONTEXT, "nominalObject", fun);
+						BasicBlock* structuralObjectBlock = BasicBlock::Create(LLVMCONTEXT, "structuralObject", fun);
+						auto isNominalObject = RTVTable::GenerateIsNominalValue(builder, vtable);
+						builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isNominalObject, MakeUInt(1,1) });
+						builder->CreateCondBr(isNominalObject, nominalObjectBlock, structuralObjectBlock, GetLikelyFirstBranchMetadata());
+
+						builder->SetInsertPoint(nominalObjectBlock);
+						{
+							PHINode* typeArgsPHI = nullptr;
+							BasicBlock* foundMatchBlock = nullptr;
+							if (this->Arguments.size() > 0)
+							{
+								foundMatchBlock = BasicBlock::Create(LLVMCONTEXT, "foundMatch", fun);
+								builder->SetInsertPoint(foundMatchBlock);
+								typeArgsPHI = builder->CreatePHI(SuperInstanceEntryType()->getPointerTo(), 2, "matchingEntry");
+								auto origTypeArgs = ObjectHeader::GeneratePointerToTypeArguments(builder, castedValue);
+								auto typeArgs = MakeInvariantLoad(builder, typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic);
+								auto typeEqFun = RTTypeEq::Instance(false).GetLLVMElement(mod);
+								RTSubstStackValue rssv = RTSubstStackValue(builder, origTypeArgs);
+								BasicBlock* outBlock[2];
+								rssv.MakeReleaseBlocks(builder, successBlock, &outBlock[0], failBlock, &outBlock[1]);
+								int pos = 0;
+								for (auto& arg : this->Arguments)
+								{
+									auto targ = MakeInvariantLoad(builder, builder->CreateGEP(typeArgs, { MakeInt32(-(pos + 1)) }), "typeArg", AtomicOrdering::NotAtomic);
+									auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ, rssv, arg->GetLLVMElement(mod), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()) });
+									isTypeEq->setCallingConv(NOMCC);
+									CreateExpect(builder, isTypeEq, MakeUInt(1, 1));
+
+									BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "nextArg", fun);
+
+									builder->CreateCondBr(isTypeEq, nextBlock, outBlock[1], GetLikelyFirstBranchMetadata());
+
+									builder->SetInsertPoint(nextBlock);
+								}
+								builder->CreateBr(outBlock[0]);
+
+								builder->SetInsertPoint(nominalObjectBlock);
+							}
+							else
+							{
+								foundMatchBlock = successBlock;
+							}
+							if (this->Named->IsInterface())
+							{
+								auto supercount = RTInterface::GenerateReadSuperInterfaceCount(builder, clsptr);
+								auto supers = RTInterface::GenerateReadSuperInterfaces(builder, clsptr);
+								BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$head", fun);
+								BasicBlock* loopBodyBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$body", fun);
+								auto origBlock = builder->GetInsertBlock();
+								builder->CreateBr(loopHeadBlock);
+
+								builder->SetInsertPoint(loopHeadBlock);
+								auto posPHI = builder->CreatePHI(supercount->getType(), 2, "superIndex");
+								posPHI->addIncoming(MakeIntLike(supercount, 0), origBlock);
+
+								auto stillEntriesLeft = builder->CreateICmpULT(posPHI, supercount);
+								CreateExpect(builder, stillEntriesLeft, MakeUInt(1, 1));
+								builder->CreateCondBr(stillEntriesLeft, loopBodyBlock, failBlock, GetLikelyFirstBranchMetadata());
+
+								builder->SetInsertPoint(loopBodyBlock);
+								auto entry = builder->CreateGEP(supers, posPHI);
+								auto superIface = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superInterface", AtomicOrdering::NotAtomic);
+								auto superMatch = CreatePointerEq(builder, superIface, this->Named->GetInterfaceDescriptor(mod));
+								posPHI->addIncoming(builder->CreateAdd(posPHI, MakeIntLike(posPHI, 1)), builder->GetInsertBlock());
+								builder->CreateCondBr(superMatch, foundMatchBlock, loopHeadBlock);
+								if (typeArgsPHI != nullptr)
+								{
+									typeArgsPHI->addIncoming(entry, builder->GetInsertBlock());
+								}
+							}
+							else
+							{
+								auto supers = RTInterface::GenerateReadSuperInstances(builder, clsptr);
+								BasicBlock* checkSuperClassBlock = BasicBlock::Create(LLVMCONTEXT, "checkSuperClass", fun);
+								auto supercount = RTInterface::GenerateReadSuperClassCount(builder, clsptr);
+								auto superIndex = MakeIntLike(supercount, this->Named->GetSuperClassCount());
+								auto lessThan = builder->CreateICmpULT(superIndex, supercount);
+								CreateExpect(builder, lessThan, MakeUInt(1, 1));
+								builder->CreateCondBr(lessThan, checkSuperClassBlock, failBlock, GetLikelyFirstBranchMetadata());
+
+								builder->SetInsertPoint(checkSuperClassBlock);
+								auto entry = builder->CreateGEP(supers, superIndex);
+								auto superClass = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superClass", AtomicOrdering::NotAtomic);
+								auto superMatch = CreatePointerEq(builder, superClass, this->Named->GetInterfaceDescriptor(mod));
+								CreateExpect(builder, lessThan, MakeUInt(1, 1));
+								builder->CreateCondBr(superMatch, foundMatchBlock, failBlock, GetLikelyFirstBranchMetadata());
+								if (typeArgsPHI != nullptr)
+								{
+									typeArgsPHI->addIncoming(entry, builder->GetInsertBlock());
+								}
 							}
 						}
-						builder->CreateRet(castedValue);
 
-						builder->SetInsertPoint(noDirectMatchBlock);
+						builder->SetInsertPoint(structuralObjectBlock);
+						{
+							if (this->Named->IsInterface())
+							{
+								StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, successBlock, failBlock, castedValue, this, ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()));
+							}
+							else
+							{
+								BasicBlock* structClassFailBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Tried to cast structural value to class!");
+								builder->CreateBr(structClassFailBlock);
+							}
+						}
 					}
-					BasicBlock* nominalObjectBlock = BasicBlock::Create(LLVMCONTEXT, "nominalObject", fun);
-					BasicBlock* structuralObjectBlock = BasicBlock::Create(LLVMCONTEXT, "structuralObject", fun);
-					auto isNominalObject = RTVTable::GenerateIsNominalValue(builder, vtable);
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isNominalObject, MakeUInt(1,1) });
-					builder->CreateCondBr(isNominalObject, nominalObjectBlock, structuralObjectBlock, GetLikelyFirstBranchMetadata());
-
-					builder->SetInsertPoint(nominalObjectBlock);
+					if (intBlock != nullptr)
 					{
-						PHINode* typeArgsPHI = nullptr;
-						BasicBlock* foundMatchBlock = nullptr;
-						if (this->Arguments.size() > 0)
+						if (NomIntClass::GetInstance()->GetType()->IsSubtype(this, false))
 						{
-							foundMatchBlock = BasicBlock::Create(LLVMCONTEXT, "foundMatch", fun);
-							builder->SetInsertPoint(foundMatchBlock);
-							typeArgsPHI = builder->CreatePHI(SuperInstanceEntryType()->getPointerTo(), 2, "matchingEntry");
-							auto origTypeArgs = ObjectHeader::GeneratePointerToTypeArguments(builder, castedValue);
-							auto typeArgs = MakeInvariantLoad(builder, typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic);
-							auto typeEqFun = RTTypeEq::Instance(false).GetLLVMElement(mod);
-							RTSubstStackValue rssv = RTSubstStackValue(builder, origTypeArgs);
-							BasicBlock* outBlock[2];
-							rssv.MakeReleaseBlocks(builder, successBlock, &outBlock[0], failBlock, &outBlock[1]);
-							int pos = 0;
-							for (auto& arg : this->Arguments)
-							{
-								auto targ = MakeInvariantLoad(builder, builder->CreateGEP(typeArgs, { MakeInt32(-(pos + 1)) }), "typeArg", AtomicOrdering::NotAtomic);
-								auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ, rssv, arg->GetLLVMElement(mod), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()) });
-								isTypeEq->setCallingConv(NOMCC);
-								CreateExpect(builder, isTypeEq, MakeUInt(1, 1));
-
-								BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "nextArg", fun);
-
-								builder->CreateCondBr(isTypeEq, nextBlock, outBlock[1], GetLikelyFirstBranchMetadata());
-
-								builder->SetInsertPoint(nextBlock);
-							}
-							builder->CreateBr(outBlock[0]);
-
-							builder->SetInsertPoint(nominalObjectBlock);
+							builder->SetInsertPoint(intBlock);
+							builder->CreateBr(successBlock);
 						}
 						else
 						{
-							foundMatchBlock = successBlock;
-						}
-						if (this->Named->IsInterface())
-						{
-							auto supercount = RTInterface::GenerateReadSuperInterfaceCount(builder, clsptr);
-							auto supers = RTInterface::GenerateReadSuperInterfaces(builder, clsptr);
-							BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$head", fun);
-							BasicBlock* loopBodyBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$body", fun);
-							auto origBlock = builder->GetInsertBlock();
-							builder->CreateBr(loopHeadBlock);
-
-							builder->SetInsertPoint(loopHeadBlock);
-							auto posPHI = builder->CreatePHI(supercount->getType(), 2, "superIndex");
-							posPHI->addIncoming(MakeIntLike(supercount, 0), origBlock);
-
-							auto stillEntriesLeft = builder->CreateICmpULT(posPHI, supercount);
-							CreateExpect(builder, stillEntriesLeft, MakeUInt(1, 1));
-							builder->CreateCondBr(stillEntriesLeft, loopBodyBlock, failBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(loopBodyBlock);
-							auto entry = builder->CreateGEP(supers, posPHI);
-							auto superIface = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superInterface", AtomicOrdering::NotAtomic);
-							auto superMatch = CreatePointerEq(builder, superIface, this->Named->GetInterfaceDescriptor(mod));
-							posPHI->addIncoming(builder->CreateAdd(posPHI, MakeIntLike(posPHI, 1)), builder->GetInsertBlock());
-							builder->CreateCondBr(superMatch, foundMatchBlock, loopHeadBlock);
-							if (typeArgsPHI != nullptr)
-							{
-								typeArgsPHI->addIncoming(entry, builder->GetInsertBlock());
-							}
-						}
-						else
-						{
-							auto supers = RTInterface::GenerateReadSuperInstances(builder, clsptr);
-							BasicBlock* checkSuperClassBlock = BasicBlock::Create(LLVMCONTEXT, "checkSuperClass", fun);
-							auto supercount = RTInterface::GenerateReadSuperClassCount(builder, clsptr);
-							auto superIndex = MakeIntLike(supercount, this->Named->GetSuperClassCount());
-							auto lessThan = builder->CreateICmpULT(superIndex, supercount);
-							CreateExpect(builder, lessThan, MakeUInt(1, 1));
-							builder->CreateCondBr(lessThan, checkSuperClassBlock, failBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(checkSuperClassBlock);
-							auto entry = builder->CreateGEP(supers, superIndex);
-							auto superClass = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superClass", AtomicOrdering::NotAtomic);
-							auto superMatch = CreatePointerEq(builder, superClass, this->Named->GetInterfaceDescriptor(mod));
-							CreateExpect(builder, lessThan, MakeUInt(1, 1));
-							builder->CreateCondBr(superMatch, foundMatchBlock, failBlock, GetLikelyFirstBranchMetadata());
-							if (typeArgsPHI != nullptr)
-							{
-								typeArgsPHI->addIncoming(entry, builder->GetInsertBlock());
-							}
+							RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Tried to cast integer to wrong type!", intBlock);
 						}
 					}
-
-					builder->SetInsertPoint(structuralObjectBlock);
+					if (floatBlock != nullptr)
 					{
-						if (this->Named->IsInterface())
+						if (NomFloatClass::GetInstance()->GetType()->IsSubtype(this, false))
 						{
-							StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, successBlock, failBlock, castedValue, this, ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()));
+							builder->SetInsertPoint(floatBlock);
+							builder->CreateBr(successBlock);
 						}
 						else
 						{
-							BasicBlock* structClassFailBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Tried to cast structural value to class!");
-							builder->CreateBr(structClassFailBlock);
+							RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Tried to cast float to wrong type!", floatBlock);
 						}
 					}
 					builder->SetInsertPoint(successBlock);
