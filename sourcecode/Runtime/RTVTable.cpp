@@ -14,6 +14,8 @@
 #include "NomNameRepository.h"
 #include "RefValueHeader.h"
 #include "Metadata.h"
+#include "RTConfig_LambdaOpt.h"
+#include "CallingConvConf.h"
 
 using namespace llvm;
 using namespace std;
@@ -29,8 +31,9 @@ namespace Nom
 			{
 				once = false;
 				rtitt->setBody(
-					arrtype(POINTERTYPE,0),													//Class method table (grows upward)
+					arrtype(POINTERTYPE, 0),													//Class method table (grows upward)
 					numtype(RTDescriptorKind),												//Kind
+					numtype(int32_t),														//Flags
 					arrtype(GetIMTFunctionType()->getPointerTo(), IMTsize),					//Interface method table
 					arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize),	//Dynamic dispatcher retrieval
 					GetFieldReadFunctionType()->getPointerTo(),								//field lookup
@@ -39,9 +42,9 @@ namespace Nom
 			}
 			return rtitt;
 		}
-		llvm::Constant* RTVTable::CreateConstant(RTDescriptorKind kind, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable, llvm::Constant* fieldLookupFunction, llvm::Constant* fieldStoreFunction)
+		llvm::Constant* RTVTable::CreateConstant(RTDescriptorKind kind, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable, llvm::Constant* fieldLookupFunction, llvm::Constant* fieldStoreFunction, llvm::Constant* flags)
 		{
-			return ConstantStruct::get(GetLLVMType(), ConstantArray::get(arrtype(POINTERTYPE, 0), {}), MakeInt<RTDescriptorKind>(kind), interfaceMethodTable, dynamicDispatcherTable, fieldLookupFunction, fieldStoreFunction);
+			return ConstantStruct::get(GetLLVMType(), ConstantArray::get(arrtype(POINTERTYPE, 0), {}), MakeInt<RTDescriptorKind>(kind), ConstantExpr::getTruncOrBitCast(flags, numtype(int32_t)), interfaceMethodTable, dynamicDispatcherTable, fieldLookupFunction, fieldStoreFunction);
 		}
 		llvm::Value* RTVTable::GenerateReadKind(NomBuilder& builder, llvm::Value* vtablePtr)
 		{
@@ -69,75 +72,112 @@ namespace Nom
 		}
 		llvm::Value* RTVTable::GenerateHasRawInvoke(NomBuilder& builder, Value* vtablePtr)
 		{
-			return builder->CreateTrunc(builder->CreateLShr(builder->CreatePtrToInt(vtablePtr, numtype(intptr_t)), MakeInt<intptr_t>(3)), inttype(1));
+			if (RTConfig_UseLambdaOffset)
+			{
+				return builder->CreateTrunc(builder->CreateLShr(builder->CreatePtrToInt(vtablePtr, numtype(intptr_t)), MakeInt<intptr_t>(3)), inttype(1));
+			}
+			else
+			{
+				auto flags = MakeInvariantLoad(builder, builder->CreatePointerCast(vtablePtr, GetLLVMType()->getPointerTo()), MakeInt32(RTVTableFields::Flags), "Flags", AtomicOrdering::NotAtomic);
+				return builder->CreateICmpEQ(builder->CreateAnd(flags, MakeIntLike(flags, 1)), MakeIntLike(flags, 1));
+			}
 		}
 		llvm::Value* RTVTable::GenerateIsNominalValue(NomBuilder& builder, Value* vtablePtr)
 		{
 			return builder->CreateTrunc(builder->CreateLShr(builder->CreatePtrToInt(vtablePtr, numtype(intptr_t)), MakeInt<intptr_t>(4)), inttype(1));
 		}
 
-		void RTVTable::GenerateFreezeMethodField(NomBuilder& builder, Value* refValue, Value* vtablePtr, Value* name, Value* tableIndex)
-		{
-			BasicBlock* origBlock = builder->GetInsertBlock();
-			auto fun = origBlock->getParent();
+		//void RTVTable::GenerateFreezeMethodField(NomBuilder& builder, Value* _refValue, Value* _vtablePtr, Value* _name, Value* _tableIndex)
+		//{
+		//	static auto funType = FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { REFTYPE, GetLLVMType()->getPointerTo(), inttype(64), inttype(32) }, false);
+		//	BasicBlock* origBlock = builder->GetInsertBlock();
+		//	auto fun = origBlock->getParent();
 
-			BasicBlock* structuralBlock = BasicBlock::Create(LLVMCONTEXT, "freeze$start", fun);
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "freeze$out", fun);
+		//	auto isNominalValue = GenerateIsNominalValue(builder, _vtablePtr);
 
-			auto isNominalValue = GenerateIsNominalValue(builder, vtablePtr);
-			builder->CreateCondBr(isNominalValue, outBlock, structuralBlock, GetLikelyFirstBranchMetadata());
+		//	BasicBlock* structuralBlock = BasicBlock::Create(LLVMCONTEXT, "freeze$start", fun);
+		//	BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "freeze$out", fun);
+		//	builder->CreateCondBr(isNominalValue, outBlock, structuralBlock, GetLikelyFirstBranchMetadata());
 
-			builder->SetInsertPoint(structuralBlock);
-			{
-				auto listPtr = MakeInvariantLoad(builder, builder->CreatePointerCast(vtablePtr, GetLLVMType()->getPointerTo()), { MakeInt32(RTVTableFields::DynamicDispatcherTable), tableIndex }, "DDTE", AtomicOrdering::NotAtomic);
+		//	auto &mod = *fun->getParent();
+		//	fun = fun->getParent()->getFunction("MONNOM_RT_ENSUREMETHOD");
+		//	if (fun == nullptr)
+		//	{
+		//		fun = Function::Create(funType, GlobalValue::LinkageTypes::InternalLinkage, "MONNOM_RT_ENSUREMETHOD", mod);
+		//		fun->setCallingConv(NOMCC);
+		//		fun->addFnAttr(Attribute::get(LLVMCONTEXT, Attribute::AttrKind::NoInline));
 
-				BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Head", fun);
-				BasicBlock* loopBodyBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Body", fun);
-				BasicBlock* loopMatchBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Match", fun);
-				BasicBlock* loopMatchFieldBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Match$Field", fun);
-				BasicBlock* loopDictionaryBlock = RTOutput_Fail::GenerateFailUnimplementedBlock(builder);
+		//		auto argsiter = fun->arg_begin();
+		//		Value* refValue = argsiter;
+		//		argsiter++;
+		//		Value* vtablePtr = argsiter;
+		//		argsiter++;
+		//		Value* name = argsiter;
+		//		argsiter++;
+		//		Value* tableIndex = argsiter;
 
-				builder->CreateBr(loopHeadBlock);
+		//		BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
+		//		BasicBlock* retBlock = BasicBlock::Create(LLVMCONTEXT, "return", fun);
+		//		builder->SetInsertPoint(retBlock);
+		//		builder->CreateRetVoid();
 
-				builder->SetInsertPoint(loopHeadBlock);
-				auto indexPHI = builder->CreatePHI(inttype(32), 2);
-				indexPHI->addIncoming(MakeInt32(0), structuralBlock);
-				auto currentEntry = builder->CreateGEP(listPtr, indexPHI, "currentEntry");
-				auto currentKey = MakeInvariantLoad(builder, currentEntry, MakeInt32(DynamicDispatchListEntryFields::Key), "DDTEKey", AtomicOrdering::NotAtomic);
-				auto currentKeyIsNotNull = builder->CreateICmpNE(currentKey, MakeIntLike(currentKey, 0), "keyIsNotNull");
-				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { currentKeyIsNotNull, MakeUInt(1,1) });
-				builder->CreateCondBr(currentKeyIsNotNull, loopBodyBlock, loopDictionaryBlock, GetLikelyFirstBranchMetadata());
+		//		builder->SetInsertPoint(startBlock);
+		//		{
+		//			auto listPtr = MakeInvariantLoad(builder, builder->CreatePointerCast(vtablePtr, GetLLVMType()->getPointerTo()), { MakeInt32(RTVTableFields::DynamicDispatcherTable), tableIndex }, "DDTE", AtomicOrdering::NotAtomic);
 
-				builder->SetInsertPoint(loopBodyBlock);
-				auto isMatch = builder->CreateICmpEQ(currentKey, builder->CreateZExtOrTrunc(name, currentKey->getType()), "keyMatch");
-				auto nextIndex = builder->CreateAdd(indexPHI, MakeIntLike(indexPHI, 1));
-				indexPHI->addIncoming(nextIndex, builder->GetInsertBlock());
-				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isMatch, MakeUInt(1,1) });
-				builder->CreateCondBr(isMatch, loopMatchBlock, loopHeadBlock, GetLikelyFirstBranchMetadata());
+		//			BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Head", fun);
+		//			BasicBlock* loopBodyBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Body", fun);
+		//			BasicBlock* loopMatchBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Match", fun);
+		//			BasicBlock* loopMatchFieldBlock = BasicBlock::Create(LLVMCONTEXT, "DDLookupLoop$Match$Field", fun);
+		//			BasicBlock* loopDictionaryBlock = RTOutput_Fail::GenerateFailUnimplementedBlock(builder);
 
-				builder->SetInsertPoint(loopMatchBlock);
-				auto flag = MakeInvariantLoad(builder, currentEntry, MakeInt32(DynamicDispatchListEntryFields::Flags), "DDTEFlags", AtomicOrdering::NotAtomic);
-				auto isMethod = builder->CreateICmpEQ(flag, MakeIntLike(flag, 0), "isMethod");
-				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isMethod, MakeUInt(1,1) });
-				builder->CreateCondBr(isMethod, outBlock, loopMatchFieldBlock, GetLikelyFirstBranchMetadata());
+		//			builder->CreateBr(loopHeadBlock);
 
-				builder->SetInsertPoint(loopMatchFieldBlock);
-				auto fieldIndex = builder->CreatePtrToInt(MakeInvariantLoad(builder, currentEntry, MakeInt32(DynamicDispatchListEntryFields::Dispatcher), "fieldNumber", AtomicOrdering::Unordered), numtype(intptr_t));
-				auto fieldValue = RecordHeader::GenerateReadAndLockField(builder, refValue, fieldIndex, false); //hasRawInvoke is false because this table is already filled with appropriately changed indices
-				//fieldValue is definitely a reference value because locking only works on reference values
-				static const char* noLambdaMsg = "Tried to load invokable value from field, but value has no lambda method!";
-				BasicBlock* noLambdaBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, noLambdaMsg);
-				auto hasLambda = GenerateHasRawInvoke(builder, RefValueHeader::GenerateReadVTablePointer(builder, fieldValue));
-				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasLambda, MakeUInt(1,1) });
-				builder->CreateCondBr(hasLambda, outBlock, noLambdaBlock, GetLikelyFirstBranchMetadata());
-			}
+		//			builder->SetInsertPoint(loopHeadBlock);
+		//			auto indexPHI = builder->CreatePHI(inttype(32), 2);
+		//			indexPHI->addIncoming(MakeInt32(0), startBlock);
+		//			auto currentEntry = builder->CreateGEP(listPtr, indexPHI, "currentEntry");
+		//			auto currentKey = MakeInvariantLoad(builder, currentEntry, MakeInt32(DynamicDispatchListEntryFields::Key), "DDTEKey", AtomicOrdering::NotAtomic);
+		//			auto currentKeyIsNotNull = builder->CreateICmpNE(currentKey, MakeIntLike(currentKey, 0), "keyIsNotNull");
+		//			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { currentKeyIsNotNull, MakeUInt(1,1) });
+		//			builder->CreateCondBr(currentKeyIsNotNull, loopBodyBlock, loopDictionaryBlock, GetLikelyFirstBranchMetadata());
 
-			builder->SetInsertPoint(outBlock);
-		}
+		//			builder->SetInsertPoint(loopBodyBlock);
+		//			auto isMatch = builder->CreateICmpEQ(currentKey, builder->CreateZExtOrTrunc(name, currentKey->getType()), "keyMatch");
+		//			auto nextIndex = builder->CreateAdd(indexPHI, MakeIntLike(indexPHI, 1));
+		//			indexPHI->addIncoming(nextIndex, builder->GetInsertBlock());
+		//			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isMatch, MakeUInt(1,1) });
+		//			builder->CreateCondBr(isMatch, loopMatchBlock, loopHeadBlock, GetLikelyFirstBranchMetadata());
+
+		//			builder->SetInsertPoint(loopMatchBlock);
+		//			auto flag = MakeInvariantLoad(builder, currentEntry, MakeInt32(DynamicDispatchListEntryFields::Flags), "DDTEFlags", AtomicOrdering::NotAtomic);
+		//			auto isMethod = builder->CreateICmpEQ(flag, MakeIntLike(flag, 0), "isMethod");
+		//			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isMethod, MakeUInt(1,1) });
+		//			builder->CreateCondBr(isMethod, retBlock, loopMatchFieldBlock, GetLikelyFirstBranchMetadata());
+
+		//			builder->SetInsertPoint(loopMatchFieldBlock);
+		//			auto fieldIndex = builder->CreatePtrToInt(MakeInvariantLoad(builder, currentEntry, MakeInt32(DynamicDispatchListEntryFields::Dispatcher), "fieldNumber", AtomicOrdering::Unordered), numtype(intptr_t));
+		//			auto fieldValue = RecordHeader::GenerateReadAndLockField(builder, refValue, fieldIndex, false); //hasRawInvoke is false because this table is already filled with appropriately changed indices
+		//			//fieldValue is definitely a reference value because locking only works on reference values
+		//			static const char* noLambdaMsg = "Tried to load invokable value from field, but value has no lambda method!";
+		//			BasicBlock* noLambdaBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, noLambdaMsg);
+		//			auto hasLambda = GenerateHasRawInvoke(builder, RefValueHeader::GenerateReadVTablePointer(builder, fieldValue));
+		//			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasLambda, MakeUInt(1,1) });
+		//			builder->CreateCondBr(hasLambda, retBlock, noLambdaBlock, GetLikelyFirstBranchMetadata());
+		//		}
+
+		//	}
+		//	builder->SetInsertPoint(structuralBlock);
+		//	auto ensureMethodCall = builder->CreateCall(fun, { _refValue, _vtablePtr, _name, _tableIndex });
+		//	ensureMethodCall->setCallingConv(NOMCC);
+		//	builder->CreateBr(outBlock);
+
+		//	builder->SetInsertPoint(outBlock);
+		//}
 		llvm::Value* RTVTable::GenerateFindDynamicDispatcherPair(NomBuilder& builder, Value* refValue, Value* vtablePtr, Value* name, Value* tableIndex)
 		{
 			auto listPtr = MakeInvariantLoad(builder, builder->CreatePointerCast(vtablePtr, GetLLVMType()->getPointerTo()), { MakeInt32(RTVTableFields::DynamicDispatcherTable), tableIndex }, "DDTE", AtomicOrdering::NotAtomic);
-			
+
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			auto fun = origBlock->getParent();
 
@@ -162,7 +202,7 @@ namespace Nom
 			indexPHI->addIncoming(MakeInt32(0), origBlock);
 			auto currentEntry = builder->CreateGEP(listPtr, indexPHI, "currentEntry");
 			auto currentKey = MakeInvariantLoad(builder, currentEntry, MakeInt32(DynamicDispatchListEntryFields::Key), "DDTEKey", AtomicOrdering::NotAtomic);
-			auto currentKeyIsNotNull = builder->CreateICmpNE(currentKey, MakeIntLike(currentKey,0), "keyIsNotNull");
+			auto currentKeyIsNotNull = builder->CreateICmpNE(currentKey, MakeIntLike(currentKey, 0), "keyIsNotNull");
 			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { currentKeyIsNotNull, MakeUInt(1,1) });
 			builder->CreateCondBr(currentKeyIsNotNull, loopBodyBlock, loopDictionaryBlock, GetLikelyFirstBranchMetadata());
 
@@ -250,9 +290,14 @@ namespace Nom
 
 				builder->SetInsertPoint(recordFieldBlock);
 				{
-					auto fieldValue = RecordHeader::GenerateReadField(builder, refValue, fieldIndex, false); //hasRawInvoke is false because this table is already filled with appropriately changed indices
+					BasicBlock* fieldOverwrittenBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Tried to invoke overwritten field!");
+					auto actualIndex = builder->CreateTrunc(builder->CreateLShr(fieldIndex, MakeIntLike(fieldIndex, 32)), inttype(32));
+					auto fieldsOffset = builder->CreateTrunc(fieldIndex, inttype(32));
+					auto fieldValue = RecordHeader::GenerateReadField(builder, refValue, builder->CreateAdd(actualIndex,fieldsOffset)); //hasRawInvoke is false because this table is already filled with appropriately changed indices
+					auto fieldWriteTag = RecordHeader::GenerateReadWrittenTag(builder, refValue, actualIndex);
 					fieldValuePHI->addIncoming(fieldValue, builder->GetInsertBlock());
-					builder->CreateBr(checkLambdaExistsBlock);
+					CreateExpect(builder, fieldWriteTag, MakeIntLike(fieldWriteTag, 0));
+					builder->CreateCondBr(fieldWriteTag, fieldOverwrittenBlock, checkLambdaExistsBlock, GetLikelySecondBranchMetadata());
 				}
 			}
 

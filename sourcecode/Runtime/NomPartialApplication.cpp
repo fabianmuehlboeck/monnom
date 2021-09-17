@@ -56,6 +56,10 @@ namespace Nom
 			{
 				return builder->CreateGEP(ObjectHeader::GeneratePointerToTypeArguments(builder, registers[0]), MakeInt32((uint32_t)Callable->GetParent()->GetTypeParametersStart()));
 			}
+			virtual bool GetInConstructor() override
+			{
+				return false;
+			}
 		};
 		class NomPartialApplicationDispatcherEntry : public NomCallable, public NomMemberContextInternal
 		{
@@ -137,7 +141,7 @@ namespace Nom
 							}
 							else
 							{
-								targValueArr[i] = MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[RTConfig_NumberOfVarargsArguments-1], TYPETYPE->getPointerTo()), MakeInt32(i - (RTConfig_NumberOfVarargsArguments - 1))));
+								targValueArr[i] = MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[RTConfig_NumberOfVarargsArguments - 1], TYPETYPE->getPointerTo()), MakeInt32(i - (RTConfig_NumberOfVarargsArguments - 1))));
 							}
 							methodargs[i + 1] = targValueArr[i];
 						}
@@ -173,7 +177,7 @@ namespace Nom
 					//	argTypesArr[i] = &NomDynamicType::Instance();
 					//}
 
-					
+
 
 					//auto dictEntry = new GlobalVariable(mod, GetDescriptorDictionaryEntryType(), true, linkage, CreateDescriptorDictionaryEntryConstant(DescriptorDictionaryEntryKind::Dispatcher, true, Visibility::Public, dispatcher, 0));
 

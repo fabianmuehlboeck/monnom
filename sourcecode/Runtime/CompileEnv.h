@@ -57,6 +57,8 @@ namespace Nom
 
 			virtual PhiNode* GetPhiNode(int index) = 0;
 
+			virtual bool GetInConstructor() = 0;
+
 			virtual size_t GetLocalTypeArgumentCount() = 0;
 			virtual size_t GetEnvTypeArgumentCount() = 0;
 			virtual llvm::Value* GetLocalTypeArgumentArray(NomBuilder& builder) = 0;
@@ -148,6 +150,7 @@ namespace Nom
 			// Inherited via CompileEnv
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override { return false; }
 		};
 
 		class StaticMethodCompileEnv : public AFullArityCompileEnv
@@ -158,16 +161,21 @@ namespace Nom
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override { return false; }
 		};
 
 		class ConstructorCompileEnv : public AFullArityCompileEnv
 		{
+		private:
+			bool inConstructor = true;
 		public:
 			const NomConstructor* const Method;
 			ConstructorCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomClassTypeRef thisType, const NomConstructor* method);
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override;
+			virtual void SetPastInitialSetup();
 		};
 
 		class LambdaCompileEnv : public AVariableArityCompileEnv
@@ -178,6 +186,7 @@ namespace Nom
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override { return false; }
 		};
 
 
@@ -189,16 +198,21 @@ namespace Nom
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override { return false; }
 		};
 
 		class StructInstantiationCompileEnv : public AFullArityCompileEnv
 		{
+		private:
+			bool inConstructor = true;
 		public:
 			const NomRecord* const Record;
 			StructInstantiationCompileEnv(RegIndex regcount, llvm::Function* function, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomRecord* structure, RegIndex endargregcount);
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override;
+			virtual void SetPastInitialSetup();
 		};
 
 
@@ -211,6 +225,7 @@ namespace Nom
 			virtual size_t GetEnvTypeArgumentCount() override;
 
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override { return false; }
 		};
 
 		class CastedValueCompileEnv : public CompileEnv
@@ -248,8 +263,7 @@ namespace Nom
 
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 
-
-
+			virtual bool GetInConstructor() override { return false; }
 
 			// Inherited via CompileEnv
 			virtual void PushDispatchPair(llvm::Value* dpair) override;

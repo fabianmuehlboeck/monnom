@@ -8,13 +8,13 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		enum class RTVTableFields : unsigned char { MethodTable = 0, Kind = 1, InterfaceMethodTable = 2, DynamicDispatcherTable = 3, ReadField = 4, WriteField = 5 };
+		enum class RTVTableFields : unsigned char { MethodTable = 0, Kind = 1, Flags = 2, InterfaceMethodTable = 3, DynamicDispatcherTable = 4, ReadField = 5, WriteField = 6 };
 		class RTVTable
 		{
 		public:
 			static llvm::StructType* GetLLVMType();
 
-			static llvm::Constant* CreateConstant(RTDescriptorKind kind, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable, llvm::Constant* fieldLookupFunction, llvm::Constant* fieldStoreFunction);
+			static llvm::Constant* CreateConstant(RTDescriptorKind kind, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable, llvm::Constant* fieldLookupFunction, llvm::Constant* fieldStoreFunction, llvm::Constant* flags);
 
 			static llvm::Value* GenerateReadKind(NomBuilder& builder, llvm::Value* vtablePtr);
 			static llvm::Value* GenerateReadInterfaceMethodTableEntry(NomBuilder& builder, llvm::Value* vtablePtr, llvm::Constant* index);
@@ -25,7 +25,7 @@ namespace Nom
 			static llvm::Value* GenerateHasRawInvoke(NomBuilder& builder, llvm::Value* vtablePtr);
 			static llvm::Value* GenerateIsNominalValue(NomBuilder& builder, llvm::Value* vtablePtr);
 
-			static void GenerateFreezeMethodField(NomBuilder& builder, llvm::Value* refValue, llvm::Value* vtablePtr, llvm::Value* name, llvm::Value* tableIndex);
+			//static void GenerateFreezeMethodField(NomBuilder& builder, llvm::Value* refValue, llvm::Value* vtablePtr, llvm::Value* name, llvm::Value* tableIndex);
 			static llvm::Value* GenerateFindDynamicDispatcherPair(NomBuilder& builder, llvm::Value* refValue, llvm::Value* vtablePtr, size_t name);
 			static llvm::Value* GenerateFindDynamicDispatcherPair(NomBuilder& builder, llvm::Value* refValue, llvm::Value* vtablePtr, llvm::Value* name, llvm::Value* tableIndex);
 

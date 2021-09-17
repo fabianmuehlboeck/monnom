@@ -26,6 +26,7 @@
 #include "RTCast.h"
 #include "RTSignature.h"
 #include "Metadata.h"
+#include "RTConfig.h"
 
 using namespace llvm;
 using namespace std;
@@ -87,9 +88,12 @@ namespace Nom
 			auto mthis = const_cast<NomInterface*>(this);
 			for (auto cmeth = Methods.begin(); cmeth != Methods.end(); cmeth++)
 			{
-				NomMethodTableEntry* mte = new NomMethodTableEntry(*cmeth, (*cmeth)->GetLLVMFunctionType(), mthis->MethodTable.size());
-				(*cmeth)->SetOffset(mthis->MethodTable.size());
-				mthis->MethodTable.push_back(mte);
+				if (NomLambdaOptimizationLevel == 0 || !(*cmeth)->GetName().empty())
+				{
+					NomMethodTableEntry* mte = new NomMethodTableEntry(*cmeth, (*cmeth)->GetLLVMFunctionType(), mthis->MethodTable.size());
+					(*cmeth)->SetOffset(mthis->MethodTable.size());
+					mthis->MethodTable.push_back(mte);
+				}
 			}
 			mthis->InterfaceTableEntries[GetID()] = 0;
 			auto supers = GetSuperInterfaces();

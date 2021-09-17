@@ -31,7 +31,7 @@ namespace Nom
 
 		llvm::Constant* RTRecord::CreateConstant(const NomRecord *record, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable)
 		{
-			return ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Record, interfaceMethodTable, dynamicDispatcherTable, fieldRead, fieldWrite),  MakeInt<size_t>(record->Fields.size()), MakeInt<size_t>(record->GetTypeParametersCount()));
+			return ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Record, interfaceMethodTable, dynamicDispatcherTable, fieldRead, fieldWrite, MakeInt32(record->GetHasRawInvoke()?1:0)),  MakeInt<size_t>(record->Fields.size()), MakeInt<size_t>(record->GetTypeParametersCount()));
 		}
 
 		llvm::Value* RTRecord::GenerateReadFieldCount(NomBuilder& builder, llvm::Value* descriptor)

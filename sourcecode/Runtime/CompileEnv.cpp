@@ -261,6 +261,8 @@ namespace Nom
 		{
 			return ConstantPointerNull::get(TYPETYPE->getPointerTo());
 		}
+		bool ConstructorCompileEnv::GetInConstructor() { return inConstructor; }
+		void ConstructorCompileEnv::SetPastInitialSetup() { inConstructor = false; }
 #pragma endregion
 
 #pragma region LambdaCompileEnv
@@ -350,6 +352,14 @@ namespace Nom
 		llvm::Value* StructInstantiationCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
 		{
 			return builder->CreateGEP(ObjectHeader::GeneratePointerToTypeArguments(builder, registers[0]), MakeInt32(-(uint32_t)Context->GetTypeParametersStart()));
+		}
+		bool StructInstantiationCompileEnv::GetInConstructor()
+		{
+			return inConstructor;
+		}
+		void StructInstantiationCompileEnv::SetPastInitialSetup()
+		{
+			inConstructor = false;
 		}
 #pragma endregion
 #pragma region SimpleClassCompileEnv

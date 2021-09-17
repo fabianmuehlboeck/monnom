@@ -23,6 +23,7 @@ namespace Nom
 			virtual ~NomRecord() override = default;
 
 			// Inherited via NomCallable
+			virtual llvm::Type* GetLLVMType() const;
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual NomTypeRef GetReturnType(const NomSubstitutionContext *context) const override;
 			const NomField* GetField(NomStringRef name) const;

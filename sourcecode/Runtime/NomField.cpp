@@ -274,7 +274,11 @@ namespace Nom
 				value = CastInstruction::MakeCast(builder, env, value, this->GetType());
 			}
 			value = EnsurePacked(builder, value);
-			RecordHeader::GenerateWriteField(builder, receiver, Index, value, Structure->GetHasRawInvoke());
+			if (!env->GetInConstructor())
+			{
+				RecordHeader::GenerateWriteWrittenTag(builder, receiver, Index, Structure->Fields.size());
+			}
+			RecordHeader::GenerateWriteField(builder, receiver, Index, value, Structure->Fields.size());
 			return;
 		}
 	}

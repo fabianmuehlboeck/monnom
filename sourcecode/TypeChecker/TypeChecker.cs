@@ -359,7 +359,12 @@ namespace Nom.TypeChecker
                     context.AddUsing(new LibLookupContext<LType, LTypeArg>(uref));
                 }
                 return InitializeInheritanceNamespace(file, context);
+            }
 
+            internal bool CheckInheritance()
+            {
+                new CheckInheritancePass().RunPass(this);
+                return true;
             }
 
             internal bool InitializeInheritanceNamespace(Parser.Namespace ns, ITypeCheckLookup<LType, LTypeArg> context)
@@ -673,6 +678,7 @@ namespace Nom.TypeChecker
 
                 protected override void HandleClass(ClassDef elem, ClassTypeCheckInfo tci, TypeCheckBlock tcb, ITypeCheckLookup<LType, LTypeArg> context)
                 {
+                    var cls = tcb.Classes[elem].Container;
                     foreach (Parser.FieldDecl fd in elem.Fields)
                     {
                         if (fd.InitExpr != null)
@@ -701,7 +707,17 @@ namespace Nom.TypeChecker
             {
                 CheckInitializersPass.Instance.RunPass(this);
             }
+            private class CheckInheritancePass : TypeCheckPass
+            {
+                protected override void HandleClass(ClassDef elem, ClassTypeCheckInfo tci, TypeCheckBlock tcb, ITypeCheckLookup<LType, LTypeArg> context)
+                {
+                    
+                }
 
+                protected override void HandleInterface(InterfaceDef elem, InterfaceTypeCheckInfo tci, TypeCheckBlock tcb, ITypeCheckLookup<LType, LTypeArg> context)
+                {
+                }
+            }
             private class CheckBodiesPass : TypeCheckPass
             {
                 public static CheckBodiesPass Instance = new CheckBodiesPass();
@@ -896,6 +912,15 @@ namespace Nom.TypeChecker
             foreach (TypeCheckBlock b in blocks)
             {
                 b.ConsolidateDefinitions();
+            }
+            if (CompilerOutput.HasErrors)
+            {
+                throw new CompileAbortException();
+            }
+
+            foreach(TypeCheckBlock b in blocks)
+            {
+                b.CheckInheritance();
             }
             if (CompilerOutput.HasErrors)
             {

@@ -434,6 +434,7 @@
     <ClInclude Include="RTClass.h" />
     <ClInclude Include="RTClassType.h" />
     <ClInclude Include="RTCompileConfig.h" />
+    <ClInclude Include="RTConfig_LambdaOpt.h" />
     <ClInclude Include="RTDescriptor.h" />
     <ClInclude Include="RTDictionary.h" />
     <ClInclude Include="RTDisjointness.h" />

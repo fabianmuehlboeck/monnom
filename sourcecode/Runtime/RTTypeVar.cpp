@@ -21,9 +21,6 @@ namespace Nom
 					numtype(int), //Index
 					RTTypeHead::GetLLVMType()->getPointerTo(), //Lower Bound
 					RTTypeHead::GetLLVMType()->getPointerTo() //Upper Bound
-					//RTClass::GetLLVMType()->getPointerTo(), 
-					//llvm::IntegerType::get(LLVMCONTEXT, bitsin(size_t)), 
-					//llvm::ArrayType::get(RTTypeHead::GetLLVMType(), 0)
 				);
 			}
 			return llvmtype;

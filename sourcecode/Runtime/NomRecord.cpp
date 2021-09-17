@@ -41,6 +41,10 @@ namespace Nom
 		{
 			NomConstants::GetRecord(structID)->SetStruct(this);
 		}
+		llvm::Type* NomRecord::GetLLVMType() const
+		{
+			return RecordHeader::GetLLVMType(this->Fields.size());
+		}
 		llvm::Function* NomRecord::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			Function* fun = Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
@@ -444,9 +448,12 @@ namespace Nom
 					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(meth->GetName())), MakeInt<size_t>(0), fun);
 					entryID++;
 				}
+				auto bigptr = ConstantExpr::getGetElementPtr(RecordHeader::GetLLVMType(Fields.size()), ConstantPointerNull::get(RecordHeader::GetLLVMType(Fields.size())->getPointerTo()), ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(StructHeaderFields::Fields) }));
+				auto littleptr = ConstantExpr::getGetElementPtr(RecordHeader::GetLLVMType(Fields.size()), ConstantPointerNull::get(RecordHeader::GetLLVMType()->getPointerTo()), ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(StructHeaderFields::Fields) }));
+				auto fieldsOffset = ConstantExpr::getUDiv(ConstantExpr::getSub(ConstantExpr::getPtrToInt(bigptr, numtype(size_t)), ConstantExpr::getPtrToInt(littleptr, numtype(size_t))), MakeInt<size_t>(8));
 				for (auto& field : fields)
 				{
-					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), MakeInt<size_t>(1), ConstantExpr::getIntToPtr(MakeInt<size_t>(((size_t)(field->Index)) << 32), GetIMTFunctionType()->getPointerTo()));
+					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), MakeInt<size_t>(1), ConstantExpr::getIntToPtr(ConstantExpr::getAdd(MakeInt<size_t>((((size_t)(field->Index)) << 32)), fieldsOffset), GetIMTFunctionType()->getPointerTo()));
 					entryID++;
 				}
 				entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(0), MakeInt<size_t>(0), ConstantPointerNull::get(GetIMTFunctionType()->getPointerTo()));

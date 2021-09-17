@@ -111,6 +111,7 @@ namespace Nom
 				}
 				superclass.Elem->GenerateConstructorCall(builder, env, superclass.TypeArgs, (*env)[0], llvm::ArrayRef<NomValue>(superArgsBuf, superConstructorArgs.size()));
 			}
+			cenv.SetPastInitialSetup();
 			auto instructions = GetInstructions();
 #ifdef INSTRUCTIONMESSAGES
 			auto dbgfun = GetDebugPrint(&mod);

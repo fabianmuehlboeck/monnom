@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string.h>
 #include <fstream>
+#include "RTConfig_LambdaOpt.h"
 
 std::string NomRuntimePath = "";
 int NomBlameLevel = 0;
@@ -31,6 +32,7 @@ bool RTConfig_RunUnncessesaryCallTagChecks = false;
 bool RTConfig_OmitLambdaCallTags = false;
 bool RTConfig_AdditionalOptPasses = false;
 bool RTConfig_OmitCallTagCasts = false;
+bool RTConfig_UseLambdaOffset = true;
 
 //using namespace llvm;
 using namespace std;
@@ -304,6 +306,10 @@ namespace Nom
 						else if (strncmp(args[argpos], "--alwayscheckcalltags", 32) == 0)
 						{
 							RTConfig_RunUnncessesaryCallTagChecks = true;
+						}
+						else if (strncmp(args[argpos], "--lambdaoffsetdeopt", 32) == 0)
+						{
+							RTConfig_UseLambdaOffset = false;
 						}
 						else if (strncmp(args[argpos], "--varargscount", 24) == 0)
 						{

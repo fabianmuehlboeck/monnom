@@ -42,6 +42,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "NomLambdaCallTag.h"
 #include "Metadata.h"
+#include <algorithm>
 
 namespace Nom
 {
@@ -353,11 +354,11 @@ namespace Nom
 				return nullptr;
 			}
 			const NomMethod* method = nullptr;
-			for (auto mte : MethodTable)
+			for (auto mte : Methods)
 			{
-				if (mte->Method->GetName().empty())
+				if (mte->GetName().empty())
 				{
-					method = mte->Method;
+					method = mte;
 					break;
 				}
 			}
@@ -417,7 +418,7 @@ namespace Nom
 				varargs[i] = argiter;
 				argiter++;
 			}
-
+			std::reverse(methods.begin(), methods.end());
 			for (auto& meth : methods)
 			{
 				BasicBlock* callBlock = BasicBlock::Create(LLVMCONTEXT, meth->GetName(), fun);
@@ -856,7 +857,7 @@ namespace Nom
 				{
 					for (auto& meth : super->Methods)
 					{
-						if (meth->GetContainer() == super && meth->GetIMTIndex() == i)
+						if (meth->GetContainer() == super && meth->GetIMTIndex() == i&&(NomLambdaOptimizationLevel==0||!meth->GetName().empty()))
 						{
 							methods.push_back(meth);
 						}
@@ -1174,6 +1175,7 @@ namespace Nom
 							{
 								if (!found)
 								{
+									cout << super.Elem->MethodTable[i]->Method->GetName();
 									throw new std::exception();
 								}
 							}

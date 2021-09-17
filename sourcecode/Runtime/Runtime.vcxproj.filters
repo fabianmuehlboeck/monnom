@@ -67,6 +67,9 @@
     <Filter Include="Runtime\Memory">
       <UniqueIdentifier>{9aaf847a-26c9-4432-9a2c-c0f39d46f2c7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Runtime\Config">
+      <UniqueIdentifier>{c71a7b2b-d8b7-4603-8da7-6043dd1e6f96}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="instructions\CallCheckedStaticMethod.cpp">
@@ -306,9 +309,6 @@
     <ClCompile Include="instructions\RTCmdInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="RTConfig.cpp">
-      <Filter>Runtime</Filter>
-    </ClCompile>
     <ClCompile Include="NomSubstitutionContext.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
@@ -530,6 +530,9 @@
     </ClCompile>
     <ClCompile Include="NomAlloc.cpp">
       <Filter>Runtime\Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="RTConfig.cpp">
+      <Filter>Runtime\Config</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -803,9 +806,6 @@
     <ClInclude Include="instructions\RTCmdInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="RTConfig.h">
-      <Filter>Runtime</Filter>
-    </ClInclude>
     <ClInclude Include="DLLExport.h">
       <Filter>Common</Filter>
     </ClInclude>
@@ -1048,6 +1048,12 @@
     </ClInclude>
     <ClInclude Include="NomAlloc.h">
       <Filter>Runtime\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="RTConfig.h">
+      <Filter>Runtime\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="RTConfig_LambdaOpt.h">
+      <Filter>Runtime\Config</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
