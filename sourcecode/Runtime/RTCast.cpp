@@ -129,9 +129,34 @@ namespace Nom
 				builder->CreateCall(GetIncMonotonicCastsFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
 
-			auto stackPtr = builder->CreateIntrinsic(Intrinsic::stacksave, {}, {});
+			int refWeight = 100;
+			int intWeight = 40;
+			int floatWeight = 30;
+			int boolWeight = 20;
 
-			int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
+			if (type->IsSubtype(NomIntClass::GetInstance()->GetType(), true))
+			{
+				refWeight = 30;
+				floatWeight = 1;
+				boolWeight = 1;
+				intWeight = 100;
+			}
+			else if (type->IsSubtype(NomFloatClass::GetInstance()->GetType(), true))
+			{
+				refWeight = 30;
+				floatWeight = 100;
+				boolWeight = 1;
+				intWeight = 1;
+			}
+			else if (type->IsSubtype(NomBoolClass::GetInstance()->GetType(), true))
+			{
+				refWeight = 30;
+				floatWeight = 1;
+				boolWeight = 100;
+				intWeight = 1;
+			}
+
+			int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr, refWeight, intWeight, floatWeight, boolWeight);
 
 			SmallVector<tuple<BasicBlock*, Value*, Value*>, 8> targsInObjectSources;
 			Value* vtableVar = nullptr;
@@ -399,16 +424,29 @@ namespace Nom
 
 
 				builder->SetInsertPoint(nominalSubtypingCheck);
+				//auto stackPtr = builder->CreateIntrinsic(Intrinsic::stacksave, {}, {});
+				//builder->CreateIntrinsic(Intrinsic::stackrestore, {}, { stackPtr });
 				auto instanceType = builder->CreateAlloca(RTInstanceType::GetLLVMType(), MakeInt32(1));
+				auto instanceTypeRef = builder->CreatePointerCast(instanceType, POINTERTYPE);
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), numtype(size_t)), instanceTypeRef });
 				RTInstanceType::CreateInitialization(builder, *fun->getParent(), instanceType, MakeInt<size_t>(0), ConstantPointerNull::get(POINTERTYPE), ifacePtr, typeArgsPtr);
-
+				auto instanceInvariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), numtype(size_t)), instanceTypeRef });
 				BasicBlock* outBlocks[2] = { outTrueBlock,outFalseBlock };
+				
 				auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
 				RTSubtyping::CreateInlineSubtypingCheck(builder, builder->CreatePointerCast(instanceType, TYPETYPE), nullptr, type, substStack, outBlocks[0], nullptr, outBlocks[1]);
+
+				builder->SetInsertPoint(outBlocks[0]->getTerminator());
+				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
+
+				builder->SetInsertPoint(outBlocks[1]->getTerminator());
+				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
+
 			}
 
 			builder->SetInsertPoint(outBlock);
-			builder->CreateIntrinsic(Intrinsic::stackrestore, {}, { stackPtr });
 			return value;
 		}
 
@@ -421,161 +459,6 @@ namespace Nom
 			auto castFunCall = builder->CreateCall(GetCastFunctionType(), castFun, { type, value });
 			castFunCall->setCallingConv(NOMCC);
 			return castFunCall;
-
-			//BasicBlock* outFalseBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Cast failed!");
-
-			//BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOut", fun);
-			//BasicBlock* outTrueBlock = outBlock;
-			//PHINode* outPHI;
-			//{
-			//	builder->SetInsertPoint(outBlock);
-			//	outPHI = builder->CreatePHI(value->getType(), 2, "castSuccess");
-			//}
-
-			//BasicBlock* refValueBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-
-			//builder->SetInsertPoint(origBlock);
-			//if (NomCastStats)
-			//{
-			//	builder->CreateCall(GetIncMonotonicCastsFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
-			//}
-			//auto stackPtr = builder->CreateIntrinsic(Intrinsic::stacksave, {}, {});
-
-			//int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
-
-			//SmallVector<tuple<BasicBlock*, Value*, Value*>, 8> targsInObjectSources;
-			//Value* vtableVar = nullptr;
-			//if (refValueBlock != nullptr)
-			//{
-			//	builder->SetInsertPoint(refValueBlock);
-
-			//	auto castFun = RTTypeHead::GenerateReadCastFun(builder, type);
-			//	auto castFunCall = builder->CreateCall(GetCastFunctionType(), castFun, { type, value });
-			//	castFunCall->setCallingConv(NOMCC);
-			//	outPHI->addIncoming(castFunCall, builder->GetInsertBlock());
-			//	builder->CreateBr(outTrueBlock);
-
-			//	//BasicBlock* classBlock = nullptr, * structuralValueBlock = nullptr;
-
-			//	//int vtableCases = RefValueHeader::GenerateNominalStructuralSwitch(builder, value, &vtableVar, &classBlock, &structuralValueBlock);
-
-			//	////Nominal objects; just collecting blocks here for unified treatments with ints/floats/bools outside
-			//	//if (classBlock != nullptr)
-			//	//{
-			//	//	targsInObjectSources.push_back(make_tuple(classBlock, *value, vtableVar));
-			//	//}
-
-			//	////STRUCTURAL VALUE - note difference to inlined version above: there we know we have a class type, here we can get any type
-			//	//if (structuralValueBlock != nullptr)
-			//	//{
-			//	//	builder->SetInsertPoint(structuralValueBlock);
-			//	//	BasicBlock* outBlocks[2] = { outTrueBlock, outFalseBlock };
-			//	//	auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2);
-			//	//	BasicBlock* rightClassTypeBlock = nullptr, * rightInstanceTypeBlock = nullptr;
-			//	//	Value* rightPHI = nullptr;
-			//	//	Value* rightSubstPHI = nullptr;
-			//	//	RTTypeHead::GenerateTypeKindSwitchRecurse(builder, type, substStack, &rightPHI, &rightSubstPHI, &rightClassTypeBlock, &(outBlocks[0]), &(outBlocks[1]), &(outBlocks[1]), &rightInstanceTypeBlock, &(outBlocks[0]), nullptr, outBlocks[1]);
-
-			//	//	if (rightClassTypeBlock)
-			//	//	{
-			//	//		builder->SetInsertPoint(rightClassTypeBlock);
-			//	//		auto iface = RTClassType::GenerateReadClassDescriptorLink(builder, rightPHI);
-			//	//		StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTClassType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
-			//	//	}
-
-			//	//	if (rightInstanceTypeBlock)
-			//	//	{
-			//	//		builder->SetInsertPoint(rightInstanceTypeBlock);
-			//	//		auto iface = RTInstanceType::GenerateReadClassDescriptorLink(builder, rightPHI);
-			//	//		StructuralValueHeader::GenerateMonotonicStructuralCast(builder, fun, outBlocks[0], outBlocks[1], value, rightPHI, iface, RTInstanceType::GetTypeArgumentsPtr(builder, rightPHI), rightSubstPHI);
-			//	//	}
-			//	//}
-			//}
-
-			//if (intBlock != nullptr)
-			//{
-			//	builder->SetInsertPoint(intBlock);
-			//	targsInObjectSources.push_back(make_tuple(intBlock, *value, (Value*)ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
-			//}
-
-			//if (floatBlock != nullptr)
-			//{
-			//	builder->SetInsertPoint(floatBlock);
-			//	targsInObjectSources.push_back(make_tuple(floatBlock, *value, (Value*)ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
-			//}
-
-			//if (primitiveIntBlock != nullptr)
-			//{
-			//	builder->SetInsertPoint(primitiveIntBlock);
-			//	targsInObjectSources.push_back(make_tuple(primitiveIntBlock, *value, (Value*)ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
-			//}
-
-			//if (primitiveFloatBlock != nullptr)
-			//{
-			//	builder->SetInsertPoint(primitiveFloatBlock);
-			//	targsInObjectSources.push_back(make_tuple(primitiveFloatBlock, *value, (Value*)ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
-			//}
-
-			//if (primitiveBoolBlock != nullptr)
-			//{
-			//	builder->SetInsertPoint(primitiveBoolBlock);
-			//	targsInObjectSources.push_back(make_tuple(primitiveBoolBlock, *value, (Value*)ConstantExpr::getPointerCast(NomBoolClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
-			//}
-
-			//int nominalSubtypingCases = targsInObjectSources.size();
-			//if (nominalSubtypingCases > 0)
-			//{
-			//	BasicBlock* nominalSubtypingCheck = BasicBlock::Create(LLVMCONTEXT, "nominalSubtypingCheck", fun);
-			//	Value* adjustFunction = nullptr;
-			//	Value* ifacePtr = nullptr;
-			//	PHINode* ifacePHI = nullptr;
-			//	Value* typeArgsPtr = nullptr;
-			//	PHINode* typeArgsPHI = nullptr;
-			//	if (nominalSubtypingCases > 1)
-			//	{
-			//		builder->SetInsertPoint(nominalSubtypingCheck);
-			//		ifacePHI = builder->CreatePHI(RTInterface::GetLLVMType()->getPointerTo(), nominalSubtypingCases, "interfacePointer");
-			//		typeArgsPHI = builder->CreatePHI(TYPETYPE->getPointerTo(), nominalSubtypingCases, "typeArgs");
-			//		ifacePtr = ifacePHI;
-			//		typeArgsPtr = typeArgsPHI;
-			//	}
-			//	for (auto& tpl : targsInObjectSources)
-			//	{
-			//		builder->SetInsertPoint(std::get<0>(tpl));
-			//		auto typeArgsCast = builder->CreatePointerCast(std::get<1>(tpl), TYPETYPE->getPointerTo());
-			//		auto ifaceCast = RTClass::GetInterfaceReference(builder, std::get<2>(tpl));
-
-			//		if (nominalSubtypingCases > 1)
-			//		{
-			//			typeArgsPHI->addIncoming(typeArgsCast, builder->GetInsertBlock());
-			//			ifacePHI->addIncoming(ifaceCast, builder->GetInsertBlock());
-			//		}
-			//		else
-			//		{
-			//			typeArgsPtr = typeArgsCast;
-			//			ifacePtr = ifaceCast;
-			//		}
-			//		builder->CreateBr(nominalSubtypingCheck);
-			//	}
-
-			//	builder->SetInsertPoint(nominalSubtypingCheck);
-			//	Value* instanceType = builder->CreateAlloca(RTInstanceType::GetLLVMType(), MakeInt32(1));
-			//	RTInstanceType::CreateInitialization(builder, *fun->getParent(), instanceType, MakeInt<size_t>(0), ConstantPointerNull::get(POINTERTYPE), ifacePtr, typeArgsPtr);
-			//	BasicBlock* outBlocks[2] = { outTrueBlock,outFalseBlock };
-			//	auto envSubstitutions = GenerateEnvSubstitutions(builder, env, outBlocks, 2);
-			//	instanceType = builder->CreateGEP(instanceType, { MakeInt32(0), MakeInt32(RTInstanceTypeFields::Head) });
-			//	auto subtypingResult = builder->CreateCall(RTSubtyping::Instance().GetLLVMElement(*fun->getParent()), { instanceType, type, ConstantPointerNull::get(RTSubtyping::TypeArgumentListStackType()->getPointerTo()), envSubstitutions });
-			//	subtypingResult->setCallingConv(NOMCC);
-			//	auto subtypingFailed = builder->CreateICmpEQ(subtypingResult, MakeUInt(2, 0));
-			//	builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { subtypingFailed, MakeUInt(1,0) });
-			//	builder->CreateCondBr(subtypingFailed, outBlocks[1], outBlocks[0], GetLikelySecondBranchMetadata());
-			//	outPHI->addIncoming(value, outBlocks[0]);
-			//}
-
-			//builder->SetInsertPoint(outBlock);
-			//builder->CreateIntrinsic(Intrinsic::stackrestore, {}, { stackPtr });
-
-			//return outPHI;
 		}
 
 		uint64_t RTCast::nextCastSiteID()

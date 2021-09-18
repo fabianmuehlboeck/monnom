@@ -26,8 +26,7 @@ namespace Nom
 
 		llvm::Value* PackInt(NomBuilder& builder, llvm::Value* intval);
 		llvm::Value* UnpackInt(NomBuilder& builder, NomValue value);
-		NomValue UnpackPosMaskedInt(NomBuilder& builder, llvm::Value* refAsInt);
-		NomValue UnpackNegMaskedInt(NomBuilder& builder, llvm::Value* refAsInt);
+		NomValue UnpackMaskedInt(NomBuilder& builder, llvm::Value* refAsInt);
 		llvm::Value* PackFloat(NomBuilder& builder, llvm::Value* floatval);
 		llvm::Value* UnpackFloat(NomBuilder& builder, NomValue value);
 

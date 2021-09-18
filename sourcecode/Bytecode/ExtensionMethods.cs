@@ -68,26 +68,31 @@ namespace Nom.Bytecode
         {
             byte[] buf = BitConverter.GetBytes(v);
             s.Write(buf, 0, buf.Length);
+            s.Flush();
         }
         public static void WriteValue(this Stream s, double v)
         {
             byte[] buf = BitConverter.GetBytes(v);
             s.Write(buf, 0, buf.Length);
+            s.Flush();
         }
         public static void WriteValue(this Stream s, long v)
         {
             byte[] buf = BitConverter.GetBytes(v);
             s.Write(buf, 0, buf.Length);
+            s.Flush();
         }
         public static void WriteValue(this Stream s, int v)
         {
             byte[] buf = BitConverter.GetBytes(v);
             s.Write(buf, 0, buf.Length);
+            s.Flush();
         }
         public static void WriteValue(this Stream s, uint v)
         {
             byte[] buf = BitConverter.GetBytes(v);
             s.Write(buf, 0, buf.Length);
+            s.Flush();
         }
         //public static void WriteASCII(this Stream s, String str)
         //{
@@ -106,6 +111,7 @@ namespace Nom.Bytecode
             byte[] lenbuf = BitConverter.GetBytes(buflen/2);
             s.Write(lenbuf, 0, lenbuf.Length);
             s.Write(buf, 0, buf.Length);
+            s.Flush();
         }
 
         public static void WriteBytes(this Stream s, IEnumerable<byte> bytes)
@@ -113,6 +119,7 @@ namespace Nom.Bytecode
             foreach(byte b in bytes)
             {
                 s.WriteByte(b);
+                s.Flush();
             }
         }
 

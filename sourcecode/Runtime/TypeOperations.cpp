@@ -11,6 +11,7 @@
 #include "RTOutput.h"
 #include "CastStats.h"
 #include "NomBuilder.h"
+#include "Metadata.h"
 
 using namespace llvm;
 using namespace std;
@@ -258,11 +259,9 @@ namespace Nom
 
 		/// <summary>
 		/// Integer Packing Protocol:
-		/// Step 1: Left Funnel Shift by 3 bits, i.e. the three most significant bits become the three least significant bits, and everything else is shifted left by 3.
-		///         These most significant bits are going to be replaced by the mask.
-		/// Step 2: Check three least significant bits of funnel shift result (i.e. the three most significant bits of the actual number)
-		///   - if 000, the mask becomes 011, i.e. a positive masked integer
-		///   - if 111, the mask becomes 111, i.e. a negative masked integer
+		/// Step 1: Left shift by 2 bits, then arithmetic right shift by 2. 
+		/// Step 2: Check whether the result equals the original value, which means the top three bits are all equal, i.e. 000 or 111.
+		///   - if so, the packed int is the result of the left shift by 2 plus an or with 3 (to marke the to LSBs as 11).
 		///   - for all other combinations, the integer is boxed into a newly allocated reference value
 		/// Thus, all small enough (|n| ~ < 2^61) are masked, while bigger absolute values are boxed 
 		/// </summary>
@@ -284,13 +283,15 @@ namespace Nom
 			BasicBlock* maskedIntBlock = BasicBlock::Create(LLVMCONTEXT, "maskIntBlock", fun);
 			BasicBlock* boxedIntBlock = BasicBlock::Create(LLVMCONTEXT, "boxIntBlock", fun);
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "packedIntBlock", fun);
-			auto fshresult = builder->CreateIntrinsic(Intrinsic::fshl, { intval->getType() }, { intval, intval, ConstantInt::get(intval->getType(), 3) });
-			auto intSwitch = builder->CreateSwitch(builder->CreateTrunc(fshresult, inttype(3)), boxedIntBlock);
-			intSwitch->addCase(ConstantInt::get(inttype(3), 7), maskedIntBlock);
-			intSwitch->addCase(ConstantInt::get(inttype(3), 0), maskedIntBlock);
+
+			auto shlresult = builder->CreateShl(intval, MakeIntLike(intval, 2), "leftShiftedValue");
+			auto shrresult = builder->CreateAShr(shlresult, MakeIntLike(shlresult, 2), "rightShiftedValue");
+			auto shiftseq = builder->CreateICmpEQ(shrresult, intval, "shiftedValuesEq");
+			CreateExpect(builder, shiftseq, MakeUInt(1, 1));
+			builder->CreateCondBr(shiftseq, maskedIntBlock, boxedIntBlock, GetLikelyFirstBranchMetadata());
 
 			builder->SetInsertPoint(maskedIntBlock);
-			auto maskedInt = builder->CreateOr(fshresult, ConstantInt::get(fshresult->getType(), 3));
+			auto maskedInt = builder->CreateOr(shlresult, MakeIntLike(shlresult,3));
 			auto packedInt = builder->CreateIntToPtr(maskedInt, REFTYPE);
 			builder->CreateBr(outBlock);
 
@@ -319,11 +320,11 @@ namespace Nom
 				builder->CreateCall(GetIncIntUnpacksFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
 			Function* fun = builder->GetInsertBlock()->getParent();
-			BasicBlock* refValueBlock = nullptr, * posMaskedIntBlock = nullptr, *negMaskedIntBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr;
+			BasicBlock* refValueBlock = nullptr, * maskedIntBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr;
 			Value* primitiveIntVal = nullptr;
-			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &posMaskedIntBlock, &negMaskedIntBlock, &floatBlock, &floatBlock, &floatBlock, false, &primitiveIntBlock, &primitiveIntVal, nullptr, nullptr, nullptr, nullptr);
+			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &maskedIntBlock, &floatBlock, false, &primitiveIntBlock, &primitiveIntVal, nullptr, nullptr, nullptr, nullptr, 30, 100, 1, 1);
 
-			int phiCases = (refValueBlock != nullptr ? 1 : 0) + (posMaskedIntBlock != nullptr ? 1 : 0) + (negMaskedIntBlock != nullptr ? 1 : 0) + (primitiveIntBlock != nullptr ? 1 : 0);
+			int phiCases = (refValueBlock != nullptr ? 1 : 0) + (maskedIntBlock != nullptr ? 1 : 0) + (primitiveIntBlock != nullptr ? 1 : 0);
 
 			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "intUnpackMerge", fun);
 			builder->SetInsertPoint(mergeBlock);
@@ -332,14 +333,14 @@ namespace Nom
 			if (refValueBlock != nullptr)
 			{
 				builder->SetInsertPoint(refValueBlock);
-				if (value.GetNomType()->IsSubtype(GetIntClassType(), false))
+				if (!value.GetNomType()->IsSubtype(GetIntClassType(), false))
 				{
 					static const char* const errormsg = "Tried to unpack non-integer value as an Int!";
 					BasicBlock* unboxErrorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, errormsg);
 					BasicBlock* unboxValidBlock = BasicBlock::Create(LLVMCONTEXT, "intUnboxValid", fun);
 					auto vtableptr = builder->CreatePtrToInt(ObjectHeader::GenerateReadVTablePointer(builder, value), numtype(intptr_t));
 					auto isInt = builder->CreateICmpEQ(vtableptr, ConstantExpr::getPtrToInt(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), numtype(intptr_t)));
-					builder->CreateCondBr(isInt, unboxValidBlock, unboxErrorBlock);
+					builder->CreateCondBr(isInt, unboxValidBlock, unboxErrorBlock, GetLikelyFirstBranchMetadata());
 
 					builder->SetInsertPoint(unboxValidBlock);
 					refValueBlock = unboxValidBlock;
@@ -352,20 +353,12 @@ namespace Nom
 				mergePHI->addIncoming(boxField, refValueBlock);
 				builder->CreateBr(mergeBlock);
 			}
-			if (posMaskedIntBlock != nullptr)
+			if (maskedIntBlock != nullptr)
 			{
-				builder->SetInsertPoint(posMaskedIntBlock);
+				builder->SetInsertPoint(maskedIntBlock);
 				auto refAsInt = builder->CreatePtrToInt(value, INTTYPE);
-				auto posFsh = UnpackPosMaskedInt(builder, refAsInt);
-				mergePHI->addIncoming(posFsh, posMaskedIntBlock);
-				builder->CreateBr(mergeBlock);
-			}
-			if (negMaskedIntBlock != nullptr)
-			{
-				builder->SetInsertPoint(negMaskedIntBlock);
-				auto refAsInt = builder->CreatePtrToInt(value, INTTYPE);
-				auto negFsh = UnpackNegMaskedInt(builder, refAsInt);
-				mergePHI->addIncoming(negFsh, negMaskedIntBlock);
+				auto unpackedInt = UnpackMaskedInt(builder, refAsInt);
+				mergePHI->addIncoming(unpackedInt, builder->GetInsertBlock());
 				builder->CreateBr(mergeBlock);
 			}
 			if (floatBlock != nullptr)
@@ -383,35 +376,15 @@ namespace Nom
 			return mergePHI;
 		}
 
-		NomValue UnpackPosMaskedInt(NomBuilder& builder, llvm::Value* refAsInt)
+		NomValue UnpackMaskedInt(NomBuilder& builder, llvm::Value* refAsInt)
 		{
-			auto intMask = GetMask(64, 0, 2);
-			auto prefunnel = builder->CreateAnd(intMask, refAsInt);
-			return builder->CreateIntrinsic(Intrinsic::fshr, { prefunnel->getType() }, { prefunnel, prefunnel, ConstantInt::get(prefunnel->getType(), 3) });
-		}
-		NomValue UnpackNegMaskedInt(NomBuilder& builder, llvm::Value* refAsInt)
-		{
-			return builder->CreateIntrinsic(Intrinsic::fshr, { refAsInt->getType() }, { refAsInt, refAsInt, ConstantInt::get(refAsInt->getType(), 3) });
+			return builder->CreateAShr(refAsInt, MakeIntLike(refAsInt, 2), "unpackedInt");
 		}
 
 		/// <summary>
-		/// Float Packing Protocol:
-		/// The following float masks exist:
-		/// - 001: either positive 0 if all other bits are 0, or some other floating point value
-		/// - 101: either negative 0 if all other bits are 0, or some other floating point value
-		/// - 010: a floating point value whose most significant bits happen to be 010
-		/// - 110: a floating point value whose most significant bits happen to be 110
-		/// Step 1: Left Funnel Shift by 3 bits, i.e. the three most significant bits become the three least significant bits, and everything else is shifted left by 3.
-		///         These most significant bits are going to be replaced by the mask.
-		/// Step 2: Check the whole funnel shift result (assuming 0s for any left-out positions to the left)
-		///   - if 000, float is positive 0.0, mask with 001
-		///   - if 100, float is negative 0.0, mask with 101
-		///   - if 101 or 001, the value is an extremely small value (1.49...E-154) and LSBs would collide with above masks, so these values are boxed
-		///   - otherwise, check the two least significant bits:
-		///     - if 01 or 10, the exponent is is between -511 and +512 (out of its overall -1022 -- +1023 range), and the sign bit is either 0 or 1, thus covering a good mid-range of values.
-		///       these values are left in the funnel shifted state, so the mask is just one of 001, 101, 010, or 110 (the mask collisions with the zero values don't matter because at least some other bit can distinguish them)
-		///     - all other values (i.e. those with more extreme exponents) are boxed
-		/// NOTE: together with the 000 mask for reference values and the 011/111 masks for integers, this leaves the mask 100, which is used in freezing reference values in dictionaries
+		/// If MSBs 2 and 3 are 10 or 01, float is packed by left funnel shift 3.
+		/// Otherwise, if float is positive or negative zero, we return a reference to the default objects for those values.
+		/// Otherwise, float is boxed.
 		/// </summary>
 		/// <param name="builder"></param>
 		/// <param name="floatval"></param>
@@ -442,46 +415,30 @@ namespace Nom
 				boxFloatDbgFun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), { FLOATTYPE, POINTERTYPE }, false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_DBG_PrintBoxFloatDebug", mod);
 			}
 #endif
-			BasicBlock* normalFloatBlock = BasicBlock::Create(LLVMCONTEXT, "normalFloatBlock", fun);
-			BasicBlock* normalFloatBlock1 = BasicBlock::Create(LLVMCONTEXT, "normalFloatBlock1", fun);
-			BasicBlock* zeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "zeroFloatBlock", fun);
-			//BasicBlock* zeroCollisionFloatBlock = BasicBlock::Create(LLVMCONTEXT, "zeroCollisionFloatBlock", fun);
-			//BasicBlock* maskFloatBlock = BasicBlock::Create(LLVMCONTEXT, "maskFloatBlock", fun);
-			BasicBlock* boxFloatBlock = BasicBlock::Create(LLVMCONTEXT, "boxFloatBlock", fun);
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "packedFloatBlock", fun);
+			BasicBlock* checkPosZeroBlock = BasicBlock::Create(LLVMCONTEXT, "checkPosZeroFloat", fun);
+			BasicBlock* checkNegZeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "checkNegZeroFloat", fun);
+			BasicBlock* boxFloatBlock = BasicBlock::Create(LLVMCONTEXT, "boxFloat", fun);
+			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "packFloatOut", fun);
 			auto floatAsInt = builder->CreateBitCast(floatval, INTTYPE);
-			auto fshresult = builder->CreateIntrinsic(Intrinsic::fshl, { floatAsInt->getType() }, { floatAsInt, floatAsInt, ConstantInt::get(floatAsInt->getType(), 3) });
+			auto posExpTag = 0x4000000000000000LL;
+			auto negExpTag = 0x2000000000000000LL;
+			auto exponentMask = 0x6000000000000000LL;
+			auto isPositiveGoodExponent = builder->CreateICmpEQ(builder->CreateAnd(floatAsInt, MakeIntLike(floatAsInt, exponentMask)), MakeIntLike(floatAsInt, posExpTag));
+			auto isNegativeGoodExponent = builder->CreateICmpEQ(builder->CreateAnd(floatAsInt, MakeIntLike(floatAsInt, exponentMask)), MakeIntLike(floatAsInt, negExpTag));
+			auto isGoodExponent = builder->CreateOr(isPositiveGoodExponent, isNegativeGoodExponent);
+			auto funnelShiftedFloat = builder->CreateIntToPtr(builder->CreateIntrinsic(Intrinsic::fshl, { floatAsInt->getType() }, { floatAsInt, floatAsInt, ConstantInt::get(floatAsInt->getType(), 3) }), REFTYPE, "maskedFloat");
+			CreateExpect(builder, isGoodExponent, MakeIntLike(isGoodExponent, 1));
+			builder->CreateCondBr(isGoodExponent, outBlock, checkPosZeroBlock, GetLikelyFirstBranchMetadata());
 
-			auto specialSwitch = builder->CreateSwitch(fshresult, normalFloatBlock, 2);
-			specialSwitch->addCase(MakeUInt(64, 0), zeroFloatBlock);
-			specialSwitch->addCase(MakeUInt(64, 4), zeroFloatBlock);
-			specialSwitch->addCase(MakeUInt(64, 1), boxFloatBlock);
-			specialSwitch->addCase(MakeUInt(64, 5), boxFloatBlock);
+			builder->SetInsertPoint(checkPosZeroBlock);
+			auto isPosZero = builder->CreateFCmpOEQ(floatval, ConstantFP::get(FLOATTYPE, 0.0));
+			CreateExpect(builder, isPosZero, MakeIntLike(isPosZero, 1));
+			builder->CreateCondBr(isPosZero, outBlock, checkNegZeroFloatBlock, GetLikelyFirstBranchMetadata());
 
-			builder->SetInsertPoint(normalFloatBlock);
-			auto floatSwitch = builder->CreateSwitch(builder->CreateTrunc(fshresult, inttype(2)), boxFloatBlock);
-			floatSwitch->addCase(ConstantInt::get(inttype(2), 1), normalFloatBlock1);
-			floatSwitch->addCase(ConstantInt::get(inttype(2), 2), normalFloatBlock1);
-
-			builder->SetInsertPoint(normalFloatBlock1);
-			auto fshresultAsPtr = builder->CreateIntToPtr(fshresult, REFTYPE, "shiftedFloatRef");
-#ifdef FLOATDEBUG
-			builder->CreateCall(packFloatDbgFun, {floatval, fshresult });
-#endif
-			builder->CreateBr(outBlock);
-
-			builder->SetInsertPoint(zeroFloatBlock);
-			auto maskedFloatVal = builder->CreateOr(fshresult, MakeUInt(64, 1));
-			auto zeroFloat = builder->CreateIntToPtr(maskedFloatVal, REFTYPE, "maskedZeroFloat");
-#ifdef FLOATDEBUG
-			builder->CreateCall(packFloatDbgFun, { floatval, maskedFloatVal });
-#endif
-			builder->CreateBr(outBlock);
-
-			//builder->SetInsertPoint(maskFloatBlock);
-			//auto maskedInt = builder->CreateOr(fshresult, ConstantInt::get(fshresult->getType(), 3));
-			//auto packedInt = builder->CreateIntToPtr(maskedInt, REFTYPE);
-			//builder->CreateBr(outBlock);
+			builder->SetInsertPoint(checkNegZeroFloatBlock);
+			auto isNegZero = builder->CreateFCmpOEQ(floatval, ConstantFP::getNegativeZero(FLOATTYPE));
+			CreateExpect(builder, isNegZero, MakeIntLike(isNegZero, 1));
+			builder->CreateCondBr(isNegZero, outBlock, boxFloatBlock, GetLikelyFirstBranchMetadata());
 
 			builder->SetInsertPoint(boxFloatBlock);
 			if (NomCastStats)
@@ -499,13 +456,12 @@ namespace Nom
 			builder->CreateBr(outBlock);
 
 			builder->SetInsertPoint(outBlock);
-			auto floatPHI = builder->CreatePHI(REFTYPE, 3, "packedFloat");
-			floatPHI->addIncoming(zeroFloat, zeroFloatBlock);
-			floatPHI->addIncoming(fshresultAsPtr, normalFloatBlock1);
+			auto floatPHI = builder->CreatePHI(REFTYPE, 4, "packedFloat");
+			floatPHI->addIncoming(funnelShiftedFloat, incomingBlock);
+			floatPHI->addIncoming(NomFloatObjects::GetPosZero(*fun->getParent()), checkPosZeroBlock);
+			floatPHI->addIncoming(NomFloatObjects::GetNegZero(*fun->getParent()), checkNegZeroFloatBlock);
 			floatPHI->addIncoming(boxedFloat, boxFloatBlock);
 			return floatPHI;
-			/*llvm::Value* floatmask = (llvm::ConstantInt::get(INTTYPE, 2, false));
-			return builder->CreateIntToPtr(builder->CreateOr(builder->CreateBitCast(floatval, INTTYPE), floatmask), REFTYPE);*/
 		}
 
 		llvm::Value* UnpackFloat(NomBuilder& builder, NomValue value)
@@ -515,12 +471,10 @@ namespace Nom
 				builder->CreateCall(GetIncFloatUnpacksFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
 			Function* fun = builder->GetInsertBlock()->getParent();
-			BasicBlock* refValueBlock = nullptr, * posZeroFloatBlock = nullptr, * negZeroFloatBlock = nullptr, *maskedFloatBlock=nullptr, * intBlock = nullptr, * primitiveFloatBlock = nullptr;
+			BasicBlock* refValueBlock = nullptr, *maskedFloatBlock=nullptr, * intBlock = nullptr, * primitiveFloatBlock = nullptr;
 			Value* primitiveFloatVal = nullptr;
 
-			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &intBlock, &posZeroFloatBlock, &negZeroFloatBlock, &maskedFloatBlock, false, nullptr, nullptr, &primitiveFloatBlock, &primitiveFloatVal, nullptr, nullptr);
-
-			int phiCases = (refValueBlock != nullptr ? 1 : 0) + (posZeroFloatBlock != nullptr ? 1 : 0) + (negZeroFloatBlock != nullptr ? 1 : 0) + (maskedFloatBlock != nullptr ? 1 : 0);
+			int phiCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &maskedFloatBlock, false, nullptr, nullptr, &primitiveFloatBlock, &primitiveFloatVal, nullptr, nullptr, 30, 1, 100, 1);
 
 			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "floatUnpackMerge", fun);
 			builder->SetInsertPoint(mergeBlock);
@@ -529,14 +483,14 @@ namespace Nom
 			if (refValueBlock != nullptr)
 			{
 				builder->SetInsertPoint(refValueBlock);
-				if (value.GetNomType()->IsSubtype(GetFloatClassType(), false))
+				if (!value.GetNomType()->IsSubtype(GetFloatClassType(), false))
 				{
 					static const char* const errormsg = "Tried to unpack non-float value as a Float!";
 					BasicBlock* unboxErrorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, errormsg);
 					BasicBlock* unboxValidBlock = BasicBlock::Create(LLVMCONTEXT, "floatUnboxValid", fun);
 					auto vtableptr = builder->CreatePtrToInt(ObjectHeader::GenerateReadVTablePointer(builder, value), numtype(intptr_t));
-					auto isFloat = builder->CreateICmpEQ(vtableptr, ConstantExpr::getPtrToInt(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), numtype(intptr_t)));
-					builder->CreateCondBr(isFloat, unboxValidBlock, unboxErrorBlock);
+					auto isFloat = builder->CreateICmpEQ(vtableptr, ConstantExpr::getPtrToInt(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), numtype(intptr_t)));
+					builder->CreateCondBr(isFloat, unboxValidBlock, unboxErrorBlock, GetLikelyFirstBranchMetadata());
 
 					builder->SetInsertPoint(unboxValidBlock);
 					refValueBlock = unboxValidBlock;
@@ -549,23 +503,11 @@ namespace Nom
 				mergePHI->addIncoming(boxField, refValueBlock);
 				builder->CreateBr(mergeBlock);
 			}
-			if (posZeroFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(posZeroFloatBlock);
-				mergePHI->addIncoming(ConstantFP::get(FLOATTYPE, 0.0), posZeroFloatBlock);
-				builder->CreateBr(mergeBlock);
-			}
-			if (negZeroFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(negZeroFloatBlock);
-				mergePHI->addIncoming(ConstantFP::getNegativeZero(FLOATTYPE), negZeroFloatBlock);
-				builder->CreateBr(mergeBlock);
-			}
 			if (maskedFloatBlock != nullptr)
 			{
 				builder->SetInsertPoint(maskedFloatBlock);
 				auto refAsInt = builder->CreatePtrToInt(value, INTTYPE);
-				auto unmaskedFloat = builder->CreateBitCast(builder->CreateIntrinsic(Intrinsic::fshr, { INTTYPE }, { refAsInt, refAsInt, ConstantInt::get(refAsInt->getType(), 3) }), FLOATTYPE, "unmaskedFloat");
+				auto unmaskedFloat = UnpackMaskedFloat(builder, refAsInt);
 				mergePHI->addIncoming(unmaskedFloat, maskedFloatBlock);
 				builder->CreateBr(mergeBlock);
 			}

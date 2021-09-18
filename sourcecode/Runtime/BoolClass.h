@@ -1,6 +1,5 @@
 #pragma once
 #include "NomClass.h"
-//#include "RTClass.h"
 namespace Nom
 {
 	namespace Runtime
@@ -14,12 +13,6 @@ namespace Nom
 			virtual ~NomBoolClass() override;
 		};
 
-		//class RTBoolClass : public RTClass
-		//{
-		//public:
-		//	RTBoolClass();
-		//	~RTBoolClass() {}
-		//};
 		class NomBoolObjects : public AvailableExternally < llvm::Constant >
 		{
 		private:
@@ -43,11 +36,3 @@ namespace Nom
 
 	}
 }
-
-
-////extern const Nom::Runtime::RTBoolClass _RTBoolClass;
-//extern const Nom::Runtime::NomBoolClass _NomBoolClass;
-//extern const Nom::Runtime::NomBoolClass * const _NomBoolClassRef;
-////extern const Nom::Runtime::RTBoolClass * const _RTBoolClassRef;
-//extern const Nom::Runtime::NomClass * const _NomBoolClassNC;
-////extern const Nom::Runtime::RTClass * const _RTBoolClassRTC;

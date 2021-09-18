@@ -197,7 +197,7 @@ namespace Nom.Bytecode
 
         public IManifest EmitToPath(DirectoryInfo path)
         {
-            Func<string, Stream> opener = s => new FileInfo(path + "/" + s).OpenWrite();
+            Func<string, Stream> opener = s => new FileInfo(path + "/" + s).Open(FileMode.Create,FileAccess.Write,FileShare.Read);
             return Emit(opener, false);
         }
 

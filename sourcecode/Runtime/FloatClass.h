@@ -14,19 +14,20 @@ namespace Nom
 			virtual ~NomFloatClass() override;
 		};
 
-		//class RTFloatClass : public RTClass
-		//{
-		//public:
-		//	RTFloatClass();
-		//	~RTFloatClass() {}
-		//};
+		class NomFloatObjects : public AvailableExternally < llvm::Constant >
+		{
+		private:
+			NomFloatObjects();
+		public:
+			static NomFloatObjects* GetInstance() { static NomFloatObjects obj; return &obj; }
+			~NomFloatObjects() {}
+
+			static llvm::Constant* GetPosZero(llvm::Module& mod);
+			static llvm::Constant* GetNegZero(llvm::Module& mod);
+
+			// Inherited via AvailableExternally
+			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
+			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
+		};
 	}
 }
-
-
-////extern const Nom::Runtime::RTFloatClass _RTFloatClass;
-//extern const Nom::Runtime::NomFloatClass _NomFloatClass;
-//extern const Nom::Runtime::NomFloatClass * const _NomFloatClassRef;
-////extern const Nom::Runtime::RTFloatClass * const _RTFloatClassRef;
-//extern const Nom::Runtime::NomClass * const _NomFloatClassNC;
-////extern const Nom::Runtime::RTClass * const _RTFloatClassRTC;

@@ -52,15 +52,16 @@ namespace Nom
 		{
 			return MakeInvariantLoad(builder, builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), MakeInt32(RefValueHeaderFields::InterfaceTable));
 		}
-		int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar)
-		{
-			return GenerateRefOrPrimitiveValueSwitch(builder, value, refValueBlock, intBlock, intBlock, floatBlock, floatBlock, floatBlock, unpackPrimitives, primitiveIntBlock, primitiveIntVar, primitiveFloatBlock, primitiveFloatVar, primitiveBoolBlock, primitiveBoolVar);
-		}
 
 		MDNode* GetNominalVsStructuralBranchWeights()
 		{
 			static MDNode* mdn = MDNode::get(LLVMCONTEXT, { MDString::get(LLVMCONTEXT, "branch_weights"), ConstantAsMetadata::get(MakeInt32(1)), ConstantAsMetadata::get(MakeInt32(9)) });
 			return mdn;
+		}
+
+		int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, int refWeight, int intWeight, int floatWeight, int boolWeight)
+		{
+			return GenerateRefOrPrimitiveValueSwitch(builder, value, refValueBlock, intBlock, floatBlock, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, refWeight, intWeight, floatWeight, boolWeight);
 		}
 
 		int RefValueHeader::GenerateNominalStructuralSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vTableVar, llvm::BasicBlock** nominalObjectBlockVar, llvm::BasicBlock** structuralValueBlockVar)
@@ -199,7 +200,7 @@ namespace Nom
 				vtable = RefValueHeader::GenerateReadVTablePointer(builder, refValue);
 			}
 			auto vtableKind = RTVTable::GenerateReadKind(builder, vtable);
-			auto switchInst = builder->CreateSwitch(vtableKind, *partialAppBlock, 2, GetBranchWeightsForBlocks({*partialAppBlock, *lambdaBlock, *recordBlock}));
+			auto switchInst = builder->CreateSwitch(vtableKind, *partialAppBlock, 2, GetBranchWeightsForBlocks({ *partialAppBlock, *lambdaBlock, *recordBlock }));
 			switchInst->addCase(MakeIntLike(vtableKind, (char)RTDescriptorKind::Lambda), *lambdaBlock);
 			switchInst->addCase(MakeIntLike(vtableKind, (char)RTDescriptorKind::Record), *recordBlock);
 			return 3;
@@ -240,10 +241,7 @@ namespace Nom
 			}
 		}
 
-		int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock,
-			llvm::BasicBlock** posMaskedIntBlock, llvm::BasicBlock** negMaskedIntBlock,
-			llvm::BasicBlock** posZeroFloatBlock, llvm::BasicBlock** negZeroFloatBlock, llvm::BasicBlock** maskedFloatBlock,
-			bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar)
+		int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar, int refWeight, int intWeight, int floatWeight, int boolWeight)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -324,152 +322,108 @@ namespace Nom
 			bool boolsPossible = !value.GetNomType()->IsDisjoint(GetFloatClassType());
 
 			int cases = 1; //could always be normal reference at this point
-			int mergeBlocks = 1;
 
-			BasicBlock* _posMaskedIntBlock = nullptr;
-			BasicBlock* _negMaskedIntBlock = nullptr;
-			BasicBlock* _intMergeBlock = nullptr;
-			PHINode* intMergePHI = nullptr;
+			BasicBlock* _packedIntBlock = nullptr;
+			BasicBlock* _primitiveIntBlock = nullptr;
+			PHINode* _primitiveIntPHI = nullptr;
+			if (intBlock != nullptr)
+			{
+				_packedIntBlock = *intBlock;
+			}
+			if (primitiveIntBlock != nullptr)
+			{
+				_primitiveIntBlock = *primitiveIntBlock;
+			}
 
 			if (intsPossible)
 			{
-				cases += 2;
+				cases += 1;
+				if (_packedIntBlock == nullptr)
+				{
+					_packedIntBlock = BasicBlock::Create(LLVMCONTEXT, "packedInt", fun);
+					if (intBlock != nullptr)
+					{
+						*intBlock = _packedIntBlock;
+					}
+					else if (!unpackPrimitives)
+					{
+						std::cout << "Internal error: did not cover packed integer case";
+						throw new std::exception();
+					}
+				}
 				if (unpackPrimitives)
 				{
 					if (primitiveIntBlock == nullptr || primitiveIntVar == nullptr)
 					{
 						throw new std::exception();
 					}
-					_posMaskedIntBlock = BasicBlock::Create(LLVMCONTEXT, "posMaskedInt", fun);
-					_negMaskedIntBlock = BasicBlock::Create(LLVMCONTEXT, "negMaskedInt", fun);
-
-					_intMergeBlock = BasicBlock::Create(LLVMCONTEXT, "unpackIntMerge", fun);
-					builder->SetInsertPoint(_intMergeBlock);
-					intMergePHI = builder->CreatePHI(INTTYPE, 3, "unpackedInt");
-					*primitiveIntBlock = _intMergeBlock;
-					*primitiveIntVar = intMergePHI;
-
-					builder->SetInsertPoint(_posMaskedIntBlock);
-					auto refAsInt = builder->CreatePtrToInt(value, INTTYPE, "refAsInt");
-					auto posUnpacked = UnpackPosMaskedInt(builder, refAsInt);
-					intMergePHI->addIncoming(posUnpacked, _posMaskedIntBlock);
-					builder->CreateBr(_intMergeBlock);
-
-					builder->SetInsertPoint(_negMaskedIntBlock);
-					refAsInt = builder->CreatePtrToInt(value, INTTYPE, "refAsInt");
-					auto negUnpacked = UnpackNegMaskedInt(builder, refAsInt);
-					intMergePHI->addIncoming(negUnpacked, _negMaskedIntBlock);
-					builder->CreateBr(_intMergeBlock);
-					mergeBlocks += 1;
-				}
-				else
-				{
-					if (posMaskedIntBlock == nullptr || negMaskedIntBlock == nullptr)
+					if (_primitiveIntBlock == nullptr)
 					{
-						throw new std::exception();
+						_primitiveIntBlock = BasicBlock::Create(LLVMCONTEXT, "primitiveInt", fun);
+						*primitiveIntBlock = _primitiveIntBlock;
 					}
-					if (posMaskedIntBlock == negMaskedIntBlock)
+					if (_primitiveIntPHI == nullptr)
 					{
-						_posMaskedIntBlock = BasicBlock::Create(LLVMCONTEXT, "maskedInt", fun);
-						_negMaskedIntBlock = _posMaskedIntBlock;
-						*posMaskedIntBlock = _posMaskedIntBlock;
-
-						mergeBlocks += 1;
-
+						builder->SetInsertPoint(_primitiveIntBlock);
+						_primitiveIntPHI = builder->CreatePHI(INTTYPE, 2, "primitiveIntValue");
+						*primitiveIntVar = _primitiveIntPHI;
 					}
-					else
-					{
-						_posMaskedIntBlock = BasicBlock::Create(LLVMCONTEXT, "posMaskedInt", fun);
-						_negMaskedIntBlock = BasicBlock::Create(LLVMCONTEXT, "negMaskedInt", fun);
-						*posMaskedIntBlock = _posMaskedIntBlock;
-						*negMaskedIntBlock = _negMaskedIntBlock;
-
-						mergeBlocks += 2;
-					}
+					builder->SetInsertPoint(_packedIntBlock);
+					auto unpackedInt = UnpackMaskedInt(builder, builder->CreatePtrToInt(value, INTTYPE, "refAsInt"));
+					_primitiveIntPHI->addIncoming(unpackedInt, builder->GetInsertBlock());
+					builder->CreateBr(_primitiveIntBlock);
 				}
 			}
 
-			BasicBlock* _boxedFloatBlock = nullptr;
-			BasicBlock* _posZeroFloatBlock = nullptr;
-			BasicBlock* _negZeroFloatBlock = nullptr;
 			BasicBlock* _maskedFloatBlock = nullptr;
-			BasicBlock* _floatMergeBlock = nullptr;
-			PHINode* floatMergePHI = nullptr;
+			BasicBlock* _primitiveFloatBlock = nullptr;
+			PHINode* _primitiveFloatPHI = nullptr;
+			if (floatBlock != nullptr)
+			{
+				_maskedFloatBlock = *floatBlock;
+			}
+			if (primitiveFloatBlock != nullptr)
+			{
+				_primitiveFloatBlock = *primitiveFloatBlock;
+			}
 
 			if (floatsPossible)
 			{
-				cases += 4;
+				cases += 1;
+				if (_maskedFloatBlock == nullptr)
+				{
+					_maskedFloatBlock = BasicBlock::Create(LLVMCONTEXT, "packedFloat", fun);
+					if (floatBlock != nullptr)
+					{
+						*floatBlock = _maskedFloatBlock;
+					}
+					else if (!unpackPrimitives)
+					{
+						std::cout << "Internal error: did not cover packed float case";
+						throw new std::exception();
+					}
+				}
 				if (unpackPrimitives)
 				{
 					if (primitiveFloatBlock == nullptr || primitiveFloatVar == nullptr)
 					{
 						throw new std::exception();
 					}
-					_posZeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "posZeroFloat", fun);
-					_negZeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "negZeroFloat", fun);
-					_maskedFloatBlock = BasicBlock::Create(LLVMCONTEXT, "maskedFloat", fun);
-
-					_floatMergeBlock = BasicBlock::Create(LLVMCONTEXT, "unpackFloatMerge", fun);
-					builder->SetInsertPoint(_floatMergeBlock);
-					floatMergePHI = builder->CreatePHI(FLOATTYPE, 3, "unpackedFloat");
-					*primitiveFloatBlock = _floatMergeBlock;
-					*primitiveFloatVar = floatMergePHI;
-
-					builder->SetInsertPoint(_posZeroFloatBlock);
-					auto refAsInt = builder->CreatePtrToInt(value, INTTYPE, "refAsInt");
-					auto posUnpacked = ConstantFP::get(FLOATTYPE, 0.0);
-					floatMergePHI->addIncoming(posUnpacked, _posZeroFloatBlock);
-					builder->CreateBr(_floatMergeBlock);
-
-					builder->SetInsertPoint(_negZeroFloatBlock);
-					refAsInt = builder->CreatePtrToInt(value, INTTYPE, "refAsInt");
-					auto negUnpacked = ConstantFP::getNegativeZero(FLOATTYPE);
-					floatMergePHI->addIncoming(negUnpacked, _negZeroFloatBlock);
-					builder->CreateBr(_floatMergeBlock);
-
+					if (_primitiveFloatBlock == nullptr)
+					{
+						_primitiveFloatBlock = BasicBlock::Create(LLVMCONTEXT, "primitiveFloat", fun);
+						*primitiveFloatBlock = _primitiveFloatBlock;
+					}
+					if (_primitiveFloatPHI == nullptr)
+					{
+						builder->SetInsertPoint(_primitiveFloatBlock);
+						_primitiveFloatPHI = builder->CreatePHI(FLOATTYPE, 2, "primitiveFloatValue");
+						*primitiveFloatVar = _primitiveFloatPHI;
+					}
 					builder->SetInsertPoint(_maskedFloatBlock);
-					refAsInt = builder->CreatePtrToInt(value, INTTYPE, "refAsInt");
-					auto maskedUnpacked = UnpackMaskedFloat(builder, refAsInt);
-					floatMergePHI->addIncoming(maskedUnpacked, _maskedFloatBlock);
-					builder->CreateBr(_floatMergeBlock);
-					mergeBlocks += 1;
-				}
-				else
-				{
-					if (posZeroFloatBlock == nullptr || negZeroFloatBlock == nullptr || maskedFloatBlock == nullptr)
-					{
-						throw new std::exception();
-					}
-					_posZeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "posZeroFloat", fun);
-					mergeBlocks += 1;
-					*posZeroFloatBlock = _posZeroFloatBlock;
-					if (negZeroFloatBlock == posZeroFloatBlock)
-					{
-						_posZeroFloatBlock->setName("zeroFloat");
-						_negZeroFloatBlock = _posZeroFloatBlock;
-					}
-					else
-					{
-						_negZeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "negZeroFloat", fun);
-						mergeBlocks += 1;
-						*negZeroFloatBlock = _negZeroFloatBlock;
-					}
-					if (maskedFloatBlock == posZeroFloatBlock)
-					{
-						_posZeroFloatBlock->setName("float");
-						_maskedFloatBlock = _posZeroFloatBlock;
-					}
-					else if (maskedFloatBlock == negZeroFloatBlock)
-					{
-						_negZeroFloatBlock->setName("float");
-						_maskedFloatBlock = _negZeroFloatBlock;
-					}
-					else
-					{
-						_maskedFloatBlock = BasicBlock::Create(LLVMCONTEXT, "maskedFloat", fun);
-						mergeBlocks += 1;
-						*maskedFloatBlock = _maskedFloatBlock;
-					}
+					auto unpackedFloat = UnpackMaskedFloat(builder, builder->CreatePtrToInt(value, INTTYPE, "refAsInt"));
+					_primitiveFloatPHI->addIncoming(unpackedFloat, builder->GetInsertBlock());
+					builder->CreateBr(_primitiveFloatBlock);
 				}
 			}
 
@@ -504,93 +458,83 @@ namespace Nom
 				}
 			}
 			builder->SetInsertPoint(origBlock);
-			BasicBlock* _refValueBlock = BasicBlock::Create(LLVMCONTEXT, "refValue", fun);
 			auto refAsInt = builder->CreatePtrToInt(value, INTTYPE, "refAsInt");
-			auto tag = builder->CreateTrunc(refAsInt, inttype(3), "tag");
-			uint64_t caseweights[9] = { 0, 100, 40, 30, 20, 10, 5, 2, 1 }; // nominal objects > positive ints > negative ints > positive non-null floats >
-			// > negative non-null-floats > positive null float > negative null float (if there are no ints, that's fine, the order is preserved and nominal
-			// objects are most likely)
-			SwitchInst* tagSwitch = builder->CreateSwitch(tag, _refValueBlock, cases, GetBranchWeights(ArrayRef<uint64_t>(caseweights, cases+1)));
-			tagSwitch->addCase(MakeUInt(3, 0), _refValueBlock);
-
+			auto tag = builder->CreateTrunc(refAsInt, inttype(2), "tag");
+			BasicBlock* _refValueBlock = BasicBlock::Create(LLVMCONTEXT, "refValue", fun);
+			auto boolRefWeight = (boolWeight > refWeight ? boolWeight : refWeight);
+			if ((!intsPossible) || (!floatsPossible))
+			{
+				bool refsMoreLikely = intsPossible ? (boolRefWeight >= intWeight) : (boolRefWeight >= floatWeight);
+				MDNode* branchWeights = refsMoreLikely ? GetLikelyFirstBranchMetadata() : GetLikelySecondBranchMetadata();
+				auto isRef = builder->CreateICmpEQ(tag, MakeIntLike(tag, 0), "isRef");
+				CreateExpect(builder, isRef, MakeIntLike(isRef, refsMoreLikely ? 1 : 0));
+				builder->CreateCondBr(isRef, _refValueBlock, intsPossible ? _packedIntBlock : _maskedFloatBlock, branchWeights);
+			}
+			else
+			{
+				uint64_t caseweights[3] = { (uint64_t)floatWeight, (uint64_t)boolRefWeight, (uint64_t)intWeight };
+				SwitchInst* tagSwitch = builder->CreateSwitch(tag, _maskedFloatBlock, 3, GetBranchWeights(ArrayRef<uint64_t>(caseweights, 3)));
+				tagSwitch->addCase(MakeUInt(2, 0), _refValueBlock);
+				tagSwitch->addCase(MakeUInt(2, 3), _packedIntBlock);
+			}
 			if (unpackPrimitives)
 			{
 				builder->SetInsertPoint(_refValueBlock);
 				vtableAsInt = builder->CreatePtrToInt(RefValueHeader::GenerateReadVTablePointer(builder, value), numtype(intptr_t));
-			}
-			if (intsPossible)
-			{
-				tagSwitch->addCase(MakeUInt(3, 3), _posMaskedIntBlock);
-				tagSwitch->addCase(MakeUInt(3, 7), _negMaskedIntBlock);
-				if (unpackPrimitives)
+				if (intsPossible)
 				{
 					BasicBlock* unboxIntBlock = BasicBlock::Create(LLVMCONTEXT, "unboxInt", fun);
 					builder->SetInsertPoint(_refValueBlock);
 					_refValueBlock = BasicBlock::Create(LLVMCONTEXT, "nonIntRefValue", fun);
 					auto intAsInt = ConstantExpr::getPtrToInt(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), numtype(intptr_t));
 					auto isInt = builder->CreateICmpEQ(vtableAsInt, intAsInt);
-					builder->CreateCondBr(isInt, unboxIntBlock, _refValueBlock);
+					CreateExpect(builder, isInt, MakeIntLike(isInt, intWeight > boolRefWeight && intWeight > floatWeight));
+					builder->CreateCondBr(isInt, unboxIntBlock, _refValueBlock, (intWeight > boolRefWeight && intWeight > floatWeight)?GetLikelyFirstBranchMetadata():GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(unboxIntBlock);
 					auto unboxedInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE, "unboxedInt");
-					intMergePHI->addIncoming(unboxedInt, unboxIntBlock);
-					builder->CreateBr(_intMergeBlock);
+					_primitiveIntPHI->addIncoming(unboxedInt, unboxIntBlock);
+					builder->CreateBr(_primitiveIntBlock);
 				}
-			}
-			if (floatsPossible)
-			{
-				BasicBlock* possiblePosZeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "possiblePosZeroFloat", fun);
-				BasicBlock* possibleNegZeroFloatBlock = BasicBlock::Create(LLVMCONTEXT, "possibleNegZeroFloat", fun);
-				tagSwitch->addCase(MakeUInt(3, 2), _maskedFloatBlock);
-				tagSwitch->addCase(MakeUInt(3, 6), _maskedFloatBlock);
-				tagSwitch->addCase(MakeUInt(3, 1), possiblePosZeroFloatBlock);
-				tagSwitch->addCase(MakeUInt(3, 5), possibleNegZeroFloatBlock);
-
-				builder->SetInsertPoint(possiblePosZeroFloatBlock);
-				auto isZero = builder->CreateICmpEQ(refAsInt, MakeIntLike(refAsInt, 1));
-				builder->CreateCondBr(isZero, _posZeroFloatBlock, _maskedFloatBlock);
-
-				builder->SetInsertPoint(possibleNegZeroFloatBlock);
-				isZero = builder->CreateICmpEQ(refAsInt, MakeIntLike(refAsInt, 5));
-				builder->CreateCondBr(isZero, _negZeroFloatBlock, _maskedFloatBlock);
-
-				if (unpackPrimitives)
+				if (floatsPossible)
 				{
 					BasicBlock* unboxFloatBlock = BasicBlock::Create(LLVMCONTEXT, "unboxInt", fun);
 					builder->SetInsertPoint(_refValueBlock);
 					_refValueBlock = BasicBlock::Create(LLVMCONTEXT, "nonIntNonFloatRefValue", fun);
 					auto floatAsInt = ConstantExpr::getPtrToInt(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), numtype(intptr_t));
 					auto isFloat = builder->CreateICmpEQ(vtableAsInt, floatAsInt);
-					builder->CreateCondBr(isFloat, unboxFloatBlock, _refValueBlock);
+					CreateExpect(builder, isFloat, MakeIntLike(isFloat, floatWeight > boolRefWeight));
+					builder->CreateCondBr(isFloat, unboxFloatBlock, _refValueBlock, (floatWeight > boolRefWeight) ? GetLikelyFirstBranchMetadata() : GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(unboxFloatBlock);
 					auto unboxedFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE), FLOATTYPE, "unboxedFloat");
-					floatMergePHI->addIncoming(unboxedFloat, unboxFloatBlock);
-					builder->CreateBr(_floatMergeBlock);
+					_primitiveFloatPHI->addIncoming(unboxedFloat, unboxFloatBlock);
+					builder->CreateBr(_primitiveFloatBlock);
 				}
-			}
-			if (boolsPossible && unpackPrimitives)
-			{
-				if (primitiveBoolBlock == nullptr || primitiveBoolVar == nullptr)
+				if (boolsPossible)
 				{
-					throw new std::exception();
-				}
-				builder->SetInsertPoint(_refValueBlock);
-				_refValueBlock = BasicBlock::Create(LLVMCONTEXT, "nonIntNonFloatNonBoolRefValue", fun);
-				*primitiveBoolBlock = BasicBlock::Create(LLVMCONTEXT, "boxedBoolean", fun);
-				auto boolAsInt = ConstantExpr::getPtrToInt(NomBoolClass::GetInstance()->GetLLVMElement(*fun->getParent()), numtype(intptr_t));
-				auto isBool = builder->CreateICmpEQ(vtableAsInt, boolAsInt);
-				builder->CreateCondBr(isBool, *primitiveBoolBlock, _refValueBlock);
+					if (primitiveBoolBlock == nullptr || primitiveBoolVar == nullptr)
+					{
+						throw new std::exception();
+					}
+					builder->SetInsertPoint(_refValueBlock);
+					_refValueBlock = BasicBlock::Create(LLVMCONTEXT, "nonIntNonFloatNonBoolRefValue", fun);
+					*primitiveBoolBlock = BasicBlock::Create(LLVMCONTEXT, "boxedBoolean", fun);
+					auto boolAsInt = ConstantExpr::getPtrToInt(NomBoolClass::GetInstance()->GetLLVMElement(*fun->getParent()), numtype(intptr_t));
+					auto isBool = builder->CreateICmpEQ(vtableAsInt, boolAsInt);
+					CreateExpect(builder, isBool, MakeIntLike(isBool, boolWeight > refWeight));
+					builder->CreateCondBr(isBool, *primitiveBoolBlock, _refValueBlock, (boolWeight > refWeight) ? GetLikelyFirstBranchMetadata() : GetLikelySecondBranchMetadata());
 
-				builder->SetInsertPoint(*primitiveBoolBlock);
-				*primitiveBoolVar = UnpackBool(builder, value);
-				mergeBlocks += 1;
+					builder->SetInsertPoint(*primitiveBoolBlock);
+					*primitiveBoolVar = UnpackBool(builder, value);
+					cases += 1;
+				}
 			}
 			*refValueBlock = _refValueBlock;
 
 			builder->SetInsertPoint(origBlock);
 
-			return mergeBlocks;
+			return cases;
 		}
 		llvm::Value* RefValueHeader::GenerateReadTypeTag(NomBuilder& builder, llvm::Value* refValue)
 		{
