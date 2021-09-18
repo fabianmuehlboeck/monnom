@@ -18,6 +18,14 @@ namespace Nom.Language
             }
         }
 
+        public override bool IsEquivalent(IType other, bool optimistic = false)
+        {
+            var visitor = new TypeVisitor<object, bool>();
+            visitor.DefaultAction = (t, o) => false;
+            visitor.VisitDynamicType = (t, o) => optimistic;
+            visitor.VisitTopType = (t, o) => true;
+            return other.Visit(visitor, null);
+        }
         private TopType()
         {
 
@@ -85,6 +93,11 @@ namespace Nom.Language
                 VisitTopType = (v, o) => true,
                 VisitDynamicType = (d, o) => true
             });
+        }
+
+        public override IType ReplaceArgsWith(IEnumerable<IType> args)
+        {
+            throw new InvalidOperationException();
         }
     }
 }

@@ -51,5 +51,27 @@ namespace Nom.TypeChecker
         {
             return this.ToSignatureText();
         }
+
+        public IMethodSpec Substitute(ITypeParameterSpec param, IType type)
+        {
+            return new StdLib.MethodSpec(Name, Container,
+                new TypeParametersSpec(TypeParameters.Select(tp => new TDTypeArgDeclDef(new Parser.Identifier(tp.Name), tp.Index, ((ISubstitutable<IType>)tp.UpperBound)?.Substitute(param, type), ((ISubstitutable<IType>)tp.LowerBound)?.Substitute(param, type)))),
+                new ParametersSpec(Parameters.Entries.Select(p => new StdLib.ParameterSpec(p.Name, ((ISubstitutable<IType>)p.Type).Substitute(param, type)))),
+                ((ISubstitutable<IType>)ReturnType).Substitute(param, type),
+                Visibility,
+                IsFinal,
+                IsVirtual);
+        }
+
+        public IMethodSpec Substitute<E>(ITypeEnvironment<E> env) where E : ITypeArgument, ISubstitutable<E>
+        {
+            return new StdLib.MethodSpec(Name, Container,
+                new TypeParametersSpec(TypeParameters.Select(tp => new TDTypeArgDeclDef(new Parser.Identifier(tp.Name), tp.Index, ((ISubstitutable<IType>)tp.UpperBound)?.Substitute(env), ((ISubstitutable<IType>)tp.LowerBound)?.Substitute(env)))),
+                new ParametersSpec(Parameters.Entries.Select(p => new StdLib.ParameterSpec(p.Name, ((ISubstitutable<IType>)p.Type).Substitute(env)))),
+                ((ISubstitutable<IType>)ReturnType).Substitute(env),
+                Visibility,
+                IsFinal,
+                IsVirtual);
+        }
     }
 }

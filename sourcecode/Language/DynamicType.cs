@@ -21,6 +21,14 @@ namespace Nom.Language
             return other.IsSubtypeOf(BotType.Instance, false);
         }
 
+        public override bool IsEquivalent(IType other, bool optimistic = false)
+        {
+            var visitor = new TypeVisitor<object, bool>();
+            visitor.DefaultAction = (t, o) => optimistic;
+            visitor.VisitDynamicType = (t, o) => true;
+            return other.Visit(visitor, null);
+        }
+
         public override bool IsSubtypeOf(IType other, bool optimistic = false)
         {
             return optimistic || other.IsSupertypeOf(TopType.Instance,false);
@@ -56,6 +64,11 @@ namespace Nom.Language
         public override bool PrecisionRelated(IType other)
         {
             return true;
+        }
+
+        public override IType ReplaceArgsWith(IEnumerable<IType> args)
+        {
+            throw new InvalidOperationException();
         }
 
         public override Ret Visit<Arg, Ret>(ITypeVisitor<Arg, Ret> visitor, Arg arg = default)

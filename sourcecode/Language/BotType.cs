@@ -66,5 +66,19 @@ namespace Nom.Language
         {
             throw new NotImplementedException();
         }
+
+        public override bool IsEquivalent(IType other, bool optimistic = false)
+        {
+            var visitor = new TypeVisitor<object, bool>();
+            visitor.DefaultAction = (t, o) => false;
+            visitor.VisitDynamicType = (t, o) => optimistic;
+            visitor.VisitBotType = (t, o) => true;
+            return other.Visit(visitor, null);
+        }
+
+        public override IType ReplaceArgsWith(IEnumerable<IType> args)
+        {
+            throw new InvalidOperationException();
+        }
     }
 }

@@ -68,6 +68,14 @@ namespace Nom.Language
             }
         }
 
+        public override IType ReplaceArgsWith(IEnumerable<IType> args)
+        {
+            if (args.Count() == this.Arguments.Count())
+            {
+                return new ClassType(this.Class, new TypeEnvironment<ITypeArgument>(this.Class.AllTypeParameters, args));
+            }
+            throw new InternalException("Wrong number of arguments for type replacement!");
+        }
         public override IOptional<INamedType> Instantiate(IInterfaceSpec iface)
         {
             return base.Instantiate(iface).Coalesce(() =>

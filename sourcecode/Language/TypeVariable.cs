@@ -26,6 +26,14 @@ namespace Nom.Language
             }
         }
 
+        public override bool IsEquivalent(IType other, bool optimistic = false)
+        {
+            var visitor = new TypeVisitor<object, bool>();
+            visitor.DefaultAction = (t, o) => false;
+            visitor.VisitDynamicType = (t, o) => optimistic;
+            visitor.VisitTypeVariable = (t, o) => t.ParameterSpec == ParameterSpec;
+            return other.Visit(visitor, null);
+        }
         public override bool IsDisjoint(IType other)
         {
             return ParameterSpec.UpperBound.IsDisjoint(other);
@@ -103,6 +111,11 @@ namespace Nom.Language
                 VisitTypeVariable = (v, o) => v.ParameterSpec == this.ParameterSpec,
                 VisitDynamicType = (d,o)=>true
             });
+        }
+
+        public override IType ReplaceArgsWith(IEnumerable<IType> args)
+        {
+            throw new InvalidOperationException();
         }
     }
 }

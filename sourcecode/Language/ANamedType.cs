@@ -58,7 +58,35 @@ namespace Nom.Language
                 return Optional<INamedType>.Empty;
             }
         }
-        
+
+        public override bool IsEquivalent(IType other, bool optimistic = false)
+        {
+            var visitor = new TypeVisitor<object, bool>();
+            visitor.DefaultAction = (t, a) => t.IsEquivalent(this, optimistic);
+            visitor.VisitTopType = (t, a) => false;
+            visitor.VisitBotType = (t, a) => false;
+            visitor.VisitTypeVariable = (t, a) => false;
+            visitor.VisitMaybeType = (t, a) => false;
+            visitor.VisitProbablyType = (t, a) => false;
+            visitor.VisitDynamicType = (t, a) => optimistic;
+            visitor.NamedTypeAction = (nt, a) =>
+            {
+                if (nt.Element != this.Element)
+                {
+                    return false;
+                }
+                foreach (var pair in nt.Arguments.Zip(Arguments, (left, right) => (left, right)))
+                {
+                    if (!pair.left.AsType.IsEquivalent(pair.right.AsType, optimistic))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            return other.Visit<object, bool>(visitor);
+        }
+
         public override bool IsSubtypeOf(IType other, bool optimistic = false)
         {
             var visitor = new TypeVisitor<object, bool>();
@@ -72,7 +100,7 @@ namespace Nom.Language
                 {
                     foreach(KeyValuePair<ITypeParameterSpec, ITypeArgument> kvp in si.Substitutions)
                     {
-                        if(!kvp.Value.IsSubtypeOf(nt.Substitutions[kvp.Key]))
+                        if(!kvp.Value.AsType.IsEquivalent(nt.Substitutions[kvp.Key].AsType, optimistic))
                         {
                             return false;
                         }

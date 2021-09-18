@@ -104,5 +104,15 @@ namespace Nom.Bytecode
             //TODO: actually put visibility in bytecode here
             return new MethodDeclRep(nameconst, tpconst, rtconst, argsconst, Visibility.Public, isfinal);
         }
+
+        public IMethodSpec Substitute(ITypeParameterSpec param, IType type)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IMethodSpec Substitute<E>(ITypeEnvironment<E> env) where E : ITypeArgument, ISubstitutable<E>
+        {
+            throw new NotImplementedException();
+        }
     }
 }

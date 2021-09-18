@@ -26,6 +26,7 @@ namespace Nom
                 bool byFile = false;
                 bool collectstats = false;
                 bool highPriority = false;
+                bool omitUntypedInterfaces = false;
                 List<string> forwardargs = new List<string>();
                 for (int i = 0; i < args.Length; i++)
                 {
@@ -65,6 +66,9 @@ namespace Nom
                                 break;
                             case "collectstats":
                                 argkey = "collectstats";
+                                break;
+                            case "omituntypedinterfaces":
+                                argkey = "omituntypedinterfaces";
                                 break;
                         }
                     }
@@ -184,6 +188,9 @@ namespace Nom
                         case "collectstats":
                             collectstats = true;
                             break;
+                        case "omituntypedinterfaces":
+                            omitUntypedInterfaces = true;
+                            break;
                     }
                 }
                 Nom.Project.NomProject proj;
@@ -217,7 +224,7 @@ namespace Nom
 
                 Nom.Parser.Program parseprog = ParseProgram(proj.Files.Select(f => new FileInfo(di.FullName + "/" + f)));
                 Nom.TypeChecker.Program tcprog = TypeCheckProgram(parseprog, proj.Name, libraries);
-                var dirs = FullDevolution.Instance.Run(parseprog, tcprog, di, libraries, librariesManifests, proj, byFile);
+                var dirs = FullDevolution.Instance.Run(parseprog, tcprog, di, libraries, librariesManifests, proj, byFile, omitUntypedInterfaces);
                 int dircount = dirs.Count();
                 for (int i = 0; i < (runcount < 0 ? Int32.MaxValue : runcount) + (collectstats ? 1 : 0); i++)
                 {

@@ -25,10 +25,10 @@ namespace Nom.BenchmarkGenerator
         }
         public static FullDevolution Instance { get; } = new FullDevolution();
         private FullDevolution() { }
-        private enum ClassDevolutionKind { NominalTyped, NominalUntyped, StructTyped, StructUntyped, LambdaTyped, LambdaUntyped, StructDictionary };
-        private enum InterfaceDevolutionKind { Typed, Untyped, Removed };
+        internal enum ClassDevolutionKind { NominalTyped, NominalUntyped, Struct, StructTyped, StructUntyped, Lambda, LambdaTyped, LambdaUntyped, StructDictionary };
+        internal enum InterfaceDevolutionKind { Typed, Untyped, Removed };
 
-        private interface IFullDevolutionVersion
+        internal interface IFullDevolutionVersion
         {
             bool IsRelevantForInheritance { get; }
             bool IsUntyped { get; }
@@ -38,12 +38,12 @@ namespace Nom.BenchmarkGenerator
             void ProcessReplacements();
             void Reset();
         }
-        private interface IFullDevolutionVersionVisitor<in Arg, out Ret>
+        internal interface IFullDevolutionVersionVisitor<in Arg, out Ret>
         {
             Func<ClassDevolutionVersion, Arg, Ret> VisitClassDevolutionVersion { get; }
             Func<InterfaceDevolutionVersion, Arg, Ret> VisitInterfaceDevolutionVersion { get; }
         }
-        private class ClassDevolutionVersion : IFullDevolutionVersion
+        internal class ClassDevolutionVersion : IFullDevolutionVersion
         {
             public ClassDevolutionVersion(IClassSpec cls, ClassDevolutionKind kind)
             {
@@ -56,7 +56,7 @@ namespace Nom.BenchmarkGenerator
 
             public bool IsRelevantForInheritance => Kind == ClassDevolutionKind.NominalTyped || Kind == ClassDevolutionKind.NominalUntyped;
 
-            public bool IsUntyped => Kind == ClassDevolutionKind.NominalUntyped || Kind == ClassDevolutionKind.LambdaUntyped || Kind == ClassDevolutionKind.StructUntyped || Kind == ClassDevolutionKind.StructDictionary;
+            public bool IsUntyped => Kind == ClassDevolutionKind.NominalUntyped || Kind == ClassDevolutionKind.LambdaUntyped || Kind == ClassDevolutionKind.StructUntyped || Kind == ClassDevolutionKind.StructDictionary || Kind == ClassDevolutionKind.Lambda || Kind == ClassDevolutionKind.Struct;
 
             public bool IsPresent => Kind == ClassDevolutionKind.NominalTyped || Kind == ClassDevolutionKind.NominalUntyped;
 
@@ -99,10 +99,12 @@ namespace Nom.BenchmarkGenerator
                     case ClassDevolutionKind.NominalUntyped:
                         return "D";
                     case ClassDevolutionKind.StructTyped:
+                    case ClassDevolutionKind.Struct:
                         return "S";
                     case ClassDevolutionKind.StructUntyped:
                         return "T";
                     case ClassDevolutionKind.LambdaTyped:
+                    case ClassDevolutionKind.Lambda:
                         return "L";
                     case ClassDevolutionKind.LambdaUntyped:
                         return "M";
@@ -110,6 +112,260 @@ namespace Nom.BenchmarkGenerator
                         return "U";
                     default:
                         return "X";
+                }
+            }
+
+            internal IExpr GenerateTypedReplacement(NewExpr e, IFullDevolutionData data)
+            {
+                switch (Kind)
+                {
+                    case ClassDevolutionKind.NominalTyped:
+                    case ClassDevolutionKind.NominalUntyped:
+                        return e;
+                    case ClassDevolutionKind.LambdaTyped:
+                    case ClassDevolutionKind.Lambda:
+                        {
+                            var method = methodDefs.Single();
+
+                            if (constructors.Count == 0 && fields.All(fd => fd.InitExpr != null))
+                            {
+                                constructors.Add(new Constructor(VisibilityNode.Public, new List<VarDecl>(), new Block(new List<IStmt>(), method.Locs), new List<IExpr>(), new Block(new List<IStmt>(), method.Locs), method.Locs));
+                            }
+
+                            if (constructors.Count != 1)
+                            {
+                                throw new Exception("Invalid constructor configuration for lambdaification");
+                            }
+                            var constructor = constructors.Single();
+                            Dictionary<string, Parser.IExpr> initExprs = new Dictionary<string, IExpr>();
+                            foreach (FieldDecl fd in fields)
+                            {
+                                if (fd.InitExpr != null)
+                                {
+                                    initExprs[fd.Ident.Name] = fd.InitExpr.Visit(FullDevolutionVisitor.Instance, data);
+                                }
+                            }
+                            var rinits = new Dictionary<string, IExpr>(initExprs);
+                            var argpairs = e.Args.Zip(constructor.Args, (argexp, argdec) => (argexp, argdec)).ToList();
+                            var substitutions = e.Annotation.Substitutions;
+                            foreach (AssignStmt stmt in constructor.PreSuperStatements)
+                            {
+                                rinits[stmt.Variable.Name] = stmt.Expression.Visit(FullDevolutionVisitor.Instance, data).Visit(SubstitutionVisitor.Instance, (argpairs.ToDictionary(p => p.Item2.Name.Name, p => p.Item1), substitutions));
+                            }
+                            var newData = data.CreateInContainerData(this.InterfaceObject);
+                            method = FullDevolutionVisitor.Instance.VisitMethodDef(method, newData);
+                            return new LambdaExpr(method.ArgDefs, SubstitutionVisitor.Instance.VisitBlock(method.Code, (rinits, substitutions)).AsBlock(), method.Returns, e.Start);
+                        }
+                    case ClassDevolutionKind.StructTyped:
+                    case ClassDevolutionKind.Struct:
+                        {
+                            List<StructFieldDecl> sfds = new List<StructFieldDecl>();
+                            Dictionary<string, Parser.IExpr> initExprs = new Dictionary<string, IExpr>();
+                            foreach (FieldDecl fd in fields)
+                            {
+                                if (fd.InitExpr != null)
+                                {
+                                    initExprs[fd.Ident.Name] = fd.InitExpr.Visit(FullDevolutionVisitor.Instance, data);
+                                }
+                            }
+                            if (constructors.Count > 1 || (constructors.Count == 0 && initExprs.Count != fields.Count))
+                            {
+                                throw new Exception("Invalid constructor configuration for structification");
+                            }
+                            if (constructors.Count == 0)
+                            {
+                                constructors.Add(new Constructor(VisibilityNode.Public, new List<VarDecl>(), new Block(new List<IStmt>(), e.Locs), new List<IExpr>(), new Block(new List<IStmt>(), e.Locs), e.Locs));
+                            }
+                            if (constructors.Count != 1)
+                            {
+                                throw new Exception("Invalid constructor configuration for structification");
+                            }
+                            var constructor = constructors.Single();
+
+                            var rinits = new Dictionary<string, IExpr>(initExprs);
+                            var substitutions = e.Annotation.Substitutions;
+                            var argpairs = e.Args.Zip(constructor.Args, (argexp, argdec) => (argexp.Visit(FullDevolutionVisitor.Instance, data), argdec)).ToList();
+                            Dictionary<string, IExpr> argsubsts = new Dictionary<string, IExpr>();
+                            Stack<(Identifier, IExpr)> letBindings = new Stack<(Identifier, IExpr)>();
+                            foreach (var pair in argpairs)
+                            {
+                                if (pair.Item1 is IdentExpr)
+                                {
+                                    argsubsts.Add(pair.argdec.Name.Name, pair.Item1);
+                                }
+                                else
+                                {
+                                    Identifier freshIdent = new Identifier(pair.argdec.Name.Name + GetFreshVarID());
+                                    argsubsts.Add(pair.argdec.Name.Name, new IdentExpr(freshIdent));
+                                    letBindings.Push((freshIdent, pair.Item1));
+                                }
+                            }
+                            var newData = data.CreateInContainerData(InterfaceObject);
+                            foreach (AssignStmt stmt in constructor.PreSuperStatements)
+                            {
+                                if (stmt.Expression is IdentExpr)
+                                {
+                                    var substExp = stmt.Expression.Visit(FullDevolutionVisitor.Instance, newData).Visit(SubstitutionVisitor.Instance, (argsubsts, substitutions));
+                                    argsubsts.Add(stmt.Variable.Name, substExp);
+                                    rinits[stmt.Variable.Name] = substExp;
+                                }
+                                else
+                                {
+                                    Identifier freshIdent = new Identifier(stmt.Variable.Name + GetFreshVarID());
+                                    letBindings.Push((freshIdent, stmt.Expression.Visit(FullDevolutionVisitor.Instance, newData).Visit(SubstitutionVisitor.Instance, (argsubsts, substitutions))));
+                                    argsubsts.Add(stmt.Variable.Name, new IdentExpr(freshIdent));
+                                    rinits[stmt.Variable.Name] = new IdentExpr(freshIdent);
+                                }
+                            }
+                            IExpr retExpr = new StructExpr(
+                                fields
+                                .Select(fd => FullDevolutionVisitor.Instance.VisitFieldDecl(fd, newData))
+                                .Select(fd => new StructFieldDecl(((ISubstitutable<Language.IType>)fd.Type.Annotation).Substitute(substitutions).ToParserType(fd.Type.Locs), fd.Ident, rinits[fd.Ident.Name])),
+                                methodDefs
+                                .Select(md => FullDevolutionVisitor.Instance.VisitMethodDef(md, newData))
+                                .Select(md => SubstitutionVisitor.Instance.VisitMethodDef(md, (new Dictionary<string, IExpr>(), substitutions))),
+                                new List<StructAssignment>(),
+                                e.Locs);
+                            while (letBindings.Count > 0)
+                            {
+                                var top = letBindings.Pop();
+                                retExpr = new LetVarExpr(top.Item1, top.Item2, retExpr, e.Locs);
+                            }
+                            return retExpr;
+                        }
+                    case ClassDevolutionKind.LambdaUntyped:
+                    case ClassDevolutionKind.StructUntyped:
+                    case ClassDevolutionKind.StructDictionary:
+                        return GenerateUntypedReplacement(e, data);
+                    default:
+                        throw new Exception();
+                }
+            }
+            internal IExpr GenerateUntypedReplacement(NewExpr e, IFullDevolutionData data)
+            {
+                switch (Kind)
+                {
+                    case ClassDevolutionKind.NominalTyped:
+                    case ClassDevolutionKind.NominalUntyped:
+                        return e;
+                    case ClassDevolutionKind.LambdaUntyped:
+                    case ClassDevolutionKind.Lambda:
+                        {
+                            var method = methodDefs.Single();
+
+                            if (constructors.Count == 0 && fields.All(fd => fd.InitExpr != null))
+                            {
+                                constructors.Add(new Constructor(VisibilityNode.Public, new List<VarDecl>(), new Block(new List<IStmt>(), method.Locs), new List<IExpr>(), new Block(new List<IStmt>(), method.Locs), method.Locs));
+                            }
+
+                            if (constructors.Count != 1)
+                            {
+                                throw new Exception("Invalid constructor configuration for lambdaification");
+                            }
+                            var constructor = constructors.Single();
+                            Dictionary<string, Parser.IExpr> initExprs = new Dictionary<string, IExpr>();
+                            foreach (FieldDecl fd in fields)
+                            {
+                                if (fd.InitExpr != null)
+                                {
+                                    initExprs[fd.Ident.Name] = fd.InitExpr.Visit(FullDevolutionVisitorUntyped.Instance, data);
+                                }
+                            }
+                            var rinits = new Dictionary<string, IExpr>(initExprs);
+                            var argpairs = e.Args.Zip(constructor.Args, (argexp, argdec) => (argexp, argdec)).ToList();
+                            var substitutions = e.Annotation.Substitutions;
+                            foreach (AssignStmt stmt in constructor.PreSuperStatements)
+                            {
+                                rinits[stmt.Variable.Name] = stmt.Expression.Visit(FullDevolutionVisitorUntyped.Instance, data)
+                                    .Visit(SubstitutionVisitor.Instance, (argpairs.ToDictionary(p => p.Item2.Name.Name, p => p.Item1), substitutions));
+                            }
+                            var newData = data.CreateInContainerData(this.InterfaceObject);
+                            method = FullDevolutionVisitorUntyped.Instance.VisitMethodDef(method, newData);
+                            return new LambdaExpr(method.ArgDefs, SubstitutionVisitor.Instance.VisitBlock(method.Code, (rinits, substitutions)).AsBlock(), method.Returns, e.Start);
+                        }
+                    case ClassDevolutionKind.StructUntyped:
+                    case ClassDevolutionKind.StructDictionary:
+                    case ClassDevolutionKind.Struct:
+                        {
+                            List<StructFieldDecl> sfds = new List<StructFieldDecl>();
+                            Dictionary<string, Parser.IExpr> initExprs = new Dictionary<string, IExpr>();
+                            foreach (FieldDecl fd in fields)
+                            {
+                                if (fd.InitExpr != null)
+                                {
+                                    initExprs[fd.Ident.Name] = fd.InitExpr.Visit(FullDevolutionVisitorUntyped.Instance, data);
+                                }
+                            }
+                            if (constructors.Count > 1 || (constructors.Count == 0 && initExprs.Count != fields.Count))
+                            {
+                                throw new Exception("Invalid constructor configuration for structification");
+                            }
+                            if (constructors.Count == 0)
+                            {
+                                constructors.Add(new Constructor(VisibilityNode.Public, new List<VarDecl>(), new Block(new List<IStmt>(), e.Locs), new List<IExpr>(), new Block(new List<IStmt>(), e.Locs), e.Locs));
+                            }
+                            if (constructors.Count != 1)
+                            {
+                                throw new Exception("Invalid constructor configuration for structification");
+                            }
+                            var constructor = constructors.Single();
+
+                            var rinits = new Dictionary<string, IExpr>(initExprs);
+                            var substitutions = e.Annotation.Substitutions;
+                            var argpairs = e.Args.Zip(constructor.Args, (argexp, argdec) => (argexp.Visit(FullDevolutionVisitorUntyped.Instance, data), argdec)).ToList();
+                            Dictionary<string, IExpr> argsubsts = new Dictionary<string, IExpr>();
+                            Stack<(Identifier, IExpr)> letBindings = new Stack<(Identifier, IExpr)>();
+                            foreach (var pair in argpairs)
+                            {
+                                if (pair.Item1 is IdentExpr)
+                                {
+                                    argsubsts.Add(pair.argdec.Name.Name, pair.Item1);
+                                }
+                                else
+                                {
+                                    Identifier freshIdent = new Identifier(pair.argdec.Name.Name + GetFreshVarID());
+                                    argsubsts.Add(pair.argdec.Name.Name, new IdentExpr(freshIdent));
+                                    letBindings.Push((freshIdent, pair.Item1));
+                                }
+                            }
+                            var newData = data.CreateInContainerData(InterfaceObject);
+                            foreach (AssignStmt stmt in constructor.PreSuperStatements)
+                            {
+                                if (stmt.Expression is IdentExpr)
+                                {
+                                    var substExp = stmt.Expression.Visit(FullDevolutionVisitorUntyped.Instance, newData).Visit(SubstitutionVisitor.Instance, (argsubsts, substitutions));
+                                    argsubsts.Add(stmt.Variable.Name, substExp);
+                                    rinits[stmt.Variable.Name] = substExp;
+                                }
+                                else
+                                {
+                                    Identifier freshIdent = new Identifier(stmt.Variable.Name + GetFreshVarID());
+                                    letBindings.Push((freshIdent, stmt.Expression.Visit(FullDevolutionVisitorUntyped.Instance, newData).Visit(SubstitutionVisitor.Instance, (argsubsts, substitutions))));
+                                    argsubsts.Add(stmt.Variable.Name, new IdentExpr(freshIdent));
+                                    rinits[stmt.Variable.Name] = new IdentExpr(freshIdent);
+                                }
+                            }
+                            IExpr retExpr = new StructExpr(
+                                fields
+                                .Select(fd => FullDevolutionVisitorUntyped.Instance.VisitFieldDecl(fd, newData))
+                                .Select(fd => new StructFieldDecl(((ISubstitutable<Language.IType>)fd.Type.Annotation).Substitute(substitutions).ToParserType(fd.Type.Locs), fd.Ident, rinits[fd.Ident.Name])),
+                                methodDefs
+                                .Select(md => FullDevolutionVisitorUntyped.Instance.VisitMethodDef(md, newData))
+                                .Select(md => SubstitutionVisitor.Instance.VisitMethodDef(md, (new Dictionary<string, IExpr>(), substitutions))),
+                                new List<StructAssignment>(),
+                                e.Locs);
+                            while (letBindings.Count > 0)
+                            {
+                                var top = letBindings.Pop();
+                                retExpr = new LetVarExpr(top.Item1, top.Item2, retExpr, e.Locs);
+                            }
+                            return retExpr;
+                        }
+                    case ClassDevolutionKind.LambdaTyped:
+                    case ClassDevolutionKind.StructTyped:
+                        return GenerateTypedReplacement(e, data);
+                    default:
+                        throw new Exception();
                 }
             }
 
@@ -213,7 +469,7 @@ namespace Nom.BenchmarkGenerator
                         break;
                     case ClassDevolutionKind.StructDictionary:
                         {
-                            if(replacements.Count==0)
+                            if (replacements.Count == 0)
                             {
                                 break;
                             }
@@ -354,6 +610,8 @@ namespace Nom.BenchmarkGenerator
                             }
                         }
                         break;
+                    case ClassDevolutionKind.Lambda:
+                        throw new Exception();
                 }
             }
 
@@ -367,7 +625,7 @@ namespace Nom.BenchmarkGenerator
             }
         }
 
-        private class UnreplacedReplacementExprException : Exception
+        internal class UnreplacedReplacementExprException : Exception
         {
 
         }
@@ -388,11 +646,63 @@ namespace Nom.BenchmarkGenerator
 
             public override Func<Parser.ClassType, (IDictionary<string, IExpr>, ITypeEnvironment<ITypeArgument>), Parser.IType> VisitClassType => (ct, s) =>
             {
-                return ((ISubstitutable<Language.IType>)ct.Annotation).Substitute(s.Item2).ToParserType(ct.Locs);
+                return ((ISubstitutable<Language.IType>)ct.Annotation)?.Substitute(s.Item2).ToParserType(ct.Locs);
+            };
+
+            public override Func<MethodDef, (IDictionary<string, IExpr>, ITypeEnvironment<ITypeArgument>), MethodDef> VisitMethodDef => (md, s) =>
+            {
+                var ret = base.VisitMethodDef(md, s);
+                if (ret.Annotation == null && md.Annotation != null)
+                {
+                    ret.Annotation = md.Annotation.Substitute(s.Item2);
+                }
+                return ret;
+            };
+
+            public override Func<FieldDecl, (IDictionary<string, IExpr>, ITypeEnvironment<ITypeArgument>), FieldDecl> VisitFieldDecl => (fd, s) =>
+            {
+                return base.VisitFieldDecl(fd, s);
             };
         }
 
-        private class InterfaceDevolutionVersion : IFullDevolutionVersion
+        private class CollectionVisitor : ConversionVisitor<IFullDevolutionData>
+        {
+            private CollectionVisitor() { }
+            public static CollectionVisitor Instance { get; } = new CollectionVisitor();
+
+            public override Func<ClassDef, IFullDevolutionData, ClassDef> VisitClassDef => (cdef, data) =>
+            {
+                return base.VisitClassDef(cdef, data.CreateInContainerData(cdef.Annotation));
+            };
+
+            public override Func<InterfaceDef, IFullDevolutionData, InterfaceDef> VisitInterfaceDef => (idef, data) =>
+            {
+                return base.VisitInterfaceDef(idef, data.CreateInContainerData(idef.Annotation));
+            };
+
+            public override Func<MethodDecl, IFullDevolutionData, MethodDecl> VisitMethodDecl => (md, data) =>
+            {
+                data.RegisterMethodDecl(md);
+                return base.VisitMethodDecl(md, data);
+            };
+            public override Func<MethodDef, IFullDevolutionData, MethodDef> VisitMethodDef => (md, data) =>
+            {
+                data.RegisterMethodDef(md);
+                return base.VisitMethodDef(md, data);
+            };
+            public override Func<FieldDecl, IFullDevolutionData, FieldDecl> VisitFieldDecl => (fd, data) =>
+            {
+                data.RegisterField(fd);
+                return base.VisitFieldDecl(fd, data);
+            };
+            public override Func<Constructor, IFullDevolutionData, Constructor> VisitConstructorDef => (cd, data) =>
+            {
+                data.RegisterConstructor(cd);
+                return base.VisitConstructorDef(cd, data);
+            };
+        }
+
+        internal class InterfaceDevolutionVersion : IFullDevolutionVersion
         {
             public InterfaceDevolutionVersion(IInterfaceSpec ifc, InterfaceDevolutionKind kind)
             {
@@ -437,16 +747,103 @@ namespace Nom.BenchmarkGenerator
             }
         }
 
-        public IEnumerable<DirectoryInfo> Run(Parser.Program program, TypeChecker.Program tcprog, DirectoryInfo dir, IEnumerable<ILibrary> libraries, IEnumerable<Bytecode.IManifest> manifests, Project.NomProject project, bool byFile = false)
+        private interface IValidityCheckData
+        {
+            IValidityCheckData GetInInheritanceDeclVersion();
+            void FoundDynamicType();
+            void FoundClassType(Parser.ClassType ct);
+            bool IsValid { get; }
+        }
+
+        private class ValidityCheckData : IValidityCheckData
+        {
+            private IFullDevolutionData data;
+            public ValidityCheckData(IFullDevolutionData data) { this.data = data; }
+            public bool IsValid { get; set; } = true;
+
+            public void FoundClassType(Parser.ClassType ct)
+            {
+                //ignore
+            }
+
+            public void FoundDynamicType()
+            {
+                //ignore
+            }
+
+            public IValidityCheckData GetInInheritanceDeclVersion()
+            {
+                return new ValidityCheckDataInInheritanceDecl(this);
+            }
+
+            private class ValidityCheckDataInInheritanceDecl : IValidityCheckData
+            {
+                public readonly ValidityCheckData parent;
+                public ValidityCheckDataInInheritanceDecl(ValidityCheckData parent)
+                {
+                    this.parent = parent;
+                }
+
+                public bool IsValid => ((IValidityCheckData)parent).IsValid;
+
+                public void FoundClassType(Parser.ClassType ct)
+                {
+                    var tv = new Language.TypeVisitor<object, IInterfaceSpec>();
+                    tv.DefaultAction = (t, o) => null;
+                    tv.NamedTypeAction = (t, o) => t.Element;
+                    var key = ct.Annotation?.Visit(tv);
+                    if(key!=null&& parent.data.Versions.ContainsKey(key))
+                    {
+                        if(!parent.data.Versions[key].IsPresent)
+                        {
+                            parent.IsValid = false;
+                        }
+                    }
+                }
+
+                public void FoundDynamicType()
+                {
+                    parent.IsValid = false;
+                }
+
+                public IValidityCheckData GetInInheritanceDeclVersion()
+                {
+                    return this;
+                }
+            }
+        }
+
+        private class CheckValidityVisitor : ConversionVisitor<IValidityCheckData>
+        {
+            private CheckValidityVisitor() { }
+            public static CheckValidityVisitor Instance { get; } = new CheckValidityVisitor();
+
+            public override Func<InheritanceDecl, IValidityCheckData, InheritanceDecl> VisitInheritanceDecl => (ihd,data) =>
+            {
+                return base.VisitInheritanceDecl(ihd, data.GetInInheritanceDeclVersion());
+            };
+            public override Func<Parser.DynamicType, IValidityCheckData, Parser.IType> VisitDynamicType =>  (dt,data) =>
+            {
+                data.FoundDynamicType();
+                return dt;
+            };
+            public override Func<Parser.ClassType, IValidityCheckData, Parser.IType> VisitClassType => (t, data) =>
+            {
+                data.FoundClassType(t);
+                return t;
+            };
+        }
+
+        public IEnumerable<DirectoryInfo> Run(Parser.Program program, TypeChecker.Program tcprog, DirectoryInfo dir, IEnumerable<ILibrary> libraries, IEnumerable<Bytecode.IManifest> manifests, Project.NomProject project, bool byFile = false, bool omitUntypedInterfaces = false)
         {
             IEnumerable<IEnumerable<IFullDevolutionVersion>> configs;
             if (byFile)
             {
-                configs = GenerateFileBasedConfigs(program, tcprog);
+                configs = GenerateFileBasedConfigs(program, tcprog, omitUntypedInterfaces);
             }
             else
             {
-                configs = GenerateAllConfigs(program, tcprog);
+                configs = GenerateAllConfigs(program, tcprog, omitUntypedInterfaces);
             }
             List<(Parser.Program, DirectoryInfo, string)> progs = new List<(Parser.Program, DirectoryInfo, string)>();
             foreach (var manifest in manifests)
@@ -468,31 +865,41 @@ namespace Nom.BenchmarkGenerator
                     version.Reset();
                 }
                 var configname = String.Concat(config.OrderBy(x => x.InterfaceObject.FullQualifiedName).Select(x => x.ToString()));
-                var subdir = dir.CreateSubdirectory(".BM_" + configname);
                 Console.Write("Configuration " + configname);
                 Console.Write(": Generating...");
                 var data = ProcessDevolutionConfiguration(config, tcprog);
+                CollectionVisitor.Instance.VisitProgram(program, data);
                 var nprog = FullDevolutionVisitor.Instance.VisitProgram(program, data);
-                Queue<IFullDevolutionVersion> vpq = new Queue<IFullDevolutionVersion>(config);
-                while (vpq.Count > 0)
+                //Queue<IFullDevolutionVersion> vpq = new Queue<IFullDevolutionVersion>(config);
+                //while (vpq.Count > 0)
+                //{
+                //    var dv = vpq.Dequeue();
+                //    try
+                //    {
+                //        dv.ProcessReplacements();
+                //    }
+                //    catch (UnreplacedReplacementExprException)
+                //    {
+                //        vpq.Enqueue(dv);
+                //    }
+                //}
+                var validityData = new ValidityCheckData(data);
+                CheckValidityVisitor.Instance.VisitProgram(nprog, validityData);
+                if (validityData.IsValid)
                 {
-                    var dv = vpq.Dequeue();
-                    try
+                    var subdir = dir.CreateSubdirectory(".BM_" + configname);
+                    nprog.Output(subdir);
+                    foreach (var manifest in manifests)
                     {
-                        dv.ProcessReplacements();
+                        manifest.Emit(s => new FileInfo(subdir.FullName + "/" + manifest.ProgramName + ".manifest").OpenWrite());
                     }
-                    catch (UnreplacedReplacementExprException)
-                    {
-                        vpq.Enqueue(dv);
-                    }
+                    progs.Add((nprog, subdir, configname));
+                    Console.WriteLine("DONE!");
                 }
-                nprog.Output(subdir);
-                foreach (var manifest in manifests)
+                else
                 {
-                    manifest.Emit(s => new FileInfo(subdir.FullName + "/" + manifest.ProgramName + ".manifest").OpenWrite());
+                    Console.WriteLine("INVALID CONFIGURATION... DROPPED!");
                 }
-                progs.Add((nprog, subdir, configname));
-                Console.WriteLine("DONE!");
             }
 
             foreach (var prog in progs)
@@ -542,7 +949,7 @@ namespace Nom.BenchmarkGenerator
             return cg.GenerateBytecode(program, project);
         }
 
-        private IEnumerable<IEnumerable<IFullDevolutionVersion>> GenerateFileBasedConfigs(Parser.Program program, TypeChecker.Program tcprog)
+        private IEnumerable<IEnumerable<IFullDevolutionVersion>> GenerateFileBasedConfigs(Parser.Program program, TypeChecker.Program tcprog, bool omitUntypedInterfaces = false)
         {
             var interfaces = tcprog.GlobalNamespace.AllInterfaces();
             var classes = tcprog.GlobalNamespace.AllClasses();
@@ -571,46 +978,46 @@ namespace Nom.BenchmarkGenerator
                     {
                         typedNominals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.NominalTyped));
                         untypedNominals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.NominalUntyped));
-                        if (cls.StaticFields.Count() == 0 && cls.StaticMethods.Count() == 0)
+                        //if (cls.StaticFields.Count() == 0 && cls.StaticMethods.Count() == 0)
+                        //{
+                        if (cls.Methods.Count() == 1 && cls.Methods.Single().Name.Length == 0)
                         {
-                            if (cls.Methods.Count() == 1 && cls.Methods.Single().Name.Length == 0)
-                            {
-                                lambdaifiables.Add(cls);
-                            }
-                            else
-                            {
-                                structifiables.Add(cls);
-                            }
+                            lambdaifiables.Add(cls);
                         }
+                        else if (cls.Fields.Count() > 0 || cls.Methods.Count() > 0)
+                        {
+                            structifiables.Add(cls);
+                        }
+                        //}
                     }
                     cfcconfigs.Add(typedNominals);
                     cfcconfigs.Add(untypedNominals);
 
                     if (structifiables.Count + lambdaifiables.Count > 0)
                     {
-                        List<IFullDevolutionVersion> typedStructurals = new List<IFullDevolutionVersion>();
+                        //List<IFullDevolutionVersion> typedStructurals = new List<IFullDevolutionVersion>();
                         List<IFullDevolutionVersion> untypedStructurals = new List<IFullDevolutionVersion>();
                         //List<IFullDevolutionVersion> dictionaryStructurals = new List<IFullDevolutionVersion>();
                         foreach (var cls in cfclasses)
                         {
                             if (lambdaifiables.Contains(cls))
                             {
-                                typedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.LambdaTyped));
-                                untypedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.LambdaUntyped));
+                                //typedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.LambdaTyped));
+                                untypedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.Lambda));
                             }
                             else if (structifiables.Contains(cls))
                             {
-                                typedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructTyped));
-                                untypedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructUntyped));
+                                //typedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructTyped));
+                                untypedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.Struct));
                                 //dictionaryStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructDictionary));
                             }
                             else
                             {
-                                typedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.NominalTyped));
+                                //typedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.NominalTyped));
                                 untypedStructurals.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.NominalUntyped));
                             }
                         }
-                        cfcconfigs.Add(typedStructurals);
+                        //cfcconfigs.Add(typedStructurals);
                         cfcconfigs.Add(untypedStructurals);
                         //cfcconfigs.Add(dictionaryStructurals);
                     }
@@ -629,7 +1036,10 @@ namespace Nom.BenchmarkGenerator
                         removeds.Add(new InterfaceDevolutionVersion(ifc, InterfaceDevolutionKind.Removed));
                     }
                     cficonfigs.Add(typedNominals);
-                    cficonfigs.Add(untypedNominals);
+                    if (!omitUntypedInterfaces)
+                    {
+                        cficonfigs.Add(untypedNominals);
+                    }
                     cficonfigs.Add(removeds);
                     cfconfigs = (cfconfigs.Select(cfc => cficonfigs.Select(cfcc => cfc.Concat(cfcc)))).Flatten().ToList();
                 }
@@ -656,7 +1066,7 @@ namespace Nom.BenchmarkGenerator
             };
         }
 
-        private IEnumerable<IEnumerable<IFullDevolutionVersion>> GenerateAllConfigs(Parser.Program program, TypeChecker.Program tcprog)
+        private IEnumerable<IEnumerable<IFullDevolutionVersion>> GenerateAllConfigs(Parser.Program program, TypeChecker.Program tcprog, bool omitUntypedInterfaces = false)
         {
             var interfaces = tcprog.GlobalNamespace.AllInterfaces();
             var classes = tcprog.GlobalNamespace.AllClasses();
@@ -667,17 +1077,17 @@ namespace Nom.BenchmarkGenerator
 
             foreach (var cls in classes)
             {
-                if (cls.StaticFields.Count() == 0 && cls.StaticMethods.Count() == 0 && cls.Classes.Count() == 0 && cls.Interfaces.Count() == 0)
+                //if (cls.StaticFields.Count() == 0 && cls.StaticMethods.Count() == 0 && cls.Classes.Count() == 0 && cls.Interfaces.Count() == 0)
+                //{
+                if (cls.Methods.Count() == 1 && cls.Methods.Single().Name.Length == 0)
                 {
-                    if (cls.Methods.Count() == 1 && cls.Methods.Single().Name.Length == 0)
-                    {
-                        lambdaifiables.Add(cls);
-                    }
-                    else
-                    {
-                        structifiables.Add(cls);
-                    }
+                    lambdaifiables.Add(cls);
                 }
+                else if (cls.Fields.Count() > 0 || cls.Methods.Count() > 0)
+                {
+                    structifiables.Add(cls);
+                }
+                //}
             }
 
             IEnumerable<IEnumerable<IFullDevolutionVersion>> configs = new List<IEnumerable<IFullDevolutionVersion>>() { new List<IFullDevolutionVersion>() };
@@ -689,13 +1099,15 @@ namespace Nom.BenchmarkGenerator
                 clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.NominalUntyped));
                 if (structifiables.Contains(cls))
                 {
-                    clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructTyped));
-                    clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructUntyped));
+                    //clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructTyped));
+                    //clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.StructUntyped));
+                    clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.Struct));
                 }
                 if (lambdaifiables.Contains(cls))
                 {
-                    clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.LambdaTyped));
-                    clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.LambdaUntyped));
+                    //clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.LambdaTyped));
+                    //clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.LambdaUntyped));
+                    clsVersions.Add(new ClassDevolutionVersion(cls, ClassDevolutionKind.Lambda));
                 }
                 configs = clsVersions.Select(clsv => configs.Select(v => v.Cons(clsv).ToList())).Flatten().ToList();
             }
@@ -703,7 +1115,9 @@ namespace Nom.BenchmarkGenerator
             {
                 configs = configs.Select(v => v.Cons(new InterfaceDevolutionVersion(ifc, InterfaceDevolutionKind.Typed)).ToList())
                     .Concat(
-                    configs.Select(v => v.Cons(new InterfaceDevolutionVersion(ifc, InterfaceDevolutionKind.Untyped)).ToList())
+                    (!omitUntypedInterfaces) ?
+                    configs.Select(v => v.Cons(new InterfaceDevolutionVersion(ifc, InterfaceDevolutionKind.Untyped)).ToList()) :
+                    new List<List<IFullDevolutionVersion>>()
                     ).Concat(
                     configs.Select(v => v.Cons(new InterfaceDevolutionVersion(ifc, InterfaceDevolutionKind.Removed)).ToList())).ToList();
             }
@@ -811,7 +1225,7 @@ namespace Nom.BenchmarkGenerator
         }
 
 
-        private interface IFullDevolutionData
+        internal interface IFullDevolutionData
         {
             IDictionary<IMethodSpec, (IEnumerable<Language.IType>, Language.IType)> Signatures { get; }
             IDictionary<IInterfaceSpec, IFullDevolutionVersion> Versions { get; }
@@ -819,6 +1233,7 @@ namespace Nom.BenchmarkGenerator
             void RegisterMethodDef(MethodDef md);
             void RegisterConstructor(Constructor cd);
             void RegisterField(FieldDecl fd);
+            ClassDevolutionVersion ContainerDevolutionVersion { get; }
 
             IFullDevolutionData CreateInContainerData(IInterfaceSpec container);
         }
@@ -833,6 +1248,8 @@ namespace Nom.BenchmarkGenerator
 
             public IDictionary<IMethodSpec, (IEnumerable<Language.IType>, Language.IType)> Signatures { get; }
             public IDictionary<IInterfaceSpec, IFullDevolutionVersion> Versions { get; }
+
+            public ClassDevolutionVersion ContainerDevolutionVersion => throw new InternalException("Cannot get devolution version of container while no container exists!");
 
             public void RegisterConstructor(Constructor cd)
             {
@@ -872,6 +1289,8 @@ namespace Nom.BenchmarkGenerator
                 public IDictionary<IMethodSpec, (IEnumerable<Language.IType>, Language.IType)> Signatures => parent.Signatures;
 
                 public IDictionary<IInterfaceSpec, IFullDevolutionVersion> Versions => parent.Versions;
+
+                public ClassDevolutionVersion ContainerDevolutionVersion => (Versions[container] as ClassDevolutionVersion);
 
                 public IFullDevolutionData CreateInContainerData(IInterfaceSpec container)
                 {
@@ -998,6 +1417,10 @@ namespace Nom.BenchmarkGenerator
             protected FullDevolutionVisitor() { }
             //public override Func<IArgIdentifier<Identifier, Parser.IType>, IFullDevolutionData, RefIdentifier> VisitRefIdentifier => (ri, data) => ri as RefIdentifier ?? new RefIdentifier(ri.Name, ri.Arguments, ri.Name.Locs);
             //public override Func<IArgIdentifier<Identifier, TypeArgDecl>, IFullDevolutionData, DeclIdentifier> VisitDeclIdentifier => (di, data) => di as DeclIdentifier ?? new DeclIdentifier(di.Name, di.Arguments, di.Name.Locs);
+            public override Func<InheritanceDecl, IFullDevolutionData, InheritanceDecl> VisitInheritanceDecl => (ihd, data) =>
+            {
+                return ihd;
+            };
             public override Func<IArgIdentifier<Identifier, Parser.IType>, IFullDevolutionData, RefIdentifier> VisitRefIdentifier => (ri, data) =>
             {
                 bool different = false;
@@ -1065,7 +1488,7 @@ namespace Nom.BenchmarkGenerator
                 var args = VisitList(sig.Item1.Zip(md.Args, (tp, vd) => new VarDecl(vd.Name, tp.ToParserType(vd.Locs).Visit(FullDevolutionVisitor.Instance, data), vd.Locs)), data, VisitVarDecl, ref different);
                 var returns = sig.Item2.ToParserType(md.Returns.Locs).Visit(FullDevolutionVisitor.Instance, data);
                 var nmd = new MethodDecl(md.Visibility, md.IsCallTarget, md.Name, args, returns, md.Locs);
-                data.RegisterMethodDecl(nmd);
+                //data.RegisterMethodDecl(nmd);
                 return nmd;
             };
             public override Func<MethodDef, IFullDevolutionData, MethodDef> VisitMethodDef => (md, data) =>
@@ -1076,14 +1499,14 @@ namespace Nom.BenchmarkGenerator
                 var returns = sig.Item2.ToParserType(md.Returns.Locs).Visit(FullDevolutionVisitor.Instance, data);
                 var code = md.Code.Visit(this, data).AsBlock();
                 var nmd = new MethodDef(md.IsFinal, md.IsVirtual, md.IsOverride, md.IsCallTarget, md.Visibility, md.Name, args, returns, code, md.Locs);
-                data.RegisterMethodDef(nmd);
+                //data.RegisterMethodDef(nmd);
                 return nmd;
             };
 
             public override Func<FieldDecl, IFullDevolutionData, FieldDecl> VisitFieldDecl => (md, data) =>
             {
                 var nfd = base.VisitFieldDecl(md, data);
-                data.RegisterField(nfd);
+                //data.RegisterField(nfd);
                 return nfd;
             };
 
@@ -1091,7 +1514,7 @@ namespace Nom.BenchmarkGenerator
             public override Func<Constructor, IFullDevolutionData, Constructor> VisitConstructorDef => (cd, data) =>
             {
                 var ncd = base.VisitConstructorDef(cd, data);
-                data.RegisterConstructor(ncd);
+                //data.RegisterConstructor(ncd);
                 return ncd;
             };
 
@@ -1101,7 +1524,7 @@ namespace Nom.BenchmarkGenerator
                 var ret = base.VisitNamespaceDef(ns, data);
                 return new Namespace(ns.Name,
                     ret.Interfaces.Where(iface => (data.Versions[iface.Annotation] as InterfaceDevolutionVersion).Kind != InterfaceDevolutionKind.Removed).ToList(),
-                    ret.Classes.Where(cls => classRetainKinds.Contains((data.Versions[cls.Annotation] as ClassDevolutionVersion).Kind)).ToList(),
+                    ret.Classes.Where(cls => classRetainKinds.Contains((data.Versions[cls.Annotation] as ClassDevolutionVersion).Kind) || cls.StaticMethods.Count() > 0 || cls.StaticFields.Count() > 0).ToList(),
                     ret.Namespaces,
                     ns.Locs);
             };
@@ -1110,9 +1533,14 @@ namespace Nom.BenchmarkGenerator
             {
                 var ret = base.VisitCodeFile(cf, data);
                 return new CodeFile(ret.FileName, ret.Usings, ret.Interfaces.Where(iface => (data.Versions[iface.Annotation] as InterfaceDevolutionVersion).Kind != InterfaceDevolutionKind.Removed).ToList(),
-                    ret.Classes.Where(cls => classRetainKinds.Contains((data.Versions[cls.Annotation] as ClassDevolutionVersion).Kind)).ToList(),
+                    ret.Classes.Where(cls => classRetainKinds.Contains((data.Versions[cls.Annotation] as ClassDevolutionVersion).Kind) || cls.StaticMethods.Count() > 0 || cls.StaticFields.Count() > 0).ToList(),
                     ret.Namespaces);
             };
+
+            protected virtual IExpr ProcessStructuralReplacement(NewExpr e, IFullDevolutionData data, ClassDevolutionVersion codeVersion)
+            {
+                return codeVersion.GenerateTypedReplacement(e, data);
+            }
 
             public override Func<NewExpr, IFullDevolutionData, IExpr> VisitNewExpr => (e, data) =>
             {
@@ -1130,9 +1558,13 @@ namespace Nom.BenchmarkGenerator
                         case ClassDevolutionKind.StructDictionary:
                         case ClassDevolutionKind.LambdaTyped:
                         case ClassDevolutionKind.LambdaUntyped:
-                            var re = new ReplacementExpr(ne);
-                            version.RegisterReplacement(re);
-                            return re;
+                        case ClassDevolutionKind.Lambda:
+                        case ClassDevolutionKind.Struct:
+                            return ProcessStructuralReplacement(e, data, version);
+                        //version.GenerateTypedReplacement(ne);
+                        //var re = new ReplacementExpr(ne,version);
+                        //version.RegisterReplacement(re);
+                        //return re;
                         default:
                             throw new NotImplementedException();
                     }
@@ -1178,6 +1610,19 @@ namespace Nom.BenchmarkGenerator
                         if (cd.Implements.Any(impl => data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance))
                         {
                             ret = new ClassDef(ret.Name, ret.SuperClass, ret.Implements.Where(impl => !(data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance)), ret.ImplementedMethods, ret.Fields, ret.Constructors, ret.StaticFields, ret.StaticMethods, ret.Instances, ret.IsFinal, ret.Visibility, ret.IsAbstract, ret.IsPartial, ret.IsShape, ret.IsMaterial, ret.Interfaces, ret.Classes, ret.Locs, ret.IsSpecial);
+                        }
+                        ret.Annotation = cd.Annotation;
+                        return ret;
+                    case ClassDevolutionKind.Lambda:
+                    case ClassDevolutionKind.Struct:
+                        ret = base.VisitClassDef(cd, data.CreateInContainerData(cd.Annotation));
+                        if (cd.Implements.Any(impl => data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance))
+                        {
+                            ret = new ClassDef(ret.Name, ret.SuperClass, ret.Implements.Where(impl => !(data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance)), new List<MethodDef>(), new List<FieldDecl>(), new List<Constructor>(), ret.StaticFields, ret.StaticMethods, new List<InstanceDef>(), ret.IsFinal, ret.Visibility, false, ret.IsPartial, ret.IsShape, ret.IsMaterial, ret.Interfaces, ret.Classes, ret.Locs, ret.IsSpecial);
+                        }
+                        else
+                        {
+                            ret = new ClassDef(ret.Name, ret.SuperClass, ret.Implements, new List<MethodDef>(), new List<FieldDecl>(), new List<Constructor>(), ret.StaticFields, ret.StaticMethods, new List<InstanceDef>(), ret.IsFinal, ret.Visibility, false, ret.IsPartial, ret.IsShape, ret.IsMaterial, ret.Interfaces, ret.Classes, ret.Locs, ret.IsSpecial);
                         }
                         ret.Annotation = cd.Annotation;
                         return ret;
@@ -1244,14 +1689,26 @@ namespace Nom.BenchmarkGenerator
                 ret.Annotation = idef.Annotation;
                 return ret;
             };
-        };
 
-        private class ReplacementExpr : Parser.AExpr
+            protected override IExpr ProcessStructuralReplacement(NewExpr e, IFullDevolutionData data, ClassDevolutionVersion codeVersion)
+            {
+                return codeVersion.GenerateUntypedReplacement(e, data);
+            }
+
+            public override Func<InheritanceDecl, IFullDevolutionData, InheritanceDecl> VisitInheritanceDecl => (ihd, data) =>
+            {
+                return FullDevolutionVisitor.Instance.VisitInheritanceDecl(ihd, data);
+            };
+        }
+        internal class ReplacementExpr : Parser.AExpr
         {
-            public ReplacementExpr(IExpr original) : base(original.Locs)
+            public ReplacementExpr(IExpr original, ClassDevolutionVersion version) : base(original.Locs)
             {
                 OriginalExpr = original;
+                Version = version;
             }
+
+            public ClassDevolutionVersion Version { get; }
 
             public IExpr Expr { get; set; }
 
@@ -1267,13 +1724,22 @@ namespace Nom.BenchmarkGenerator
 
             public override void PrettyPrint(PrettyPrinter p)
             {
-                Expr?.PrettyPrint(p);
+                if (Expr == null)
+                {
+                    throw new UnreplacedReplacementExprException();
+                }
+                Expr.PrettyPrint(p);
             }
 
             public override R Visit<S, R>(IExprVisitor<S, R> visitor, S state)
             {
                 if (Expr == null)
                 {
+                    ConversionVisitor<S> vs = visitor as ConversionVisitor<S>;
+                    if (vs != null)
+                    {
+                        return (R)vs.VisitReplacementExpr(this, state);
+                    }
                     throw new UnreplacedReplacementExprException();
                 }
                 return Expr.Visit(visitor, state);

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Nom.Language
 {
-    public interface IMethodSpec : ICallableSpec, IMember
+    public interface IMethodSpec : ICallableSpec, IMember, ISubstitutable<IMethodSpec>
     {
         String Name
         {

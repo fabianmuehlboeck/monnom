@@ -15,12 +15,13 @@ namespace Nom.Language
         IType Meet(IType other);
         IType Join(IType other);
 
-
+        bool IsEquivalent(IType other, bool optimistic = false);
         new IEnumerable<IType> InheritsFrom { get; }
         bool PrecisionRelated(IType other);
         bool LessOptimistic(IType other);
         bool PessimisticSubtype(IType other);
         bool OptimisticSubtype(IType other);
         bool SubstitutiveSubtype(IType other);
+        IType ReplaceArgsWith(IEnumerable<IType> args);
     }
 }

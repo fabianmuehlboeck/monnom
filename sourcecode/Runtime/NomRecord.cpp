@@ -449,7 +449,7 @@ namespace Nom
 					entryID++;
 				}
 				auto bigptr = ConstantExpr::getGetElementPtr(RecordHeader::GetLLVMType(Fields.size()), ConstantPointerNull::get(RecordHeader::GetLLVMType(Fields.size())->getPointerTo()), ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(StructHeaderFields::Fields) }));
-				auto littleptr = ConstantExpr::getGetElementPtr(RecordHeader::GetLLVMType(Fields.size()), ConstantPointerNull::get(RecordHeader::GetLLVMType()->getPointerTo()), ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(StructHeaderFields::Fields) }));
+				auto littleptr = ConstantExpr::getGetElementPtr(RecordHeader::GetLLVMType(), ConstantPointerNull::get(RecordHeader::GetLLVMType()->getPointerTo()), ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(StructHeaderFields::Fields) }));
 				auto fieldsOffset = ConstantExpr::getUDiv(ConstantExpr::getSub(ConstantExpr::getPtrToInt(bigptr, numtype(size_t)), ConstantExpr::getPtrToInt(littleptr, numtype(size_t))), MakeInt<size_t>(8));
 				for (auto& field : fields)
 				{

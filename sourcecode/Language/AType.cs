@@ -127,5 +127,8 @@ namespace Nom.Language
         }
 
         public void PrettyPrint(PrettyPrinter p) { throw new NotImplementedException(); }
+
+        public abstract bool IsEquivalent(IType other, bool optimistic = false);
+        public abstract IType ReplaceArgsWith(IEnumerable<IType> args);
     }
 }

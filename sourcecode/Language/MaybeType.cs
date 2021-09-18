@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace Nom.Language
 {
@@ -22,6 +23,14 @@ namespace Nom.Language
             }
         }
 
+        public override bool IsEquivalent(IType other, bool optimistic = false)
+        {
+            var visitor = new TypeVisitor<object, bool>();
+            visitor.DefaultAction = (t, o) => false;
+            visitor.VisitDynamicType = (t, o) => optimistic;
+            visitor.VisitMaybeType = (t, o) => t.PotentialType.IsEquivalent(PotentialType, optimistic);
+            return other.Visit(visitor, null);
+        }
         public override bool IsDisjoint(IType other)
         {
             return other.IsDisjoint(PotentialType) && other.IsDisjoint(ClassType.NullType);
@@ -80,6 +89,15 @@ namespace Nom.Language
         protected override IType SubstituteType<T>(ITypeEnvironment<T> env)
         {
             return new MaybeType(((ISubstitutable<IType>)PotentialType).Substitute(env));
+        }
+
+        public override IType ReplaceArgsWith(IEnumerable<IType> args)
+        {
+            if(args.Count()==1)
+            {
+                return new MaybeType(args.Single());
+            }
+            throw new InternalException("Wrong number of arguments for type replacement!");
         }
     }
 }

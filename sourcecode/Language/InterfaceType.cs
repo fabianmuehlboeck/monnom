@@ -31,6 +31,14 @@ namespace Nom.Language
             }
         }
 
+        public override IType ReplaceArgsWith(IEnumerable<IType> args)
+        {
+            if (args.Count() == this.Arguments.Count())
+            {
+                return new InterfaceType(this.Element, new TypeEnvironment<ITypeArgument>(this.Element.AllTypeParameters, args));
+            }
+            throw new InternalException("Wrong number of arguments for type replacement!");
+        }
         public override bool IsDisjoint(IType other)
         {
             NoargTypeVisitor<bool> tv = new NoargTypeVisitor<bool>((t) => t.IsDisjoint(this));

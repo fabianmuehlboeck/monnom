@@ -10,6 +10,10 @@ namespace Nom.BenchmarkGenerator
 {
     public class ConversionVisitor<S> : IDefaultExprVisitor<S, Parser.IDefaultExpr>, IExprVisitor<S, Parser.IExpr>, ITypeVisitor<S, Parser.IType>, IStmtVisitor<S, Parser.IStmt>
     {
+        internal virtual Func<FullDevolution.ReplacementExpr, S, IExpr> VisitReplacementExpr => (e, s) => 
+        {
+            throw new FullDevolution.UnreplacedReplacementExprException();
+        };
         public virtual Func<DefaultBoolExpr, S, IDefaultExpr> VisitDefaultBoolExpr => (e, s) => { return e; };
         public virtual Func<BoolExpr, S, IExpr> VisitBoolExpr => (e, s) => { return e; };
 
@@ -79,7 +83,7 @@ namespace Nom.BenchmarkGenerator
             }
             if (different)
             {
-                return new NewExpr(e.NewCall, args, e.Locs);
+                return new NewExpr(e.NewCall, args, e.Locs) { Annotation = e.Annotation };
             }
             return e;
         };
@@ -507,6 +511,7 @@ namespace Nom.BenchmarkGenerator
         {
             bool different = false;
             List<IArgIdentifier<Identifier, Parser.IType>> argids = new List<IArgIdentifier<Identifier, IType>>();
+            List<IType> allArgs = new List<IType>();
             foreach(var part in t)
             {
                 bool diffID = false;
@@ -520,6 +525,7 @@ namespace Nom.BenchmarkGenerator
                         diffID = true;
                     }
                     types.Add(newtype);
+                    allArgs.Add(newtype);
                 }
                 if(diffID)
                 {
@@ -532,7 +538,12 @@ namespace Nom.BenchmarkGenerator
             }
             if(different)
             {
-                return ClassType.GetInstance(new TypeQName(false, argids));
+                var newType =  ClassType.GetInstance(new TypeQName(false, argids));
+                if(t.Annotation!=null)
+                {
+                    newType.Annotation = t.Annotation.ReplaceArgsWith(allArgs.Select(t => t.Annotation));
+                }
+                return newType;
             }
             return t;
         };
@@ -778,7 +789,12 @@ namespace Nom.BenchmarkGenerator
             var arg = tp.Type.Visit(this, s);
             if (arg != tp.Type)
             {
-                return new MaybeType(arg, tp.Locs);
+                var ret = new MaybeType(arg, tp.Locs);
+                if(tp.Annotation!=null)
+                {
+                    ret.Annotation = tp.Annotation.ReplaceArgsWith(arg.Annotation.Singleton());
+                }
+                return ret;
             }   
             return tp;
         };
@@ -788,7 +804,12 @@ namespace Nom.BenchmarkGenerator
             var arg = tp.Type.Visit(this, s);
             if (arg != tp.Type)
             {
-                return new ProbablyType(arg, tp.Locs);
+                var ret = new ProbablyType(arg, tp.Locs);
+                if (tp.Annotation != null)
+                {
+                    ret.Annotation = tp.Annotation.ReplaceArgsWith(arg.Annotation.Singleton());
+                }
+                return ret;
             }
             return tp;
         };

@@ -378,6 +378,10 @@ namespace Nom
 
 		NomValue UnpackMaskedInt(NomBuilder& builder, llvm::Value* refAsInt)
 		{
+			if (refAsInt->getType() == REFTYPE)
+			{
+				refAsInt = builder->CreatePtrToInt(refAsInt, INTTYPE);
+			}
 			return builder->CreateAShr(refAsInt, MakeIntLike(refAsInt, 2), "unpackedInt");
 		}
 
@@ -527,6 +531,10 @@ namespace Nom
 		}
 		NomValue UnpackMaskedFloat(NomBuilder& builder, llvm::Value* refAsInt)
 		{
+			if (refAsInt->getType() == REFTYPE)
+			{
+				refAsInt = builder->CreatePtrToInt(refAsInt, INTTYPE);
+			}
 			return builder->CreateBitCast(builder->CreateIntrinsic(Intrinsic::fshr, { INTTYPE }, { refAsInt, refAsInt, ConstantInt::get(refAsInt->getType(), 3) }), FLOATTYPE, "unmaskedFloat");
 		}
 
