@@ -792,9 +792,9 @@ namespace Nom.BenchmarkGenerator
                     tv.DefaultAction = (t, o) => null;
                     tv.NamedTypeAction = (t, o) => t.Element;
                     var key = ct.Annotation?.Visit(tv);
-                    if(key!=null&& parent.data.Versions.ContainsKey(key))
+                    if (key != null && parent.data.Versions.ContainsKey(key))
                     {
-                        if(!parent.data.Versions[key].IsPresent)
+                        if (!parent.data.Versions[key].IsPresent)
                         {
                             parent.IsValid = false;
                         }
@@ -818,15 +818,15 @@ namespace Nom.BenchmarkGenerator
             private CheckValidityVisitor() { }
             public static CheckValidityVisitor Instance { get; } = new CheckValidityVisitor();
 
-            public override Func<InheritanceDecl, IValidityCheckData, InheritanceDecl> VisitInheritanceDecl => (ihd,data) =>
+            public override Func<InheritanceDecl, IValidityCheckData, InheritanceDecl> VisitInheritanceDecl => (ihd, data) =>
             {
                 return base.VisitInheritanceDecl(ihd, data.GetInInheritanceDeclVersion());
             };
-            public override Func<Parser.DynamicType, IValidityCheckData, Parser.IType> VisitDynamicType =>  (dt,data) =>
-            {
-                data.FoundDynamicType();
-                return dt;
-            };
+            public override Func<Parser.DynamicType, IValidityCheckData, Parser.IType> VisitDynamicType => (dt, data) =>
+           {
+               data.FoundDynamicType();
+               return dt;
+           };
             public override Func<Parser.ClassType, IValidityCheckData, Parser.IType> VisitClassType => (t, data) =>
             {
                 data.FoundClassType(t);
@@ -1125,6 +1125,18 @@ namespace Nom.BenchmarkGenerator
             return configs;
         }
 
+        private class FullDevolutionVersionVisitor<Arg, Ret> : IFullDevolutionVersionVisitor<Arg, Ret>
+        {
+            public FullDevolutionVersionVisitor()
+            {
+
+            }
+
+            public Func<ClassDevolutionVersion, Arg, Ret> VisitClassDevolutionVersion { get; set; }
+
+            public Func<InterfaceDevolutionVersion, Arg, Ret> VisitInterfaceDevolutionVersion { get; set; }
+        }
+
         private FullDevolutionData ProcessDevolutionConfiguration(IEnumerable<IFullDevolutionVersion> config, TypeChecker.Program tcprog)
         {
             Dictionary<IMethodSpec, (IEnumerable<Language.IType>, Language.IType)> signatures = new Dictionary<IMethodSpec, (IEnumerable<Language.IType>, Language.IType)>();
@@ -1141,21 +1153,28 @@ namespace Nom.BenchmarkGenerator
                 {
                     if (!signatures.ContainsKey(method))
                     {
-                        var linkedMethods = GetLinkedMethods(method, all, versions);
-                        var roots = linkedMethods.Where(lm => lm.Item2 /*&& versions[lm.Item1.Container as IInterfaceSpec].IsRelevantForInheritance*/).Select(lm => lm.Item1);
-                        if (roots.All(r => versions.ContainsKey(r.Container as IInterfaceSpec) && versions[r.Container as IInterfaceSpec].IsUntyped))
+                        if ((!versions.ContainsKey(ifc)) || (versions[ifc].IsRelevantForInheritance))
                         {
-                            foreach (var m in linkedMethods)
+                            var linkedMethods = GetLinkedMethods(method, all.Where(x => (!versions.ContainsKey(x)) || versions[x].IsRelevantForInheritance), versions);
+                            var roots = linkedMethods.Where(lm => lm.Item2 /*&& versions[lm.Item1.Container as IInterfaceSpec].IsRelevantForInheritance*/).Select(lm => lm.Item1);
+                            if (roots.All(r => versions.ContainsKey(r.Container as IInterfaceSpec) && versions[r.Container as IInterfaceSpec].IsUntyped))
                             {
-                                signatures[m.Item1] = (m.Item1.Parameters.Entries.Select(t => new Language.DynamicType()), new Language.DynamicType());
+                                foreach (var m in linkedMethods)
+                                {
+                                    signatures[m.Item1] = (m.Item1.Parameters.Entries.Select(t => new Language.DynamicType()), new Language.DynamicType());
+                                }
+                            }
+                            else
+                            {
+                                foreach (var m in linkedMethods)
+                                {
+                                    signatures[m.Item1] = (m.Item1.Parameters.Entries.Select(ps => ps.Type), m.Item1.ReturnType);
+                                }
                             }
                         }
                         else
                         {
-                            foreach (var m in linkedMethods)
-                            {
-                                signatures[m.Item1] = (m.Item1.Parameters.Entries.Select(ps => ps.Type), m.Item1.ReturnType);
-                            }
+                            //signatures[method] = (method.Parameters.Entries.Select(p => p.Type), method.ReturnType);
                         }
                     }
                 }
@@ -1483,24 +1502,38 @@ namespace Nom.BenchmarkGenerator
             };
             public override Func<MethodDecl, IFullDevolutionData, MethodDecl> VisitMethodDecl => (md, data) =>
             {
-                var sig = data.Signatures[md.Annotation];
-                bool different = false;
-                var args = VisitList(sig.Item1.Zip(md.Args, (tp, vd) => new VarDecl(vd.Name, tp.ToParserType(vd.Locs).Visit(FullDevolutionVisitor.Instance, data), vd.Locs)), data, VisitVarDecl, ref different);
-                var returns = sig.Item2.ToParserType(md.Returns.Locs).Visit(FullDevolutionVisitor.Instance, data);
-                var nmd = new MethodDecl(md.Visibility, md.IsCallTarget, md.Name, args, returns, md.Locs);
-                //data.RegisterMethodDecl(nmd);
-                return nmd;
+                if (data.Signatures.ContainsKey(md.Annotation))
+                {
+                    var sig = data.Signatures[md.Annotation];
+                    bool different = false;
+                    var args = VisitList(sig.Item1.Zip(md.Args, (tp, vd) => new VarDecl(vd.Name, tp.ToParserType(vd.Locs).Visit(FullDevolutionVisitor.Instance, data), vd.Locs)), data, VisitVarDecl, ref different);
+                    var returns = sig.Item2.ToParserType(md.Returns.Locs).Visit(FullDevolutionVisitor.Instance, data);
+                    var nmd = new MethodDecl(md.Visibility, md.IsCallTarget, md.Name, args, returns, md.Locs);
+                    //data.RegisterMethodDecl(nmd);
+                    return nmd;
+                }
+                else
+                {
+                    return base.VisitMethodDecl(md, data);
+                }
             };
             public override Func<MethodDef, IFullDevolutionData, MethodDef> VisitMethodDef => (md, data) =>
             {
-                var sig = data.Signatures[md.Annotation];
-                bool different = false;
-                var args = VisitList(sig.Item1.Zip(md.Args, (tp, vd) => new VarDecl(vd.Name, tp.ToParserType(vd.Locs).Visit(FullDevolutionVisitor.Instance, data), vd.Locs)), data, VisitVarDecl, ref different);
-                var returns = sig.Item2.ToParserType(md.Returns.Locs).Visit(FullDevolutionVisitor.Instance, data);
-                var code = md.Code.Visit(this, data).AsBlock();
-                var nmd = new MethodDef(md.IsFinal, md.IsVirtual, md.IsOverride, md.IsCallTarget, md.Visibility, md.Name, args, returns, code, md.Locs);
-                //data.RegisterMethodDef(nmd);
-                return nmd;
+                if (data.Signatures.ContainsKey(md.Annotation))
+                {
+                    var sig = data.Signatures[md.Annotation];
+                    bool different = false;
+                    var args = VisitList(sig.Item1.Zip(md.Args, (tp, vd) => new VarDecl(vd.Name, tp.ToParserType(vd.Locs).Visit(FullDevolutionVisitor.Instance, data), vd.Locs)), data, VisitVarDecl, ref different);
+                    var returns = sig.Item2.ToParserType(md.Returns.Locs).Visit(FullDevolutionVisitor.Instance, data);
+                    var code = md.Code.Visit(this, data).AsBlock();
+                    var nmd = new MethodDef(md.IsFinal, md.IsVirtual, md.IsOverride, md.IsCallTarget, md.Visibility, md.Name, args, returns, code, md.Locs);
+                    //data.RegisterMethodDef(nmd);
+                    return nmd;
+                }
+                else
+                {
+                    return base.VisitMethodDef(md, data);
+                }
             };
 
             public override Func<FieldDecl, IFullDevolutionData, FieldDecl> VisitFieldDecl => (md, data) =>
@@ -1615,17 +1648,26 @@ namespace Nom.BenchmarkGenerator
                         return ret;
                     case ClassDevolutionKind.Lambda:
                     case ClassDevolutionKind.Struct:
-                        ret = base.VisitClassDef(cd, data.CreateInContainerData(cd.Annotation));
-                        if (cd.Implements.Any(impl => data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance))
                         {
-                            ret = new ClassDef(ret.Name, ret.SuperClass, ret.Implements.Where(impl => !(data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance)), new List<MethodDef>(), new List<FieldDecl>(), new List<Constructor>(), ret.StaticFields, ret.StaticMethods, new List<InstanceDef>(), ret.IsFinal, ret.Visibility, false, ret.IsPartial, ret.IsShape, ret.IsMaterial, ret.Interfaces, ret.Classes, ret.Locs, ret.IsSpecial);
+                            var newData = data.CreateInContainerData(cd.Annotation);
+                            ret = base.VisitClassDef(cd, newData);
+                            if (cd.Implements.Any(impl => data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance))
+                            {
+                                ret = new ClassDef(ret.Name, ret.SuperClass, ret.Implements.Where(impl => !(data.Versions.ContainsKey(impl.Annotation.Element) && !data.Versions[impl.Annotation.Element].IsRelevantForInheritance)), new List<MethodDef>(), new List<FieldDecl>(), new List<Constructor>(),
+                                    ret.StaticFields.Select(sf => FullDevolutionVisitorUntyped.Instance.VisitStaticFieldDecl(sf, newData)),
+                                    ret.StaticMethods.Select(sm => FullDevolutionVisitorUntyped.Instance.VisitStaticMethodDef(sm, newData)), 
+                                    new List<InstanceDef>(), ret.IsFinal, ret.Visibility, false, ret.IsPartial, ret.IsShape, ret.IsMaterial, ret.Interfaces, ret.Classes, ret.Locs, ret.IsSpecial);
+                            }
+                            else
+                            {
+                                ret = new ClassDef(ret.Name, ret.SuperClass, ret.Implements, new List<MethodDef>(), new List<FieldDecl>(), new List<Constructor>(), 
+                                    ret.StaticFields.Select(sf => FullDevolutionVisitorUntyped.Instance.VisitStaticFieldDecl(sf, newData)),
+                                    ret.StaticMethods.Select(sm => FullDevolutionVisitorUntyped.Instance.VisitStaticMethodDef(sm, newData)), 
+                                    new List<InstanceDef>(), ret.IsFinal, ret.Visibility, false, ret.IsPartial, ret.IsShape, ret.IsMaterial, ret.Interfaces, ret.Classes, ret.Locs, ret.IsSpecial);
+                            }
+                            ret.Annotation = cd.Annotation;
+                            return ret;
                         }
-                        else
-                        {
-                            ret = new ClassDef(ret.Name, ret.SuperClass, ret.Implements, new List<MethodDef>(), new List<FieldDecl>(), new List<Constructor>(), ret.StaticFields, ret.StaticMethods, new List<InstanceDef>(), ret.IsFinal, ret.Visibility, false, ret.IsPartial, ret.IsShape, ret.IsMaterial, ret.Interfaces, ret.Classes, ret.Locs, ret.IsSpecial);
-                        }
-                        ret.Annotation = cd.Annotation;
-                        return ret;
                     default:
                         throw new NotImplementedException();
                 }
