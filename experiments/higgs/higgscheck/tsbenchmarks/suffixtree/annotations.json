@@ -1,0 +1,1 @@
+{"benchmark": "suffixtree", "files": [{"name": "data.ts", "annotations": 91}, {"name": "label.ts", "annotations": 19}, {"name": "lcs.ts", "annotations": 38}, {"name": "main.ts", "annotations": 8}, {"name": "randomStuff.ts", "annotations": 1}, {"name": "structs.ts", "annotations": 0}, {"name": "ukkonen.ts", "annotations": 139}, null]}

@@ -1,0 +1,1 @@
+{"benchmark": "snake/typed", "files": [{"name": "DataClasses.ts", "annotations": 11}, {"name": "GameConsts.ts", "annotations": 0}, {"name": "collide.ts", "annotations": 9}, {"name": "handlers.ts", "annotations": 5}, {"name": "main.ts", "annotations": 12}, {"name": "motion.ts", "annotations": 20}, {"name": "motion_helpers.ts", "annotations": 16}, null]}

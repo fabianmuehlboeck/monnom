@@ -1,0 +1,1 @@
+{"benchmark": "morse/typed", "files": [{"name": "levenshtein.ts", "annotations": 5}, {"name": "main.ts", "annotations": 13}, {"name": "morse-code-strings.ts", "annotations": 7}, {"name": "morse-code-table.ts", "annotations": 10}, null]}
