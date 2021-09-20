@@ -1,0 +1,9 @@
+"3d-cube", "benchmarks/sunspider/3d-cube.js",
+"3d-morph", "benchmarks/sunspider/3d-morph.js",
+"binary-trees", "benchmarks/sunspider/access-binary-trees.js",
+"nbody", "benchmarks/sunspider/access-nbody.js",
+
+"s-methcall", "benchmarks/shootout/methcall.js",
+"s-objinst", "benchmarks/shootout/objinst.js",
+"s-heapsort", "benchmarks/shootout/heapsort.js",
+"s-matrix", "benchmarks/shootout/matrix.js",

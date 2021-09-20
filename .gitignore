@@ -311,7 +311,9 @@ a.out
 
 !experiments/higgs/bin/tsc
 !experiments/higgs/higgs/*
-!experiments/higgs/higgscheck/*
-!experiments/higgs/lib64/*
-!experiments/higgs/bin/*
-!experiments/reticulated/retic/*
+!experiments/higgs/higgs/**
+!experiments/higgs/higgscheck/**
+!experiments/higgs/lib64/**
+!experiments/higgs/bin/**
+!experiments/reticulated/retic/**
+experiments/higgs/higgscheck/tscontracts/tests

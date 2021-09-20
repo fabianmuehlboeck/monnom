@@ -1,0 +1,152 @@
+/*****************************************************************************
+*
+*                      Higgs JavaScript Virtual Machine
+*
+*  This file is part of the Higgs project. The project is distributed at:
+*  https://github.com/maximecb/Higgs
+*
+*  Copyright (c) 2011-2013, Maxime Chevalier-Boisvert. All rights reserved.
+*
+*  This software is licensed under the following license (Modified BSD
+*  License):
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions are
+*  met:
+*   1. Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*   2. Redistributions in binary form must reproduce the above copyright
+*      notice, this list of conditions and the following disclaimer in the
+*      documentation and/or other materials provided with the distribution.
+*   3. The name of the author may not be used to endorse or promote
+*      products derived from this software without specific prior written
+*      permission.
+*
+*  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+*  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+*  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
+*  NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+*  NOT LIMITED TO PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+*  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+*****************************************************************************/
+
+module util.string;
+
+import std.string;
+import std.array;
+
+/**
+Indent each line of a text string
+*/
+string indent(string input, string indentStr = "\t")
+{
+    if (input.length == 0)
+        return "";
+
+    auto output = appender!string(indentStr);
+    output.reserve(input.length + indentStr.length*input.length/10);
+    
+    size_t marker = 0;
+    foreach(i, ch; input[0..$-1])
+    {
+        if (ch == '\n')
+        {
+            output.put(input[marker..i+1]);
+            output.put(indentStr);
+            marker = i+1;
+        }
+    }
+    output.put(input[marker..$]);
+
+    return output.data;
+}
+
+unittest
+{
+    assert(indent("") == "");
+    auto testStr = "\nabcd\nefgh\n";
+    auto expRes = "#\n#abcd\n#efgh\n";
+    auto res = indent(testStr,"#");
+    assert(res == expRes);
+}
+
+/**
+Pad the right side of a string until it has the desired length
+*/
+string rightPadStr(string str, string pad, size_t len)
+{
+    while (str.length < len)
+        str = str ~ pad;
+
+    return str;
+}
+
+/**
+Escape a JavaScript string for output
+*/
+wstring escapeJSString(wstring input)
+{
+    auto output = appender!wstring();
+
+    foreach(ch; input)
+    {
+        switch (ch)
+        {
+            case '\0': output.put("\\0"); break;
+            case '\r': output.put("\\r"); break;
+            case '\n': output.put("\\n"); break;
+            case '\t': output.put("\\t"); break;
+            case '\v': output.put("\\v"); break;
+            case '\f': output.put("\\f"); break;
+            case '\\': output.put("\\\\"); break;
+            case '"': output.put("\\\""); break;
+            case '\'': output.put("\\\'"); break;
+
+            default:
+            if (ch < 32 || ch > 126)
+                output.put(format("\\u%04x", cast(int)ch));
+            else
+                output.put(ch);
+        }
+    }
+
+    return output.data;
+}
+
+/**
+Escape a D string for output
+*/
+string escapeDString(string input)
+{
+    auto output = appender!string();
+
+    foreach(ch; input)
+    {
+        switch (ch)
+        {
+            case '\0': output.put("\\0"); break;
+            case '\r': output.put("\\r"); break;
+            case '\n': output.put("\\n"); break;
+            case '\t': output.put("\\t"); break;
+            case '\v': output.put("\\v"); break;
+            case '\f': output.put("\\f"); break;
+            case '\\': output.put("\\\\"); break;
+            case '"': output.put("\\\""); break;
+            case '\'': output.put("\\\'"); break;
+
+            default:
+            if (ch < 32 || ch > 126)
+                output.put(format("\\u%04x", cast(int)ch));
+            else
+                output.put(ch);
+        }
+    }
+
+    return output.data;
+}
+
