@@ -8,6 +8,7 @@ else
   export PATH="$PATHADD:$PATH"
 fi
 export MONNOMBASE="$DIRNAME"
+. /opt/intel/oneapi/setvars.sh #this is needed to be able to load libtbb.so
 RACKETPKGPATH=`racket -e "(require setup/dirs) (display (path->string (find-user-console-bin-dir)))"`
 GRIFTPATHADD="$RACKETPKGPATH"
 if [[ "$PATH" =~ (^|:)"$GRIFTPATHADD"(|/)(:|$) ]]; then
