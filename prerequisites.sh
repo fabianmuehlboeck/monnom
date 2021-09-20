@@ -41,3 +41,9 @@ sudo apt-get install -y python3 python3-pip
 pip3 install -U plotly
 pip3 install -U pandas
 pip3 install -U kaleido
+
+sudo apt-get install default-jdk
+
+sudo apt-get install pypy3
+
+sudo apt-get install nodejs
