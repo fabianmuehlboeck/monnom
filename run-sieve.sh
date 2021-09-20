@@ -16,6 +16,7 @@ $MONNOMBASE/collect.sh "grift/sieve/proxies"
 $MONNOMBASE/collect.sh "grift/sieve/monotonic"
 cd "$MONNOMBASE/nom"
 "./Benchmark.exe" -l ng-bash -r "$MONNOMBASE/experiments/nom/sieve" -n $RUNS -w
+cd "$MONNOMBASE"
 nombench --path "$MONNOMBASE/experiments/monnom/sieve" -w 2 --omituntypedinterfaces --project Sieve -r $RUNS
 $MONNOMBASE/collect.sh "monnom/sieve"
 cd "$ORIG"

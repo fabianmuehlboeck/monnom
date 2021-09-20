@@ -7,8 +7,8 @@
     (not (= (string-length line) 0))
     (not (string=? line "Dynamic : ?"))
     (not (string=? line "Unit : ()"))
-    (not (string=? (substring line 0 5) "FILE:"))
-    (not (string=? (substring line 1 3) ":\\")) ))
+    (not (and (> (string-length line) 4) (string=? (substring line 0 5) "FILE:")))
+    (not (and (> (string-length line) 3) (string=? (substring line 1 3) ":\\"))) ))
 
 (define (process-line line)
   (if (and (> (string-length line) 8) 
