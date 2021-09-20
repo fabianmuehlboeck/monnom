@@ -1,0 +1,283 @@
+Wishlist
+--------
+
+TODO: blog post, Higgs' Fancy New Object System => get started
+- use knightmare image for featured image
+- quick sketching program, online?
+- post to r/compilers, r/higgsjs
+- Typed shapes + BBV a bit of a gamble
+
+TODO: blog post, the future of compilation
+- Logical reasoning, supercompilation
+- JIT compilers, continuous of compilation
+- Lazyness is crucial
+- Definite place for controlled code duplication
+TODO: BBV - Hindsight & Future Directions
+- Check notes
+
+------------------------------------------------------------------------------
+
+TODO: optimize x86 instr encoding based on usage
+- e.g.: reg64 to mem move and vice versa?
+- do profiling first
+
+TODO: produce 32-bit offsets/addresses in CodeBlock.toString
+
+TODO: execHeap collection/expansion
+- Marc says: not on critical path for paper
+
+TODO: arrays, functions, have obj ptr inside, drop object inheritance system
+- Arrays: how do we handle resizing, use a next pointer? Store length
+  - Need to check elem < length anyways before reading?
+
+TODO: typed arrays
+- Will save many many type checks on some benchmarks
+  - e.g. : integer, FFT
+
+TODO: look at https://github.com/dntj/jsfft
+- Do they have a test/benchmark of the FFT?
+
+FIXME: string concat is very slow right now... can we make it faster?
+- slow benchmarks: string-base64, string-fasta, splay
+- can we get the offset of the string data? str_ofs_data(s, 0)
+- create a memcpy IR instr?
+    import std.c.string;
+    memcpy ( void * destination, const void * source, size_t num );
+    issue: spilling required
+    could generate custom code
+
+TODO: block-internal jumps, can they all fit in 8-bit indices? force?
+- can maybe "promise" it will fit
+
+TODO: val can be both in reg and stack
+
+TODO: transform jit.compileUnit into jit.execUnit
+- Do parsing, AST->IR and call in there, better time accounting?
+- Any real reason not to?
+- alternative: try to treat unit functions more like other functions
+  - create closure objects for them
+  - create some sort of closure call bridge with a C call conv
+  - having a "C adapter" for a specific closure seems sensible
+
+TODO: add tests for nested eval support
+- accessing local vars, changing vars
+TODO: implement full eval support
+- eval can be called as global eval or local eval
+  - different "eval context"
+- if direct/local eval possible, function must behave as if all locals could be captured
+  - graft new IR sub-function into parent? don't add to sub list, but have parent link set
+- parse AST, optionally set parent link, run AST vars pass
+  - may want to pass a parent ptr to AST parsing function
+- eval_str function needs to find who the caller is, determine if direct call?
+  - call instr to get_global "eval"
+  - VM.getCallInstr?
+- need to "ungraft" the AST after vars analysis?
+- PROBLEM: there's no parent pointer in AST nodes
+  - can't just run vars analysis on subfunction, need to rerun the whole thing...
+
+TODO: look into jetstream benchmarks
+https://www.webkit.org/blog/3418/introducing-the-jetstream-benchmark-suite/
+
+TODO: complete WAV output support, test it out with sine wave
+
+TODO: take a break, look into sound output
+- work on this in dev-maxime branch ***
+- look at existing code
+  - can write and wait for poll, no callback
+
+TODO: higgs shebang mode?
+- first js file arg has shebang line
+
+TODO: port CSG lib
+http://evanw.github.io/csg.js/
+
+TODO: alloc global VM in 32-bit ptr space?
+- Ask how on D forums, maybe tweet link
+- Look into addressing modes required, mov encodings
+TODO: alloc code heap in 32-bit space?
+- Would this benefit us? where are 64-bit code ptrs?
+
+TODO: think about inlining system further
+- Necessary for acceptable compile times
+- Can fully optimize primitives, avoid needing code-patching
+- Make an exception for units with loops also
+- do it intelligently, don't inline in runtime fns, or if too deep in stack?
+TODO: gather stats about the percentage of functions which are long-running
+- init is almost 2x as fast compile time with noinline
+  - compile time for 3d-raytrace less than half, same for turtle
+- disable inlining first
+- dump text and sort
+  - fn, num calls, num itrs
+
+TODO: make $ runtime/stdlib variables read-only, non-enumerable, non-configurable
+
+TODO: const globals
+const name1 = value1 [, name2 = value2 [, name3 = value3 [, ... [, nameN = valueN]]]];
+- Same structure as var decl
+- In D8, these are enumerable
+- Use it for Turing Turtle
+- Look at current parser code, vars code, ast-to-ir code first ***
+
+TODO: look at eval notes again
+
+When fine-tuning the S9 garbage collector (which also is a constant-space mark-and-sweep collector),
+maintaining 50% of free space turned out to be the sweet spot. Whenever less than
+50% of free space are available after a collection, the heap grows.
+=> grow on next GC
+
+TODO: liveness analysis flipped...?
+- TODO: start by implementing system to measure total liveness analysis time
+  - test on 3d-raytrace, other big benchmarks which don't GC, find slowest
+- Current pathological cases, live sets grow very big everywhere
+  - Many many large sets, independently allocated
+- Idea:
+  - For some values, big live intervals
+  - Most values, vast majority, tiny live intervals
+  - For a given value, store the places where it's live in a set
+- Use custom set data structure to store live interval
+  - small embedded list
+  - associative array, initially empty
+  - For most values, small embedded list will work
+- Values that are never live don't even have a live set
+
+TODO: constant prop in ValType?
+- Don't have to propagate all
+- Would be useful to prop shapes without using a register
+- Propagate booleans
+- Simplify shape_is_null and such
+
+class AstNode: public ZoneObject
+class InstructionOperand : public ZoneObject
+typedef ZoneVector<InstructionOperand*> InstructionOperandVector;
+// The Zone supports very fast allocation of small chunks of
+// memory. The chunks cannot be deallocated individually, but instead
+// the Zone supports deallocating all chunks in one fast
+// operation. The Zone is used to hold temporary data structures like
+// the abstract syntax tree, which is deallocated after compilation.
+std.conv:
+T emplace(T, Args...)(void[] chunk, auto ref Args args) if (is(T == class));
+// AST nodes are allocated in a separate zone, which allows faster
+// allocation and constant-time deallocation of the entire syntax
+// tree.
+- Free list approach: fast reallocation, but still need to allocate many
+  objects. D GC will still prove extremely slow.
+- Seems we really should allocate our own large memory blocks
+  - Must call addRange on the memory range
+  - Free list: maybe use a vector, no need to inherit from PoolObject?
+http://wiki.dlang.org/Memory_Management#Explicit_Class_Instance_Allocation
+- Use @nogc attribute
+
+TODO: synth, right for new synth, up for new melody
+- log the melody
+TODO: try allowing either tri or sine in osc bank
+TODO: grid sequencer, keyboard movement to select current square
+- pentatonic scale a different color but other notes available
+
+TODO: try to implement inline array for instr args, phi args
+
+TODO: Can we free one scr reg to reduce spills? May help nbody
+- who uses scrRegs[2]?
+
+TODO: getter and setter syntax
+- needed for hash map benchmark
+- Easy to recognize the grammar, but need to modify the AST
+  - Use a struct for object literal property descriptors
+- Probably want some kind of runtime call to define getters and setters
+
+FP machine
+- x and y inputs, in [-1, 1]
+- function to compute an output from input coordinates
+- iterative computation, fixed itr count
+- table of operators to compute each variable
+  - input variables are fixed
+
+Octree rendering, CSG carving?
+- Once you get small enough you can draw simple points
+- How fast could we make this, how little code?
+- All axis-aligned
+- Add volume (color), subtract volume
+- Reuse GL matrix/camera code
+
+TODO: Higgs is a Typed Architecture
+- Presentation, argument, angry guy, red face
+  - Photo
+- Link to repr classic paper
+- Drawing
+- Optimization
+- Links to source
+- Reg alloc and future
+
+TODO: load and draw gates from JSON
+- add readJSON function to stdio?
+  - or directly load as JS, use new? more problematic to serialize back
+  - look further into JSON processing function
+- In and Out objects with optional names
+- function that traverses the objects and draws them
+- KISS
+
+TODO: look into improving template strings, completing further
+`string text ${expression} string text`
+tagExpr `string text ${expression} string text`
+function tag(stringArr, ...values)
+- Need to test template strings, nested too
+- For now, could ignore tag, support only expression substitution
+  - Full support at the parsing end, implement semantics partially
+- Implement TempStrExpr class
+- Lexer: dumb lexing possible? template string parts
+  - start at backtick or }???
+  - restarting at } is problematic
+  - possibly need some flag like RE, informing the lexer that we're still
+    in an expression
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[DONE] TODO: not missing global prop opt?
+- observation: if read once, we know its not missing
+
+[DONE] TODO: accelerate getPropObj, make more hosted?
+- generate optimized machine code? inline cache?
+
+[DONE] TODO: proper hidden classes, support for property enumeration?
+- Type information in hidden classes too?
+
+[DONE] Idea: getters/setters + never used opt?
+- Need to be able to invalidate code depending on this
+- segregate by property name, much more effective
+
+[DONE] TODO: lib/plot using image lib
+- look into terminology
+- look into how matplotlib does it
+- short blog post, bitcoin
+- demo plotting stock data
+  - bitcoin price CSV?
+- plot.graph(width, height, points, xFirst, xLast, yMin, yMax)
+  - but this will only draw one function
+  - can be OK to start
+- need to be able to update the plots over time
+  - plot functions should take a window object to draw into
+
+[DONE] TODO: pixel plotting, drawing window lib? lib/draw
+- Probably will want to use X11
+  - implement a lib/x11
+  - need an event loop
+- Can have a draw lib which creates a window using lib/x11 and sets up a
+  basic event loop
+  - allows setting callbacks for KB and mouse events
+  - allows calling a function in the loop
+- Make another lib to read from the console without blocking
+  - use select() on stdin
+  - Can then implement our own REPL on top
+  - not a priority for now, don't need REPL to implement games and such

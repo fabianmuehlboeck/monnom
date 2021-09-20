@@ -1,0 +1,35 @@
+(define (make-point [i : Float])
+    : (Vect Float)
+	(let ([x (flsin i)]
+	      [vec (vector 3 #i1.0)])
+      (vector-set! vec 0 x)
+      (vector-set! vec 1 (fl* 
+		  (flcos i) 
+		  #i3.0) )
+      (vector-set! vec 2 (fl/ 
+		  (fl* x x) 
+		  #i2.0))
+	   vec))
+		  
+(define (point-x [p : (Vect Float)]) : Float
+  (vector-ref p 0))
+  
+(define (point-y [p : (Vect Float)]) : Float
+  (vector-ref p 1))
+  
+(define (point-z [p : (Vect Float)]) : Float
+  (vector-ref p 2))
+  
+(define (normalize [p : (Vect Float)]) : Unit
+  (let ([norm (flsqrt (fl+ (fl* (vector-ref p 0) (vector-ref p 0))
+		                   (fl+ (fl* (vector-ref p 1) (vector-ref p 1))
+						        (fl* (vector-ref p 2) (vector-ref p 2)))))])
+	   (vector-set! p 0 (fl/ (vector-ref p 0) norm))
+	   (vector-set! p 1 (fl/ (vector-ref p 1) norm))
+	   (vector-set! p 2 (fl/ (vector-ref p 2) norm))))
+	   
+(define (maximize [p : (Vect Float)] [other : (Vect Float)]) : (Vect Float)
+  (if (fl< (vector-ref p 0) (point-x other)) (vector-set! p 0 (point-x other)) ())
+  (if (fl< (vector-ref p 1) (point-y other)) (vector-set! p 1 (point-y other)) ())
+  (if (fl< (vector-ref p 2) (point-z other)) (vector-set! p 2 (point-z other)) ())
+  p)

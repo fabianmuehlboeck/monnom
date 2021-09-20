@@ -2,4 +2,5 @@
     "lines":2,
     "time":1,
     "mapping":"configmappings.csv"
+	"version":"v1"
 }

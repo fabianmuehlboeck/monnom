@@ -1,0 +1,11 @@
+# This is the config file for travis-ci which runs our tests upon pushing to GitHub
+language: d
+
+# build a test binary and run tests
+script: make -C source test
+
+# branch settings
+branches:
+ # only run for these branches
+ only:
+  - master

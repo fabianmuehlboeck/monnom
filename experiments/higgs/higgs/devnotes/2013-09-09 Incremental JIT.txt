@@ -1,0 +1,185 @@
+Lazy JIT, probably want two compilation modes:
+- First pass
+  - Profiling
+  - No reg alloc?
+  - No versioning
+- Optimized
+  - Versioning
+  - On the fly reg alloc
+- No interpreter
+
+Type representation:
+- Differentiate closure, object, array, etc. for sure
+- Numerical, array element types
+  - Test < length, if value is array, if only saw floats up to date, flag array
+
+Interprocedural versioning?
+- Multiple function entry points
+- Multiple return points?
+
+------------------------------------------------------------------------------
+
+Features we want for the 3rd gen Higgs JIT:
+- Incremental compilation, incremental inlining
+  - Local profiling during compilation
+  - Leaner stubs for unexecuted blocks, "functions"
+- On-the-fly register allocation
+- Property access optimizations
+- Better deferring of type tag and constant writing
+- Some kind of type propagation
+- JIT return address objects
+- Interpreter-to-JIT entry points on branch edges, not blocks
+
+FIXME: version parameterization wrt phi nodes
+- Different arguments map to the same phi node, should not register as
+  different type info
+- Should base versions on what is live *after* the phi nodes
+
+------------------------------------------------------------------------------
+
+Loop opts
+
+For loops, if we could know how many times some type test is run inside the
+loop, could hoist tests before the loop, propagate info.
+
+For objects, arrays, can see how many times we test and match on their types,
+request that info be propagated.
+
+------------------------------------------------------------------------------
+
+Lazy JIT, what are the fundamental goals?
+- Less code compiled
+- More incremental compilatiion
+- Better profiling
+- Eliminating more type tests
+
+Good ideas so far:
+- Local inlining
+- Local profiling of branches, calls
+- Propagating constants
+- Occasional forward tracing of information?
+- Requests for information based on frequency of usage
+
+------------------------------------------------------------------------------
+
+Tracing
+
+Backwards tracing might work better than forward. Locate the hot type tests and
+trace until they are hit again (full circle), then either remove the test or
+hoist it, if it makes sense. There are going to be fewer hot tests than facts
+we might want to propagate.
+
+The problem with tracing, however, is that if the information is used a long
+time in the future, or comes from a long time ago (e.g.: we are in the middle
+of a loop), there might not be too much we can do. With loops, we want to
+try and establish invariants before entering.
+
+Still, if we're in a loop, and we require some fact to be propagated, can
+compile new code, info will be propagated forward after first iteration, or
+before the loop. Ideally though, we want type tests to be placed intelligently,
+some basic IR analysis might be required.
+
+------------------------------------------------------------------------------
+
+Deep Interprocedural IR (DI2R)
+
+Could we have the interpreter build a giant interprocedural IR?
+- Keep track of current block, current caller context
+- Issue: some specific cases, like deep or broad recursions might just be too big
+  - Could keep track of how deep we're expanding specific call sites, allow max depth of 2 or 3
+  - Could disallow recursive expansion of call sites
+
+In theory, this is very powerful. Can access stack frames deep down if desired.
+Can propagate type information and constants deeply, analyse the entire interprocedural CFG.
+- May have invariants become invalid, however? If new callee propagated, for example
+
+If we reach max depth on some call site, need to call into a block with some generic context.
+
+If we have a giant incremental CFG we're building, our predecessors (to backpropagate to)
+are obvious, can explore the graph back to them, tell them to propagate what they know.
+
+Backwards propagation of info: start with just one version of a block, a function, anything ***
+- If some type test doesn't always come out the same, propagate a request for specialization backwards
+- Whoever branches to this block, if they have a constant type for that variable, should duplicate the successor version ***
+- Propagate further with each execution? Should slowly duplicate blocks
+
+If we have recursive functions, have some generic version that connects to many
+different call site blocks at once. The graph stops being "tree-like" with
+respect to deep recursive calls.
+
+Backwards prop of info... Compiling backwards is rather problematic seeming
+
+In theory: some facts are established once, reused many times after
+
+It's maybe not that crazy to think we could do a short interpreter tracing pass
+for each fact we establish, to determine its usefulness. Interpret forward until
+we run into a type test, check the execution frequency of the type test thus
+far in some global ranking (sorted linked list of tests with counts?) Note that
+if a type test just started to happen, it won't be important yet. Possibly could
+inform the type test of who has impact on it, so that it can request the
+information later.
+
+Alternative approach, backwards prop... Could locate hot type tests, trace until        <====
+we hit that same type test again, then go backwards in the trace to see if we can
+find where this info was established. Otherwise try to find infrequent location
+where we could place another test (move the test back?). Need some kind of relative
+measure of hotness. Blocks can have exec counts, but also maybe timestamps of when      <====
+they were first executed.
+
+Does this all boils down to moving type tests backwards in time, out of hot paths?
+With an interprocedural CFG, this could be easier. Explore backwards for locations
+to hoist the tests to. Try to avoid expensive code duplications.
+
+Problem: deep interprocedural IR might just be too large? If some function is
+called in 200 places, duplicated 200 times. 
+
+-------------------------------------------------------------------------------
+
+May want to keep function IR intact, but create new interprocedural CFG IR
+- Add new blocks/versions as needed
+
+When jumping to entry of inlined function, can possibly treat this as just a
+jump to a local block. The new version of the inlined block has to operate on
+its inputs as they are mapped on the stack. Temporaries that do not yet exist
+could possibly be lazily mapped on the stack frame. If we use liveness info
+or some kind of interference test, can probably reuse slots and avoid growing
+the frame in most cases. Functions could have a reserve of slots to really
+minimize frame growth operations.
+
+Perhaps a generic approach is just to have customized entry blocks for all functions with
+contexts that have a lot of information. ***
+- Include constants in there too
+
+-------------------------------------------------------------------------------
+
+Backward propagation seems problematic, won't lead to inlining?
+
+- Want to expand our CFG when sufficient execution occurs
+
+Ideally, want to propagate important facts only
+Can do this based on profiling + backwards prop of info requests
+
+Possibly, can trace execution in interpreter for a bit?
+Say I have a fact, an important piece of information, can we trace it forward?
+- Seems impractical
+
+Ideally, record traces periodically?
+- Some branch is executed often, wants to know if x:int or !(x:int)
+- Wait until some trace hits us
+- Go backwards through trace until a point where we know the info we want (if we can find one)
+  - Tell that point in the program that it should propagate this info forwards
+- If we can't find a point where we know x, could request some test be placed at
+  a sufficiently rarely executed boundary site
+  - Gain information by testing
+
+Possibly, we can know who our predecessor blocks are in terms of execution context?
+
+-------------------------------------------------------------------------------
+
+What about a simpler approach?
+
+Can profile type tests in general, see which info is most often requested
+- If we often have tests for kinds of objects that encounter objects of type
+foobar, then we probably want to propagate that some variable is an object of
+type foobar. But propagate how far? Can get very large CFGs!
+

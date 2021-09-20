@@ -1,0 +1,16 @@
+{
+    "extends": "../../tsconfig-base",
+    "compilerOptions": {
+        "removeComments": true,
+        "outFile": "../../../built/local/typingsInstaller.js",
+        "types": [
+            "node"
+        ]
+    },
+    "files": [
+        "../types.ts",
+        "../shared.ts",
+        "typingsInstaller.ts",
+        "nodeTypingsInstaller.ts"
+    ]
+}

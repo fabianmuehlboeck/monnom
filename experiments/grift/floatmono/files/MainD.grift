@@ -1,0 +1,18 @@
+ 
+(define (maximize-all [l : Dyn])
+  (repeat 
+    (i 1 (vector-length l)) 
+	(next : Dyn (vector-ref l 0))
+	(maximize (vector-ref l i) next)))
+
+(define (benchmark-run [points : Dyn]) : Dyn
+    (repeat (i 0 (vector-length points)) (a ())
+	  (normalize (vector-ref points i)))
+	(maximize-all points))
+
+(define (benchmark [n : Dyn]) : Dyn
+  (let ([points (vector n (vector 1 #i1.0))])
+    (repeat (i 0 n) (a ())
+	  (begin (vector-set! points i (point-map-fun i))))
+	 (benchmark-run points)))
+ 

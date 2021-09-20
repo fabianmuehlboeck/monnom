@@ -1,0 +1,98 @@
+TODO TOMMY  -*- mode: org -*-
+
+* TASKS
+# stuff I need to do
+** spec compliance [1/3]
+*** TODO open issue for String.prototype.split - not spec compliant wrt regexps etc
+*** TODO search for other stdlib functions that fail spec
+*** DONE open issue for parsing wrt reserved words in objects [[https://github.com/maximecb/Higgs/issues/126][issue #126]]
+    CLOSED: [2014-07-03 Thu 00:55]
+** documentation [1/3]
+*** TODO start organizing and outlining a plan for improvement
+*** TODO add link to higgs license in wiki/codestyle
+*** DONE add note in wiki about using ' instead of " for strings
+    CLOSED: [2014-07-05 Sat 15:15]
+** lib/ffi [0/3]
+*** TODO add toString() and toJS() functionality for structs/unions
+*** TODO finish ffi.new()
+*** TODO struct.wrap() [0/2]
+    - [ ] remove duplicate functionality wrt ffi.new from complex wrappers, just take a ptr
+    - [ ] rework the way complex wrappers work as members
+** lib/test [0/1]
+*** TODO more assertion/helper functions
+** lib/x11 [1/2]
+*** DONE start this
+    CLOSED: [2014-07-02 Wed 23:16]
+*** TODO need bindings for structs etc
+** lib/draw [1/4]
+*** DONE start this
+    CLOSED: [2014-07-02 Wed 22:53]
+*** TODO more error checking
+*** TODO increased keyboard support
+*** TODO start organizing and outlining a plan for improvement
+** lib/stdlib [0/1]
+*** TODO start organizing and outlining a plan for improvement
+** lib/dir [0/2]
+*** TODO start organizing and outlining a plan for improvement
+*** TODO add more predicate functions - isFile etc
+** lib/SDL2 [0/1]
+*** TODO move to binding for SDL2
+** higgs-mode [2/3]
+*** DONE start this
+    CLOSED: [2014-07-02 Wed 22:56]
+*** DONE get repo on github
+    CLOSED: [2014-07-02 Wed 22:57]
+*** TODO add REPL capability
+** lib/cairo [1/2]
+*** DONE start this
+    CLOSED: [2014-07-02 Wed 22:53]
+*** TODO start organizing and outlining a plan for improvement
+** sunspider benchmarks [3/4]
+*** DONE string-validate-input segfaults
+    CLOSED: [2014-07-02 Wed 22:29]
+*** DONE string-unpack-code has some odd bug
+    CLOSED: [2014-07-02 Wed 22:29]
+*** DONE string-tagcloud has some error in its parseJSON
+    CLOSED: [2014-07-02 Wed 22:29]
+*** TODO date-format-tofte fails due to eval - [[https://github.com/maximecb/Higgs/issues/112][issue #112]]
+** D compilers
+*** TODO figure out flags for gdc/add to docs
+** JSHint
+*** TODO Add more globals to jshintrc
+* IDEAS
+# stuff I'm thinking about
+** all libs
+ - cleaner API designs
+ - start with simple, clean, and safe - fast later
+ - come up with set of fundamental 'interfaces' and have libs follow them (iterators, streams, etc)
+** lib/ffi
+ - improve perf
+ - keep improving error messages/checking
+ - improved wrapping
+ - wrapAll() function?
+ - add some preprocessor functionality?
+ - track down perf problems
+ - generate type checking code for function calls?
+** lib/console
+ - make more configurable? i.e. how objects are formatted etc, separation ws, etc.
+** lib/draw
+ - some of this should be factored out into more general purpose libs
+** higgs-mode
+ - higgs-dev functionality - run make targets, etc flymake?
+ - addons for js-mode and js2-mode to get correct syntax coloring, autocomplete, etc behavior for
+   Higgs globals (such as require()) and IR function names, etc.
+** concurrency
+ - hard to fix in user space
+ - focus for now should just be getting libraries
+ - simple (mostly sync) libraries; designed to be target for compiler to add better async?
+ - multiprocess functionality
+ - more IPC functionality
+ 
+** modules
+ - module system needs to be a little more robust
+** package management
+ - core libs can be tied to Higgs version/distrubution
+ - 3rd party libs
+  - manifest file with packag info/deps
+  - tied to url
+  - version management?

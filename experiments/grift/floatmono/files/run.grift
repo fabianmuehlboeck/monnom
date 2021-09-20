@@ -1,0 +1,10 @@
+
+(benchmark 100000)
+(benchmark 100000)
+(let ([result (time (benchmark 100000))])
+  (print-float (point-x result) 5)
+  (display-char #\newline)
+  (print-float (point-y result) 5)
+  (display-char #\newline)
+  (print-float (point-z result) 5)
+  (display-char #\newline))

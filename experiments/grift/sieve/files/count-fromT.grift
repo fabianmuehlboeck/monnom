@@ -1,0 +1,5 @@
+
+  ;; `count-from n` Build a stream of integers starting from `n` and
+  ;; iteratively adding 1
+  (define (count-from [n : Int]) : (Rec s (Tuple Int (-> s)))
+    (make-stream n (lambda () : (Rec s (Tuple Int (-> s))) (count-from (+ 1 n)))))

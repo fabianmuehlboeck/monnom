@@ -1,0 +1,71 @@
+Const prop in BBV:
+- useful for argc
+- useful for fn ptr reads on global object
+
+Plan:
+- First, get multiple entry points working, passing of arg types only
+
+Multiple entry points per function:
+- Need function entry stubs, management of entry versions
+  - Do we need entry stubs?
+  - When going to specialized entry, could we compile immediately?
+  - What do we do right now, for specialized calls?
+
+Global object threading:
+- would be useful to have a pseudo-argument
+- do we want to actually pass it as a parameter?
+  - right now, in functions using global obj, we extract it from the VM ptr
+    at the function start
+  - for runtime & known calls, can avoid passing when not used
+    - issue: any known call with normal calls inside will use the global obj
+- could fix a global object register, no need for a type tag
+  - also corresponding stack slot, but not spilled by default?
+  - get rid of vm reg first
+
+TODO: think about argc const prop
+- would need const spilling system, unless special-casing just for argc?
+
+Version explosion:
+- Probably won't have explosion, many of the types of input args already exposed
+- If problem, can have smarter versioning scheme
+  - Limit per-value polymorphism, refuse versions or return a compromise
+
+Ret info propagation:
+- need to make a prediction about the function's behavior
+- predicted changed flag is evaluated in caller when compiling return(s)
+  - set on IRFunction (changed, not changed)
+- predicted tag is determined when compiling call continuation edge
+  - set on callee IRFunction (known tag is T, unknown tag)
+- need some cont/ret block which can handle dispatching, RA and (RA - ptrsize)
+  - triggers compilation of call cont with correct prediction or predict fail
+  - branch gets rewritten as all other blocks, fall through to cont
+  - still need cont stub separately, may want to convert it to stub space
+    and a generic stub
+- Full uniformity of return state is not strictly required, just heavy bias
+
+Return info propagation:
+- Return info: try to predict what the function will return
+  - speculative/predicted info return vs generic return?
+  - remark: for many runtime functions, we should know the return type,
+    but it may also not be very relevant
+- Shape changed flag in context
+- Have some system where RA goes to a "no shapes changed" version and RA+K goes
+to a "shapes changed version", or the reverse
+- A little dispatch code fragment can be generated that falls through to the
+default version, triggers the lazy generation of the appropriate block version
+The return provokes the compilation of the continuation stub
+The continuation stub is not compiled until this return happens
+When the first return point is compiled, establish a prediction for other returns
+Compiling other return points will either match or violate the prediction
+Continuation stubs can be compiled in function of this prediction
+For stubs that make no prediction, the mispredict return is a noop
+- Can separate return predictions by entry point versions ***
+TODO: verify proportion of calls modifying shapes
+- Can also do this through profiling, set some bit to zero on call
+TODO: profile return values, are they often monomorphic?
+
+Transitiveness of "no shapes changed"?
+- This is basically a dirty flag, set to false on function entry. If we change
+a chape during the call, we set the flag to true. If a callee sets its flag,
+we set our flag too.
+

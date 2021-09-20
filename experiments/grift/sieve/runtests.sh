@@ -2,17 +2,17 @@
 if [ -z ${RUNS+x} ]; then RUNS=1 ; else :; fi
 mkdir -p proxies
 mkdir -p monotonic
-for maint in "U" "T"
-do
-for streamt in "U" "T"
-do
 for cft in "U" "T"
 do
-for siftt in "U" "T"
+for maint in "U" "T"
 do
 for sievet in "U" "T"
 do
-config="$streamt$cft$siftt$sievet$maint"
+for siftt in "U" "T"
+do
+for streamt in "U" "T"
+do
+config="$cft$maint$sievet$siftt$streamt"
 mkdir -p "proxies/.BM_$config"
 mkdir -p "monotonic/.BM_$config"
 cat "$streamt/streams.grift" "$maint/count-from$cft.grift" "$maint/sift$siftt.grift" "$maint/sieve$sievet.grift" "$maint/main.grift" > "proxies/.BM_$config/sieve.grift"

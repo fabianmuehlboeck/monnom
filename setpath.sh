@@ -15,3 +15,15 @@ if [[ "$PATH" =~ (^|:)"$GRIFTPATHADD"(|/)(:|$) ]]; then
 else
   export PATH="$GRIFTPATHADD:$PATH"
 fi
+HIGGSPATHADD="$DIRNAME/experiments/higgs/higgs/source/:$DIRNAME/experiments/higgs/bin"
+if [[ "$PATH" =~ (^|:)"$HIGGSPATHADD"(|/)(:|$) ]]; then
+  :
+else
+  export PATH="$HIGGSPATHADD:$PATH"
+fi
+HIGGSLDLIBPATHADD="$DIRNAME/experiments/higgs/lib64"
+if [[ "$LD_LIBRARY_PATH" =~ (^|:)"$HIGGSLDLIBPATHADD"(|/)(:|$) ]]; then
+  :
+else
+  export LD_LIBRARY_PATH="$HIGGSLDLIBPATHADD:$LD_LIBRARY_PATH"
+fi

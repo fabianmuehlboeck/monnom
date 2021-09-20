@@ -1,0 +1,13 @@
+{
+    "extends": "../../tsconfig-base",
+    "compilerOptions": {
+        "removeComments": true,
+        "module": "commonjs",
+        "types": [
+            "node"
+        ]
+    },
+    "files": [
+        "cancellationToken.ts"
+    ]
+}

@@ -1,0 +1,17 @@
+(define (maximize-all [l : (Vect (Vect Float))])
+  (repeat 
+    (i 1 (vector-length l)) 
+	(next : (Vect Float) (vector-ref l 0))
+	(maximize (vector-ref l i) next)))
+
+(define (benchmark-run [points : (Vect (Vect Float))]) : (Vect Float)
+    (repeat (i 0 (vector-length points)) (a ())
+	  (normalize (vector-ref points i)))
+	(maximize-all points))
+
+(define (benchmark [n : Int]) : (Vect Float)
+  (let ([points (vector n (vector 1 #i1.0))])
+    (repeat (i 0 n) (a ())
+	  (begin (vector-set! points i (point-map-fun i))))
+	 (benchmark-run points)))
+

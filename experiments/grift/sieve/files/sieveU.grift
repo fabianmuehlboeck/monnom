@@ -1,0 +1,5 @@
+  ;; `sieve st` Sieve of Eratosthenes
+  (define (sieve [st : (Rec s (Tuple Int (-> s)))])
+    : (Rec s (Tuple Int (-> s)))
+    (let ([hd : Int (stream-first st)])
+      (make-stream hd (lambda () : Dyn (sieve (sift hd (stream-rest st)))))))

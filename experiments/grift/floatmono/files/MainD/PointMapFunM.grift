@@ -1,0 +1,2 @@
+(define (point-map-fun [i : Dyn])
+  (make-point (int->float i)))
