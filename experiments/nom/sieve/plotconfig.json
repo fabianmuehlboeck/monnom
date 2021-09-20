@@ -1,3 +1,4 @@
 {
-    "mapping":"configmappings.csv"
+    "mapping":"configmappings.csv",
+	"version":"v1"
 }

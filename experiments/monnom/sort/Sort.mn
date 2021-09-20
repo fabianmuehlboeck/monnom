@@ -41,7 +41,7 @@ class Sort
 				distance=distance-1;
 				losize=losize+1;
 			}
-			while(hiIter.Current() >pivot)
+			while(hiIter.Current() > pivot)
 			{
 				hiIter.MovePrev();
 				distance=distance-1;

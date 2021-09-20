@@ -346,7 +346,7 @@ namespace Nom
 								int pos = 0;
 								for (auto& arg : this->Arguments)
 								{
-									auto targ = MakeInvariantLoad(builder, builder->CreateGEP(typeArgs, { MakeInt32(-(pos + 1)) }), "typeArg", AtomicOrdering::NotAtomic);
+									auto targ = MakeInvariantLoad(builder, builder->CreateGEP(typeArgs, MakeInt32(-(pos + 1)) ), "typeArg", AtomicOrdering::NotAtomic);
 									auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ, rssv, arg->GetLLVMElement(mod), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()) });
 									isTypeEq->setCallingConv(NOMCC);
 									CreateExpect(builder, isTypeEq, MakeUInt(1, 1));

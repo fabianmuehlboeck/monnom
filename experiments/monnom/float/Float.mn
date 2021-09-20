@@ -1,36 +1,13 @@
-interface IPoint
+class Point
 {
-	public fun GetX() : Float;
-	public fun GetY() : Float;
-	public fun GetZ() : Float;
-	public fun Normalize() : Void;
-	public fun Maximize(IPoint other) : IPoint;
-	public fun Print() : Void;
-}
-
-class Point implements IPoint
-{
-	private Float x;
-	private Float y;
-	private Float z;
+	public Float x;
+	public Float y;
+	public Float z;
 	public constructor(Float i)
 	{
 		x = Math.Sin(i);
 		y = Math.Cos(i) * 3;
 		z = (x * x) / 2;
-	}
-	
-	public fun GetX() : Float
-	{
-		return x;
-	}
-	public fun GetY() : Float
-	{
-		return y;
-	}
-	public fun GetZ() : Float
-	{
-		return z;
 	}
 	
 	public fun Normalize() : Void
@@ -41,19 +18,19 @@ class Point implements IPoint
 		z = z / norm;
 	}
 	
-	public fun Maximize(IPoint other) : IPoint
+	public fun Maximize(Point other) : Point
 	{
-		if(x < other.GetX())
+		if(x < other.x)
 		{
-			x = other.GetX();
+			x = other.x;
 		}
-		if(y < other.GetY())
+		if(y < other.y)
 		{
-			y = other.GetY();
+			y = other.y;
 		}
-		if(z < other.GetZ())
+		if(z < other.z)
 		{
-			z = other.GetZ();
+			z = other.z;
 		}
 		return this;
 	}
@@ -70,12 +47,12 @@ class Point implements IPoint
 	}
 }
 
-class PointMapFun implements Fun<Int, IPoint>
+class PointMapFun implements Fun<Int, Point>
 {
 	public constructor()
 	{
 	}
-	public fun this(Int i) : IPoint
+	public fun this(Int i) : Point
 	{
 		return new Point(i + 0.0);
 	}
@@ -83,19 +60,19 @@ class PointMapFun implements Fun<Int, IPoint>
 
 class Main
 {
-	public static fun Maximize(ArrayList<IPoint> points) : IPoint
+	public static fun Maximize(ArrayList<Point> points) : Point
 	{
-		IPoint next = points.Get(0);
-		foreach(IPoint p in Enumerable.From<IPoint>(points,1))
+		Point next = points.Get(0);
+		foreach(Point p in Enumerable.From<Point>(points,1))
 		{
 			next = next.Maximize(p);
 		}
 		return next;
 	}
-	public static fun Benchmark(Int n) : IPoint
+	public static fun Benchmark(Int n) : Point
 	{
-		ArrayList<IPoint> points = Enumerable.ToList<IPoint>(Enumerable.Map<Int, IPoint>([0..n], new PointMapFun()));
-		foreach(IPoint p in points)
+		ArrayList<Point> points = Enumerable.ToList<Point>(Enumerable.Map<Int, Point>([0..n], new PointMapFun()));
+		foreach(Point p in points)
 		{
 			p.Normalize();
 		}
@@ -104,7 +81,7 @@ class Main
 	public static fun Main() : Void
 	{
 		Timer t = new Timer();
-		IPoint result = Benchmark(100000);
+		Point result = Benchmark(100000);
 		t.PrintDifference();
 		"\n".Print();
 		result.Print();

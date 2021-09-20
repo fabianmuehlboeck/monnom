@@ -698,7 +698,7 @@ namespace Nom
 						bool found = false;
 						for (auto& meth : methods)
 						{
-							if (meth->GetName()._Equal(mte->Method->GetName()))
+							if (meth->GetName()==(mte->Method->GetName()))
 							{
 								found = true;
 								break;

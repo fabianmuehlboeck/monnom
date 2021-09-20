@@ -1,4 +1,9 @@
-class CountFromFun implements Fun<Stream>
+interface IFun<T>
+{
+    public fun this() : T;
+}
+
+class CountFromFun implements IFun<Stream>
 {
 	private readonly Int N;
 	public constructor(Int n)
@@ -12,7 +17,7 @@ class CountFromFun implements Fun<Stream>
 	}
 }
 
-class SiftFun implements Fun<Stream>
+class SiftFun implements IFun<Stream>
 {
 	private readonly Int N;
 	private readonly Stream S;
@@ -23,11 +28,11 @@ class SiftFun implements Fun<Stream>
 	}
 	public fun this() : Stream
 	{
-		return Main.Sift(N, let Fun<Stream> fn = S.Rest in fn());
+		return Main.Sift(N, let IFun<Stream> fn = S.Rest in fn());
 	}
 }
 
-class SieveFun implements Fun<Stream>
+class SieveFun implements IFun<Stream>
 {
 	private readonly Int N;
 	private readonly Stream S;
@@ -38,7 +43,7 @@ class SieveFun implements Fun<Stream>
 	}
 	public fun this() : Stream
 	{
-		return Main.Sieve(Main.Sift(N, let Fun<Stream> fn = S.Rest in fn()));
+		return Main.Sieve(Main.Sift(N, let IFun<Stream> fn = S.Rest in fn()));
 	}
 }
 
@@ -55,7 +60,7 @@ class Main
 		Int f = s.First;
 		if(f % n == 0)
 		{
-			return Main.Sift(n, let Fun<Stream> fn = s.Rest in fn()); 
+			return Main.Sift(n, let IFun<Stream> fn = s.Rest in fn()); 
 		}
 		else
 		{

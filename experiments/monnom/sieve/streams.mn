@@ -2,9 +2,9 @@
 class Stream
 {
 	public readonly Int First;
-	public readonly Fun<Stream> Rest;
+	public readonly IFun<Stream> Rest;
 	
-	public constructor(Int first, Fun<Stream> rest)
+	public constructor(Int first, IFun<Stream> rest)
 	{
 		First=first;
 		Rest=rest;
