@@ -21,6 +21,10 @@
 #include "RecordHeader.h"
 #include "NomTypeParameter.h"
 #include "RTCompileConfig.h"
+#include "PWObject.h"
+#include "PWLambda.h"
+#include "PWRecord.h"
+#include "PWTypeArr.h"
 
 namespace Nom
 {
@@ -104,10 +108,10 @@ namespace Nom
 			localTypeArgArray = builder->CreateAlloca(TYPETYPE, MakeInt(argc));
 			for (decltype(argc) i = 0; i < argc; i++)
 			{
-				MakeStore(builder, TypeArguments[i], builder->CreateGEP(localTypeArgArray, MakeInt32((int32_t)(argc - (i + 1)))));
+				MakeStore(builder, TypeArguments[i], builder->CreateGEP(arrtype(TYPETYPE, argc), localTypeArgArray, MakeInt32((int32_t)(argc - (i + 1)))));
 			}
 			//}
-			return builder->CreateGEP(localTypeArgArray, MakeInt32(argc));
+			return builder->CreateGEP(arrtype(TYPETYPE, argc), localTypeArgArray, MakeInt32(argc));
 		}
 
 #pragma endregion
@@ -221,7 +225,7 @@ namespace Nom
 		}
 		llvm::Value* InstanceMethodCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
 		{
-			return builder->CreateGEP(ObjectHeader::GeneratePointerToTypeArguments(builder, registers[0]), MakeInt32(-(uint32_t)Method->GetContainer()->GetTypeParametersStart()));
+			return builder->CreateGEP(arrtype(TYPETYPE,0), PWObject(registers[0]).PointerToTypeArguments(builder), MakeInt32(-(uint32_t)Method->GetContainer()->GetTypeParametersStart()));
 		}
 #pragma endregion
 
@@ -276,7 +280,7 @@ namespace Nom
 		{
 			if ((size_t)i < Lambda->GetParent()->GetTypeParametersCount())
 			{
-				return NomTypeVarValue(LambdaHeader::GenerateReadTypeArgument(builder, registers[0], i, this->Lambda->Parent), Context->GetTypeParameter(i)->GetVariable());
+				return NomTypeVarValue(PWLambdaPrecise(registers[0], this->Lambda->Parent).ReadTypeArgument(builder, i), Context->GetTypeParameter(i)->GetVariable());
 			}
 			else
 			{
@@ -351,7 +355,7 @@ namespace Nom
 		}
 		llvm::Value* StructInstantiationCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
 		{
-			return builder->CreateGEP(ObjectHeader::GeneratePointerToTypeArguments(builder, registers[0]), MakeInt32(-(uint32_t)Context->GetTypeParametersStart()));
+			return builder->CreateGEP(arrtype(TYPETYPE,0), PWObject(registers[0]).PointerToTypeArguments(builder), MakeInt32(-(uint32_t)Context->GetTypeParametersStart()));
 		}
 		bool StructInstantiationCompileEnv::GetInConstructor()
 		{
@@ -385,7 +389,7 @@ namespace Nom
 		}
 		llvm::Value* SimpleClassCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
 		{
-			return builder->CreateGEP(ObjectHeader::GeneratePointerToTypeArguments(builder, registers[0]), MakeInt32(-(uint32_t)Context->GetTypeParametersStart()));
+			return builder->CreateGEP(arrtype(TYPETYPE, 0), PWObject(registers[0]).PointerToTypeArguments(builder), MakeInt32(-(uint32_t)Context->GetTypeParametersStart()));
 		}
 #pragma endregion
 #pragma region CastedValueCompileEnv
@@ -418,12 +422,12 @@ namespace Nom
 					{
 						fargs++;
 					}
-					return NomTypeVarValue(MakeInvariantLoad(builder, builder->CreatePointerCast(fargs, TYPETYPE), MakeInt32(i - (funargcount - 1))), new NomTypeVar(directTypeArgs[i - instanceTypeArgs.size()]));
+					return NomTypeVarValue(MakeInvariantLoad(builder, TYPETYPE, fargs, MakeInt32(i - (funargcount - 1))), new NomTypeVar(directTypeArgs[i - instanceTypeArgs.size()]));
 				}
 			}
 			else
 			{
-				return NomTypeVarValue(MakeInvariantLoad(builder, builder->CreateGEP(instanceTypeArrPtr->getType() == TYPETYPE->getPointerTo()->getPointerTo() ? MakeInvariantLoad(builder, instanceTypeArrPtr) : instanceTypeArrPtr, MakeInt32(-(i + 1)))), new NomTypeVar(instanceTypeArgs[i]));
+				return NomTypeVarValue(MakeInvariantLoad(builder, TYPETYPE, builder->CreateGEP(NLLVMPointer(TYPETYPE), instanceTypeArrPtr, MakeInt32(-(i + 1)))), new NomTypeVar(instanceTypeArgs[i]));
 			}
 		}
 		NomValue CastedValueCompileEnv::GetArgument(int i)
@@ -460,7 +464,7 @@ namespace Nom
 		}
 		llvm::Value* CastedValueCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
 		{
-			return instanceTypeArrPtr->getType() == TYPETYPE->getPointerTo()->getPointerTo() ? MakeInvariantLoad(builder, instanceTypeArrPtr) : instanceTypeArrPtr;
+			return instanceTypeArrPtr;
 		}
 		void CastedValueCompileEnv::PushDispatchPair(llvm::Value* dpair)
 		{
@@ -471,5 +475,42 @@ namespace Nom
 			throw new std::exception();
 		}
 #pragma endregion
-	}
+		CastedValueCompileEnvIndirect::CastedValueCompileEnvIndirect(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, int regular_args_begin, int funValueArgCount, llvm::Value* instanceTypeArrPtr)
+			: CastedValueCompileEnv(directTypeArgs, instanceTypeArgs, fun, regular_args_begin, funValueArgCount, instanceTypeArrPtr)
+		{
+		}
+		NomTypeVarValue CastedValueCompileEnvIndirect::GetTypeArgument(NomBuilder& builder, int i)
+		{
+			if (i > instanceTypeArgs.size())
+			{
+				auto fargs = function->arg_begin();
+				i -= instanceTypeArgs.size();
+				auto funargcount = function->getFunctionType()->getNumParams() - regularArgsBegin;
+				if (i < funargcount - 1 || funargcount >= directTypeArgs.size() + funValueArgCount)
+				{
+					for (int j = 0; j < regularArgsBegin + i; j++)
+					{
+						fargs++;
+					}
+					return NomTypeVarValue(fargs, new NomTypeVar(directTypeArgs[i - instanceTypeArgs.size()]));
+				}
+				else
+				{
+					for (int j = 0; j < function->getFunctionType()->getNumParams() - 1; j++)
+					{
+						fargs++;
+					}
+					return NomTypeVarValue(MakeInvariantLoad(builder, TYPETYPE, fargs, MakeInt32(i - (funargcount - 1))), new NomTypeVar(directTypeArgs[i - instanceTypeArgs.size()]));
+				}
+			}
+			else
+			{
+				return NomTypeVarValue(MakeInvariantLoad(builder, TYPETYPE, builder->CreateGEP(NLLVMPointer(TYPETYPE), MakeInvariantLoad(builder, NLLVMPointer(TYPETYPE), instanceTypeArrPtr), MakeInt32(-(i + 1)))), new NomTypeVar(instanceTypeArgs[i]));
+			}
+		}
+		llvm::Value* CastedValueCompileEnvIndirect::GetEnvTypeArgumentArray(NomBuilder& builder)
+		{
+			return MakeInvariantLoad(builder, NLLVMPointer(TYPETYPE), instanceTypeArrPtr);
+		}
+}
 }

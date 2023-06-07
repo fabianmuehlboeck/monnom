@@ -106,19 +106,19 @@ namespace Nom
 		llvm::Constant* NomFloatObjects::GetPosZero(llvm::Module& mod)
 		{
 			auto elem = GetInstance()->GetLLVMElement(mod);
-			return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(((PointerType*)elem->getType())->getElementType(), elem, llvm::ArrayRef<llvm::Constant*>({ {MakeInt32(0), MakeInt32(0), MakeInt32(ObjectHeaderFields::RefValueHeader)} })), REFTYPE);
+			return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(GetInstance()->GetLLVMElementType(mod), elem, llvm::ArrayRef<llvm::Constant*>({{MakeInt32(0), MakeInt32(0), MakeInt32(ObjectHeaderFields::RefValueHeader)}})), REFTYPE);
 		}
 
 		llvm::Constant* NomFloatObjects::GetNegZero(llvm::Module& mod)
 		{
 			auto elem = GetInstance()->GetLLVMElement(mod);
-			return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(((PointerType*)elem->getType())->getElementType(), elem, llvm::ArrayRef<llvm::Constant*>({ {MakeInt32(0), MakeInt32(1), MakeInt32(ObjectHeaderFields::RefValueHeader)} })), REFTYPE);
+			return llvm::ConstantExpr::getPointerCast(llvm::ConstantExpr::getGetElementPtr(GetInstance()->GetLLVMElementType(mod), elem, llvm::ArrayRef<llvm::Constant*>({ {MakeInt32(0), MakeInt32(1), MakeInt32(ObjectHeaderFields::RefValueHeader)} })), REFTYPE);
 		}
 
 
 		llvm::Constant* NomFloatObjects::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			auto var = new llvm::GlobalVariable(mod, arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2), true, linkage, nullptr, "RT_NOM_FLOATS");
+			auto var = new llvm::GlobalVariable(mod, GetLLVMElementType(mod), true, linkage, nullptr, "RT_NOM_FLOATS");
 			auto clsref = NomFloatClass::GetInstance()->GetLLVMElement(mod);
 			auto fieldstype = arrtype(REFTYPE, 1);
 			llvm::Constant* posZeroConst = ObjectHeader::GetConstant(clsref, llvm::ConstantArray::get(fieldstype, { llvm::ConstantExpr::getIntToPtr(ConstantExpr::getBitCast(ConstantFP::get(FLOATTYPE,0.0), numtype(intptr_t)), REFTYPE) }), llvm::ConstantArray::get(arrtype(RTTypeHead::GetLLVMType()->getPointerTo(), 0), {}));
@@ -127,14 +127,18 @@ namespace Nom
 			var->setAlignment(llvm::MaybeAlign(8));
 			var->setInitializer(arr);
 
-			auto varPosZero = new llvm::GlobalVariable(mod, RefValueHeader::GetLLVMType()->getPointerTo(), true, linkage, llvm::ConstantExpr::getGetElementPtr(arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(0),MakeInt32(ObjectHeaderFields::RefValueHeader) })), "RT_NOM_POSZERO");
-			auto varNegZero = new llvm::GlobalVariable(mod, RefValueHeader::GetLLVMType()->getPointerTo(), true, linkage, llvm::ConstantExpr::getGetElementPtr(arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(1),MakeInt32(ObjectHeaderFields::RefValueHeader) })), "RT_NOM_NEGZERO");
+			new llvm::GlobalVariable(mod, RefValueHeader::GetLLVMType()->getPointerTo(), true, linkage, llvm::ConstantExpr::getGetElementPtr(arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(0),MakeInt32(ObjectHeaderFields::RefValueHeader) })), "RT_NOM_POSZERO");
+			new llvm::GlobalVariable(mod, RefValueHeader::GetLLVMType()->getPointerTo(), true, linkage, llvm::ConstantExpr::getGetElementPtr(arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(1),MakeInt32(ObjectHeaderFields::RefValueHeader) })), "RT_NOM_NEGZERO");
 			return var;
 		}
 
 		llvm::Constant* NomFloatObjects::findLLVMElement(llvm::Module& mod) const
 		{
 			return mod.getGlobalVariable("RT_NOM_FLOATS");
+		}
+		llvm::Type* NomFloatObjects::GetLLVMElementType(llvm::Module& mod) const
+		{
+			return arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2);
 		}
 	}
 }

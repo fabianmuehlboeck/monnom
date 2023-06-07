@@ -108,7 +108,7 @@ namespace Nom
 					}
 					else
 					{
-						curArg = MakeLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+						curArg = MakeLoad(builder, POINTERTYPE, builder->CreateGEP(arrtype(POINTERTYPE,0), varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 					}
 
 					//curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
@@ -121,7 +121,7 @@ namespace Nom
 					}
 					else
 					{
-						MakeStore(builder, curArg, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), AtomicOrdering::NotAtomic);
+						MakeStore(builder, curArg, builder->CreateGEP(arrtype(POINTERTYPE,0), varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), AtomicOrdering::NotAtomic);
 					}
 				}
 			}
@@ -195,7 +195,7 @@ namespace Nom
 						{
 							builder->CreateCall(GetIncPerfectCallTagTypeMatchesFunction(*fun->getParent()), {});
 						}
-						CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreatePointerCast(builder->CreateGEP(builder->CreatePointerCast(structCastType, RTClassType::GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), TYPETYPE->getPointerTo()));
+						CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreateGEP(RTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }));
 						auto castResult = RTCast::GenerateCast(builder, &cvce, actualResult, method->GetReturnType());
 						//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
 						//builder->CreateCondBr(castResult, outBlock, castFailBlock, GetLikelyFirstBranchMetadata());
@@ -209,10 +209,10 @@ namespace Nom
 						{
 							builder->CreateCall(GetIncCallTagTypeMismatchesFunction(*fun->getParent()), {});
 						}
-						auto typeArgRefStore = builder->CreateAlloca(TYPETYPE->getPointerTo(), MakeUInt(64, 1));
-						builder->CreateIntrinsic(Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
-						MakeInvariantStore(builder, builder->CreatePointerCast(builder->CreateGEP(builder->CreatePointerCast(structCastType, RTClassType::GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), TYPETYPE->getPointerTo()), typeArgRefStore, AtomicOrdering::NotAtomic);
-						auto invariantID = builder->CreateIntrinsic(Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						auto typeArgRefStore = builder->CreateAlloca(NLLVMPointer(TYPETYPE), MakeUInt(64, 1));
+						builder->CreateIntrinsic(Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						MakeInvariantStore(builder, builder->CreateGEP(RTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), typeArgRefStore, AtomicOrdering::NotAtomic);
+						auto invariantID = builder->CreateIntrinsic(Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 						argbuf--;
 						argbuf[0] = builder->CreatePointerCast(fun, POINTERTYPE);
 						argbuf[1] = typeArgRefStore;
@@ -220,8 +220,8 @@ namespace Nom
 						auto rvcf = RTInterface::GenerateReadReturnValueCheckFunction(builder, iface);
 						builder->CreateCall(GetCheckReturnValueFunctionType(), rvcf, llvm::ArrayRef<Value*>(argbuf, 3 + RTConfig_NumberOfVarargsArguments))->setCallingConv(NOMCC);
 
-						builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
-						builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(TYPETYPE->getPointerTo())), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 						outPHI->addIncoming(actualResult, builder->GetInsertBlock());
 						builder->CreateBr(outBlock);
 					}

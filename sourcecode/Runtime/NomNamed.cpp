@@ -31,7 +31,7 @@ namespace Nom
 		}
 		intptr_t NomNamed::GetRTElement() const
 		{
-			return (intptr_t)NomJIT::Instance().lookup("NOM_CD_" + (GetName()->ToStdString()))->getAddress();
+			return (intptr_t)(void*)NomJIT::Instance().lookup("NOM_CD_" + (GetName()->ToStdString()))->getValue();
 		}
 		NomClassTypeRef NomNamed::GetInstantiation(NomTypeRef type) const
 		{

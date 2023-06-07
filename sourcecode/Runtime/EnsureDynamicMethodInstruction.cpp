@@ -20,6 +20,7 @@
 #include "LambdaHeader.h"
 #include "IMT.h"
 #include "Metadata.h"
+#include "PWRefValue.h"
 
 using namespace std;
 using namespace llvm;
@@ -64,8 +65,9 @@ namespace Nom
 				builder->SetInsertPoint(refValueBlock);
 				BasicBlock* packPairBlock = BasicBlock::Create(LLVMCONTEXT, "packRawInvokeDispatcherPair", fun);
 				BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Given value is not invokable!");
-				auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
-				auto hasRawInvoke = RTVTable::GenerateHasRawInvoke(builder, vtable);
+				PWRefValue rv = PWRefValue(receiver);
+				auto vtable = rv.ReadVTable(builder);
+				auto hasRawInvoke = vtable.ReadHasRawInvoke(builder);
 				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasRawInvoke, MakeUInt(1,1) });
 				builder->CreateCondBr(hasRawInvoke, packPairBlock, errorBlock, GetLikelyFirstBranchMetadata());
 
@@ -156,7 +158,8 @@ namespace Nom
 			if (refValueBlock != nullptr)
 			{
 				builder->SetInsertPoint(refValueBlock);
-				auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
+				PWRefValue rv = PWRefValue(receiver);
+				auto vtable = rv.ReadVTable(builder);
 				auto returnVal2 = RTVTable::GenerateFindDynamicDispatcherPair(builder, receiver, vtable, NomNameRepository::Instance().GetNameID(methodName));
 
 				if (mergePHI != nullptr)

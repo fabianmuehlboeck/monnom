@@ -23,7 +23,7 @@ namespace Nom
 		void* NomString::GetStringObject() const
 		{
 			void* ret = (void*)(((char**)gcalloc(ObjectHeader::SizeOf()+sizeof(char *))) + 1);
-			GetWriteVTableFunction()(ret, *((void**)(NomJIT::Instance().lookup("NOM_CDREF_String_0")->getAddress())));
+			GetWriteVTableFunction()(ret, *((void**)(NomJIT::Instance().lookup("NOM_CDREF_String_0")->getValue())));
 			GetWriteFieldFunction()(ret, 0, const_cast<NomString*>(this));
 			return ret;
 		}

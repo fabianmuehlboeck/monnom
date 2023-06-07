@@ -20,6 +20,10 @@
 #include "CallingConvConf.h"
 #include "CompileEnv.h"
 #include "RTCompileConfig.h"
+#include "PWObject.h"
+#include "PWPartialApp.h"
+#include "PWTypeArr.h"
+#include "PWType.h"
 
 using namespace std;
 using namespace llvm;
@@ -54,7 +58,7 @@ namespace Nom
 			}
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override
 			{
-				return builder->CreateGEP(ObjectHeader::GeneratePointerToTypeArguments(builder, registers[0]), MakeInt32((uint32_t)Callable->GetParent()->GetTypeParametersStart()));
+				return PWObject(registers[0]).PointerToTypeArguments(builder).SubArr(builder, MakeInt32((uint32_t)Callable->GetParent()->GetTypeParametersStart()));
 			}
 			virtual bool GetInConstructor() override
 			{
@@ -141,7 +145,7 @@ namespace Nom
 							}
 							else
 							{
-								targValueArr[i] = MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[RTConfig_NumberOfVarargsArguments - 1], TYPETYPE->getPointerTo()), MakeInt32(i - (RTConfig_NumberOfVarargsArguments - 1))));
+								targValueArr[i] = MakeLoad(builder, TYPETYPE, builder->CreateGEP(TYPETYPE, restArgs[RTConfig_NumberOfVarargsArguments - 1], MakeInt32(i - (RTConfig_NumberOfVarargsArguments - 1))));
 							}
 							methodargs[i + 1] = targValueArr[i];
 						}
@@ -164,7 +168,7 @@ namespace Nom
 							}
 							else
 							{
-								auto nv = NomValue(MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(restArgs[RTConfig_NumberOfVarargsArguments - RTConfig_NumberOfVarargsArguments], REFTYPE->getPointerTo()), MakeInt32(i + typeArgCount - (RTConfig_NumberOfVarargsArguments - 1)))), false);
+								auto nv = NomValue(MakeLoad(builder, REFTYPE, builder->CreateGEP(REFTYPE, restArgs[RTConfig_NumberOfVarargsArguments - RTConfig_NumberOfVarargsArguments], MakeInt32(i + typeArgCount - (RTConfig_NumberOfVarargsArguments - 1)))), false);
 								valargs[i] = EnsureType(builder, env, nv, expectedArgType, meth->GetLLVMFunctionType()->getParamType(1 + i + typeArgCount));
 							}
 							methodargs[i + typeArgCount + 1] = valargs[i];

@@ -43,6 +43,7 @@
 #include "NomLambdaCallTag.h"
 #include "Metadata.h"
 #include <algorithm>
+#include "PWObject.h"
 
 namespace Nom
 {
@@ -445,7 +446,7 @@ namespace Nom
 					}
 					else
 					{
-						curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+						curArg = MakeInvariantLoad(builder, NLLVMPointer(POINTERTYPE), builder->CreateGEP(NLLVMPointer(POINTERTYPE), varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 					}
 					auto calledType = calledFunctionType->getParamType(j);
 					auto expectedType = implFunctionType->getParamType(j);
@@ -474,7 +475,7 @@ namespace Nom
 				auto argsarr = makealloca(Value*, paramCount);
 
 				NomSubstitutionContextMemberContext nscmc(method);
-				CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, ObjectHeader::GeneratePointerToTypeArguments(builder, varargs[0]));
+				CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
 				for (decltype(paramCount) j = 0; j < paramCount; j++)
 				{
 					Value* curArg = nullptr;
@@ -484,7 +485,7 @@ namespace Nom
 					}
 					else
 					{
-						curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+						curArg = MakeInvariantLoad(builder, NLLVMPointer(POINTERTYPE), builder->CreateGEP(NLLVMPointer(POINTERTYPE), varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 					}
 					auto expectedType = implFunctionType->getParamType(j);
 					if (j >= method->GetDirectTypeParametersCount())
@@ -758,7 +759,7 @@ namespace Nom
 					auto argsarr = makealloca(Value*, paramCount);
 
 					NomSubstitutionContextMemberContext nscmc(meth);
-					CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, ObjectHeader::GeneratePointerToTypeArguments(builder, varargs[0]));
+					CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
 					for (decltype(paramCount) j = 0; j < paramCount; j++)
 					{
 						Value* curArg = nullptr;
@@ -768,7 +769,7 @@ namespace Nom
 						}
 						else
 						{
-							curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+							curArg = MakeInvariantLoad(builder, NLLVMPointer(POINTERTYPE), builder->CreateGEP(NLLVMPointer(POINTERTYPE), varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 						}
 						auto expectedType = implFunctionType->getParamType(j);
 						if (j >= meth->GetDirectTypeParametersCount())
@@ -915,7 +916,7 @@ namespace Nom
 								}
 								else
 								{
-									curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+									curArg = MakeInvariantLoad(builder, NLLVMPointer(POINTERTYPE), builder->CreateGEP(NLLVMPointer(POINTERTYPE), varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 								}
 								auto calledType = calledFunctionType->getParamType(j);
 								auto expectedType = implFunctionType->getParamType(j);

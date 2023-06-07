@@ -22,6 +22,9 @@
 #include "CallingConvConf.h"
 #include "NomTopType.h"
 #include "IMT.h"
+#include "PWLambda.h"
+#include "PWObject.h"
+#include "PWRecord.h"
 
 using namespace llvm;
 using namespace std;
@@ -241,7 +244,7 @@ namespace Nom
 		}
 		NomValue NomClosureField::GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const
 		{
-			return NomValue(LambdaHeader::GenerateReadField(builder, Lambda, receiver, Index), GetType());
+			return NomValue(PWLambdaPrecise(receiver, Lambda).ReadLambdaField(builder, Index), GetType());
 		}
 		void NomClosureField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
 		{

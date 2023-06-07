@@ -14,7 +14,7 @@ namespace Nom
 		public:
 			AvailableExternally() {}
 			~AvailableExternally() {}
-
+			virtual llvm::Type* GetLLVMElementType(llvm::Module& mod) const;
 			T *GetLLVMElement(llvm::Module &mod) const
 			{
 				T *ret = this->findLLVMElement(mod);

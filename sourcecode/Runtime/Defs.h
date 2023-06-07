@@ -41,6 +41,107 @@ namespace Nom
 {
 	namespace Runtime
 	{
+		class NLLVMPointer
+		{
+		private:
+			llvm::Type* const target;
+		public:
+			NLLVMPointer(llvm::Type* target) : target(target)
+			{
+			}
+			inline bool operator==(const NLLVMPointer& other) const
+			{
+				return target==other.target;
+			}
+			inline llvm::PointerType* operator->() const
+			{
+				return llvm::PointerType::get(target->getContext(), 0);
+			}
+			inline operator llvm::PointerType*() const
+			{
+				return llvm::PointerType::get(target->getContext(), 0);
+			}
+			inline llvm::Type* GetTargetType() const
+			{
+				return target;
+			}
+			llvm::PointerType* AsLLVMType() const
+			{
+				return llvm::PointerType::get(target->getContext(), 0);
+			}
+		};
+		class NLLVMPointerArr
+		{
+		private:
+			llvm::Type* const target;
+			const uint64_t size;
+		public:
+			NLLVMPointerArr(llvm::Type* target, uint64_t size) : target(target), size(size)
+			{
+
+			}
+			inline bool operator==(const NLLVMPointerArr& other) const
+			{
+				return target == other.target && size == other.size;
+			}
+			inline llvm::ArrayType* operator->() const
+			{
+				return llvm::ArrayType::get(llvm::PointerType::get(target->getContext(), 0), size);
+			}
+			inline operator llvm::ArrayType* () const
+			{
+				return llvm::ArrayType::get(llvm::PointerType::get(target->getContext(), 0), size);
+			}
+			inline llvm::Type* GetTargetType() const
+			{
+				return target;
+			}
+			inline uint64_t GetSize() const
+			{
+				return size;
+			}
+			llvm::ArrayType* AsLLVMType() const
+			{
+				return llvm::ArrayType::get(llvm::PointerType::get(target->getContext(), 0), size);
+			}
+		};
+		template <typename T>
+		class NLLVMTypeWrap
+		{
+		private:
+			llvm::Type* const annotation;
+			T* const wrapped;
+		public:
+			NLLVMTypeWrap(T* wrapped) : annotation(0), wrapped(wrapped)
+			{
+
+			}
+			NLLVMTypeWrap(T * wrapped, llvm::Type* annotation) : annotation(annotation), wrapped(wrapped)
+			{
+
+			}
+			inline bool operator==(const NLLVMTypeWrap<T>& other) const
+			{
+				return wrapped == wrapped;
+			}
+			inline T* operator->() const
+			{
+				return wrapped;
+			}
+			inline operator T* () const
+			{
+				return wrapped;
+			}
+			inline llvm::Type* GetAnnotation() const
+			{
+				return annotation;
+			}
+		};
+		using NLLVMConstant = NLLVMTypeWrap<llvm::Constant>;
+		using NLLVMValue = NLLVMTypeWrap<llvm::Value>;
+		using NLLVMGlobalVariable = NLLVMTypeWrap<llvm::GlobalVariable>;
+		using NLLVMType = NLLVMTypeWrap<llvm::Type>;
+
 		using RegIndex = int;
 		using ConstantID = uint64_t;
 		using LocalConstantID = uint64_t;
@@ -108,19 +209,19 @@ namespace Nom
 				return boolType;
 			}
 
-			static llvm::PointerType * GetRefType();
+			static NLLVMPointer &GetRefType();
 
 			static llvm::Type * GetConstantIndexType() {
 				static llvm::Type * ciType = llvm::Type::getIntNTy(LLVMCONTEXT, bitsin(::Nom::Runtime::ConstantID));
 				return ciType;
 			}
 
-			static llvm::PointerType * GetPointerType() {
-				static llvm::PointerType * ptrType = llvm::Type::getIntNTy(LLVMCONTEXT, bitsin(char))->getPointerTo();
+			static NLLVMPointer &GetPointerType() {
+				static NLLVMPointer ptrType = llvm::Type::getIntNTy(LLVMCONTEXT, bitsin(char));
 				return ptrType;
 			}
 
-			static llvm::PointerType * GetTypeType();
+			static NLLVMPointer & GetTypeType();
 
 		};
 

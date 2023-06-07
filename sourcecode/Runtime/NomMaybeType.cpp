@@ -42,7 +42,7 @@ namespace Nom
 			llvm::StructType* ttt = RTMaybeType::GetLLVMType();
 			llvm::GlobalVariable* gv = new llvm::GlobalVariable(mod, ttt, true, linkage, nullptr, GetGlobalName());
 			gv->setInitializer(RTMaybeType::GetConstant(mod, this));
-			return llvm::ConstantExpr::getGetElementPtr(gv->getType()->getElementType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(ttt, gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
 		}
 		llvm::Constant* NomMaybeType::findLLVMElement(llvm::Module& mod) const
 		{
@@ -52,7 +52,7 @@ namespace Nom
 			{
 				return var;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(var->getType()->getElementType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTMaybeType::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
 		}
 		bool NomMaybeType::ContainsVariables() const
 		{
@@ -173,7 +173,7 @@ namespace Nom
 			{
 				return reinterpret_cast<intptr_t>(head.Entry());
 			}
-			if (auto var = NomJIT::Instance().lookup(GetGlobalName())->getAddress())
+			if (auto var = (intptr_t)(void*)NomJIT::Instance().lookup(GetGlobalName())->getValue())
 			{
 				intptr_t ret = (var)+RTMaybeType::HeadOffset();
 				head = RTTypeHead((void*)ret);
@@ -206,7 +206,7 @@ namespace Nom
 		}
 		NomMaybeType::InitFunctionPointer NomMaybeType::GetCPPInitializerFunction()
 		{
-			return (InitFunctionPointer)((intptr_t)(NomJIT::Instance().lookup("RT_NOM_MaybeTypeInitializer")->getAddress()));
+			return (InitFunctionPointer)((intptr_t)(void*)(NomJIT::Instance().lookup("RT_NOM_MaybeTypeInitializer")->getValue()));
 		}
 		llvm::Function* NomMaybeType::GetInitializerFunction(llvm::Module& mod)
 		{
@@ -226,12 +226,12 @@ namespace Nom
 				BasicBlock* mainBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 
 				builder->SetInsertPoint(mainBlock);
-				StoreInst* store = MakeStore(builder, mod, MakeInt((unsigned char)TypeKind::TKClass), builder->CreateGEP(mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
-				store = MakeStore(builder, mod, hash, builder->CreateGEP(mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
-				store = MakeStore(builder, mod, nomtype, builder->CreateGEP(mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
-				store = MakeStore(builder, mod, ptypepointer, builder->CreateGEP(mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::PotentialType) }));
+				StoreInst* store = MakeStore(builder, mod, MakeInt((unsigned char)TypeKind::TKClass), builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
+				store = MakeStore(builder, mod, hash, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
+				store = MakeStore(builder, mod, nomtype, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
+				store = MakeStore(builder, mod, ptypepointer, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::PotentialType) }));
 
-				builder->CreateRet(builder->CreateGEP(mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
+				builder->CreateRet(builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
 			}
 			return fun;
 		}

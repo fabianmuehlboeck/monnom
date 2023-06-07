@@ -6,6 +6,11 @@
 #include "RTSignature.h"
 #include "IMT.h"
 #include "RTTypeHead.h"
+#include "PWInterface.h"
+#include "PWSuperInstance.h"
+#include "PWSignature.h"
+#include "PWCastFunction.h"
+#include "PWCheckReturnValueFunction.h"
 
 using namespace llvm;
 using namespace std;
@@ -57,47 +62,47 @@ namespace Nom
 
 		llvm::Value* RTInterface::GenerateReadSignature(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::Signature), "Signature", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadSignature(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadReturnValueCheckFunction(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::ReturnValueCheckFunction), "ReturnValueCheckFunction", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadReturnValueCheckFunction(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadSuperInstanceCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperTypesCount), "SuperTypesCount", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadSuperInstanceCount(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadSuperClassCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperClassCount), "SuperClassCount", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadSuperClassCount(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadSuperInterfaceCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperInterfaceCount), "SuperInterfaceCount", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadSuperInterfaceCount(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadSuperInstances(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperTypes), "SuperTypes", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadSuperInstances(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadSuperInterfaces(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::SuperInterfaces), "SuperInterfaces", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadSuperInterfaces(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadTypeArgCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTInterfaceFields::TypeArgCount) }), "TypeArgumentCount", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadTypeArgCount(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadFlags(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTInterfaceFields::Flags) }), "InterfaceFlags", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadFlags(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadIRPtr(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreateGEP(builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTInterfaceFields::IRPtr) }), "InterfaceFlags", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadIRPtr(builder);
 		}
 		llvm::Value* RTInterface::GenerateReadCastFunction(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTInterfaceFields::CastFunction), "CastFunction", AtomicOrdering::NotAtomic);
+			return PWInterface(descriptorPtr).ReadCastFunction(builder);
 		}
 	}
 }

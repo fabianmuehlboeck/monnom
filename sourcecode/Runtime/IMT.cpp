@@ -173,7 +173,7 @@ namespace Nom
 					{
 						if (argpos > 2 && argcount > 4)
 						{
-							argBuf.push_back(MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(args[3], args[3]->getType()->getPointerTo()), MakeInt32(argpos - 3))));
+							argBuf.push_back(MakeLoad(builder, POINTERTYPE, builder->CreateGEP(args[3]->getType(), args[3], MakeInt32(argpos - 3))));
 						}
 						else
 						{

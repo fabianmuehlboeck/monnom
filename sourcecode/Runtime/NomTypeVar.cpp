@@ -108,7 +108,7 @@ namespace Nom
 			{
 				return var;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(var->getType()->getElementType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTTypeVarFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTTypeVar::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTTypeVarFields::Head) }));
 		}
 		intptr_t NomTypeVar::GetRTElement() const
 		{

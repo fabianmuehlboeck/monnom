@@ -47,7 +47,7 @@ namespace Nom
 				builder->CreateRet(argiter);
 			}
 			auto gv = new GlobalVariable(mod, RTDynamicType::GetLLVMType(), true, linkage, RTDynamicType::CreateConstant(fun), "RT_NOM_DynamicType");
-			return llvm::ConstantExpr::getGetElementPtr(gv->getType()->getElementType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTDynamicTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTDynamicTypeFields::Head) }));
 		}
 		Constant* NomDynamicType::findLLVMElement(llvm::Module& mod) const
 		{
@@ -56,7 +56,7 @@ namespace Nom
 			{
 				return gv;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(gv->getType()->getElementType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTDynamicTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTDynamicTypeFields::Head) }));
 		}
 		bool NomDynamicType::ContainsVariables() const
 		{

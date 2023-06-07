@@ -8,6 +8,8 @@ namespace Nom
 	{
 
 		class NomType;
+		class PWRefValue;
+		class NomBuilder;
 
 		NomTypeRef GetIntClassType();
 		NomTypeRef GetFloatClassType();
@@ -18,7 +20,7 @@ namespace Nom
 		template<typename T>
 		class NomValueContainer
 		{
-		private:
+		protected:
 			T * val;
 			NomTypeRef type;
 			bool isFunctionCall;
@@ -58,7 +60,25 @@ namespace Nom
 			operator NomTypeRef() const { return type; }
 		};
 
-		using NomValue = NomValueContainer<llvm::Value>;
+		class NomValue : public NomValueContainer<llvm::Value>
+		{
+		public:
+			NomValue() {}
+			NomValue(llvm::Value* val, NomTypeRef type, bool isFunctionCall = false) : NomValueContainer(val, type, isFunctionCall)
+			{
+
+			}
+			NomValue(llvm::Value* val, bool isFunctionCall = false) : NomValueContainer(val, isFunctionCall)
+			{
+
+			}
+			~NomValue() {}
+			PWRefValue operator->() const;
+			PWRefValue AsPWRef() const;
+			int GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives = false, llvm::BasicBlock** primitiveIntBlock = nullptr, llvm::Value** primitiveIntVar = nullptr, llvm::BasicBlock** primitiveFloatBlock = nullptr, llvm::Value** primitiveFloatVar = nullptr, llvm::BasicBlock** primitiveBoolBlock = nullptr, llvm::Value** primitiveBoolVar = nullptr, int refWeight = 100, int intWeight = 50, int floatWeight = 40, int boolWeight = 30);
+			int GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, int refWeight, int intWeight = 50, int floatWeight = 40, int boolWeight = 30);
+
+		};
 	}
 }
 

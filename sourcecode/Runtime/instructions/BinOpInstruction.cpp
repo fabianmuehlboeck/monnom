@@ -14,6 +14,7 @@
 #include "../RefValueHeader.h"
 #include "../RTOutput.h"
 #include "../Metadata.h"
+#include "../PWRefValue.h"
 
 using namespace std;
 using namespace llvm;
@@ -67,6 +68,8 @@ namespace Nom
 				auto floattype = NomFloatClass::GetInstance()->GetType();
 				auto left = (*env)[Left];
 				auto right = (*env)[Right];
+				PWRefValue leftrv = left.AsPWRef();
+				PWRefValue rightrv = right.AsPWRef();
 
 				auto lefttype = left.GetNomType();
 				auto righttype = right.GetNomType();
@@ -147,8 +150,8 @@ namespace Nom
 						{
 							vtableMisMatchBlock = BasicBlock::Create(LLVMCONTEXT, "vtablesMismatchForEq", env->Function);
 						}
-						auto leftvtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
-						auto rightvtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+						auto leftvtable = leftrv.ReadVTable(builder);
+						auto rightvtable = rightrv.ReadVTable(builder);
 						auto vtablesEq = CreatePointerEq(builder, leftvtable, rightvtable);
 						Value* leftIsInt = nullptr;
 						Value* leftIsFloat = nullptr;
@@ -255,7 +258,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightInt", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightInt", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
@@ -271,7 +274,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightInt", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightInt", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -292,7 +295,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightFloat", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightFloat", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -308,7 +311,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightFloat", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightFloat", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
@@ -329,7 +332,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightPrimitiveInt", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightPrimitiveInt", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
@@ -345,7 +348,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightPrimitiveInt", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotFloatObjRightPrimitiveInt", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -366,7 +369,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightPrimitiveFloat", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotFloatObjRightPrimitiveFloat", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -382,7 +385,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightPrimitiveFloat", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightPrimitiveFloat", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, left);
+							auto vtable = leftrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
@@ -420,7 +423,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightIntObj", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotIntObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
@@ -441,7 +444,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightFloatObj", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotFloatObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -497,7 +500,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightFloatObj", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightNotFloatObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -518,7 +521,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightIntObj", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightNotIntObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
@@ -581,7 +584,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightIntObj", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotIntObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
@@ -597,7 +600,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightFloatObj", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotFloatObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -653,7 +656,7 @@ namespace Nom
 						{
 							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightFloatObj", env->Function);
 							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightNotFloatObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
 							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
@@ -674,7 +677,7 @@ namespace Nom
 						{
 							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightIntObj", env->Function);
 							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightNotIntObj", env->Function);
-							auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, right);
+							auto vtable = rightrv.ReadVTable(builder);
 							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
 							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());

@@ -71,7 +71,7 @@ namespace Nom
 				}
 				else
 				{
-					MakeStore(builder, targ, builder->CreateGEP(extArgArray, MakeInt32(argbufpos - (RTConfig_NumberOfVarargsArguments - 1))));
+					MakeStore(builder, targ, builder->CreateGEP(extArgArray->getType(), extArgArray, MakeInt32(argbufpos - (RTConfig_NumberOfVarargsArguments - 1))));
 				}
 				argbufpos++;
 			}
@@ -84,7 +84,7 @@ namespace Nom
 				}
 				else
 				{
-					MakeStore(builder, arg, builder->CreateGEP(extArgArray, MakeInt32(argbufpos - (RTConfig_NumberOfVarargsArguments - 1))));
+					MakeStore(builder, arg, builder->CreateGEP(extArgArray->getType(), extArgArray, MakeInt32(argbufpos - (RTConfig_NumberOfVarargsArguments - 1))));
 				}
 				argbufpos++;
 			}

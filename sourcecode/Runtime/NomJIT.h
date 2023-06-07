@@ -80,7 +80,7 @@ namespace Nom
 			}
 
 
-			llvm::Expected<llvm::JITEvaluatedSymbol> lookup(llvm::StringRef Name) {
+			llvm::Expected<llvm::orc::ExecutorAddr> lookup(llvm::StringRef Name) {
 				return lljit->lookup(Name);
 				//return ES.lookup({ &MainJD }, Mangle(Name.str()));
 			}
@@ -151,8 +151,8 @@ namespace Nom
 			//	return OptimizeLayer.findSymbol(MangledNameStream.str(), false);
 			//}
 
-			llvm::JITTargetAddress getSymbolAddress(const std::string Name) {
-				return lookup(Name)->getAddress();
+			uint64_t getSymbolAddress(const std::string Name) {
+				return lookup(Name)->getValue();
 			}
 
 			//void * getAddressIn(ModuleHandle h, const std::string &Name)

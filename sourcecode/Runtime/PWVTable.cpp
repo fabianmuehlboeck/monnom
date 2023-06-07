@@ -1,0 +1,29 @@
+#include "PWVTable.h"
+#include "Defs.h"
+#include "CompileHelpers.h"
+#include "RTConfig_LambdaOpt.h"
+
+using namespace std;
+using namespace llvm;
+namespace Nom
+{
+	namespace Runtime
+	{
+		llvm::Value* Nom::Runtime::PWVTable::ReadHasRawInvoke(NomBuilder& builder) const
+		{
+			if (RTConfig_UseLambdaOffset)
+			{
+				return builder->CreateTrunc(builder->CreateLShr(builder->CreatePtrToInt(wrapped, numtype(intptr_t)), MakeInt<intptr_t>(3)), inttype(1));
+			}
+			else
+			{
+				auto flags = MakeInvariantLoad(builder, RTVTable::GetLLVMType(), wrapped, MakeInt32(RTVTableFields::Flags), "Flags", AtomicOrdering::NotAtomic);
+				return builder->CreateICmpEQ(builder->CreateAnd(flags, MakeIntLike(flags, 1)), MakeIntLike(flags, 1));
+			}
+		}
+		llvm::Value* PWVTable::ReadMethodPointer(NomBuilder& builder, llvm::Constant* index) const
+		{
+			return MakeInvariantLoad(builder, RTVTable::GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(RTVTableFields::MethodTable), builder->CreateSub(MakeInt32(-1), index) }, "MethodPointer", AtomicOrdering::NotAtomic);
+		}
+	}
+}

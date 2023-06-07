@@ -2,6 +2,9 @@
 #include "RTSubtyping.h"
 #include "CompileHelpers.h"
 #include "RTTypeVar.h"
+#include "PWSubstStack.h"
+#include "PWTypeVar.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 using namespace llvm;
 using namespace std;
@@ -15,19 +18,20 @@ namespace Nom
 		}
 		llvm::Value* RTSubstStack::Pop(NomBuilder& builder, llvm::Value* substStack, llvm::Value* typeVar, llvm::Value** newStack)
 		{
+			auto ss = PWSubstStack(substStack);
+			PWType ret = PWSubstStack(substStack).Pop(builder, typeVar, newStack!=nullptr?&ss:nullptr);
 			if (newStack != nullptr)
 			{
-				*newStack = MakeInvariantLoad(builder, substStack, MakeInt32(TypeArgumentListStackFields::Next));
+				*newStack = ss.wrapped;
 			}
-			auto typeList = MakeInvariantLoad(builder, substStack, MakeInt32(TypeArgumentListStackFields::Types));
-			return MakeInvariantLoad(builder, builder->CreateGEP(typeList, builder->CreateSub(MakeInt32(-1), RTTypeVar::GenerateLoadIndex(builder, typeVar))));
+			return ret;
 		}
 		RTSubstStackValue::RTSubstStackValue(NomBuilder& builder, llvm::Value* typelist, llvm::Value* previousStack, llvm::ConstantInt* typeListSize, llvm::Value* typeListOrigPtr) : typeList(typeListOrigPtr), typeListSize(typeListSize)
 		{
 			stack = builder->CreateAlloca(RTSubstStack::GetLLVMType(), MakeInt32(1), "substStack");
 			builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(RTSubstStack::GetLLVMType())), builder->CreatePointerCast(stack, POINTERTYPE) });
-			MakeInvariantStore(builder, previousStack==nullptr?ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()):previousStack, stack, MakeInt32(TypeArgumentListStackFields::Next));
-			MakeInvariantStore(builder, typelist, stack, MakeInt32(TypeArgumentListStackFields::Types));
+			MakeInvariantStore(builder, previousStack==nullptr?ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()):previousStack, RTSubstStack::GetLLVMType(), stack, MakeInt32(TypeArgumentListStackFields::Next));
+			MakeInvariantStore(builder, typelist, RTSubstStack::GetLLVMType(), stack, MakeInt32(TypeArgumentListStackFields::Types));
 			invariantID=builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, {POINTERTYPE}, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(RTSubstStack::GetLLVMType())), builder->CreatePointerCast(stack, POINTERTYPE) });
 			if (typeListSize != nullptr)
 			{

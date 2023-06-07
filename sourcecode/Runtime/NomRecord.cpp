@@ -30,6 +30,8 @@
 #include "NomLambdaCallTag.h"
 #include "Metadata.h"
 #include "NomRecordCallTag.h"
+#include "PWObject.h"
+#include "PWTypeArr.h"
 
 using namespace llvm;
 using namespace std;
@@ -292,7 +294,7 @@ namespace Nom
 						auto argsarr = makealloca(Value*, paramCount);		
 
 						NomSubstitutionContextMemberContext nscmc(meth);
-						CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, ObjectHeader::GeneratePointerToTypeArguments(builder, varargs[0]));
+						CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
 
 						for (decltype(paramCount) j = 0; j < paramCount; j++)
 						{
@@ -303,7 +305,7 @@ namespace Nom
 							}
 							else
 							{
-								curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+								curArg = MakeInvariantLoad(builder, POINTERTYPE, builder->CreateGEP(POINTERTYPE, varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 							}
 							auto expectedType = implFunctionType->getParamType(j);
 							if (j >= meth->GetDirectTypeParametersCount())
@@ -420,7 +422,7 @@ namespace Nom
 						}
 						else
 						{
-							curArg = MakeInvariantLoad(builder, builder->CreateGEP(varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
+							curArg = MakeInvariantLoad(builder, POINTERTYPE, builder->CreateGEP(POINTERTYPE, varargs[RTConfig_NumberOfVarargsArguments], MakeInt32(j - RTConfig_NumberOfVarargsArguments)), "varArg", AtomicOrdering::NotAtomic);
 						}
 						auto expectedType = implFunctionType->getParamType(j);
 						curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
@@ -450,7 +452,7 @@ namespace Nom
 				}
 				auto bigptr = ConstantExpr::getGetElementPtr(RecordHeader::GetLLVMType(Fields.size()), ConstantPointerNull::get(RecordHeader::GetLLVMType(Fields.size())->getPointerTo()), ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(StructHeaderFields::Fields) }));
 				auto littleptr = ConstantExpr::getGetElementPtr(RecordHeader::GetLLVMType(), ConstantPointerNull::get(RecordHeader::GetLLVMType()->getPointerTo()), ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(StructHeaderFields::Fields) }));
-				auto fieldsOffset = ConstantExpr::getUDiv(ConstantExpr::getSub(ConstantExpr::getPtrToInt(bigptr, numtype(size_t)), ConstantExpr::getPtrToInt(littleptr, numtype(size_t))), MakeInt<size_t>(8));
+				auto fieldsOffset = ConstantFoldBinaryInstruction(BinaryOperator::UDiv, ConstantExpr::getSub(ConstantExpr::getPtrToInt(bigptr, numtype(size_t)), ConstantExpr::getPtrToInt(littleptr, numtype(size_t))), MakeInt<size_t>(8));
 				for (auto& field : fields)
 				{
 					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), MakeInt<size_t>(1), ConstantExpr::getIntToPtr(ConstantExpr::getAdd(MakeInt<size_t>((((size_t)(field->Index)) << 32)), fieldsOffset), GetIMTFunctionType()->getPointerTo()));

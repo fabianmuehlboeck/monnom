@@ -672,7 +672,7 @@ namespace Nom
 					}
 					else
 					{
-						CastedValueCompileEnv cvce = CastedValueCompileEnv(crtp.second->Method->GetDirectTypeParameters(), crtp.second->Method->GetParent()->GetAllTypeParameters(), fun, 3, crtp.second->Method->GetArgumentCount(), typeArgsPtrArg);
+						CastedValueCompileEnvIndirect cvce = CastedValueCompileEnvIndirect(crtp.second->Method->GetDirectTypeParameters(), crtp.second->Method->GetParent()->GetAllTypeParameters(), fun, 3, crtp.second->Method->GetArgumentCount(), typeArgsPtrArg);
 						auto castResult = RTCast::GenerateCast(builder, &cvce, checkValue, crtp.second->Method->GetReturnType(nullptr));
 						//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
 						//builder->CreateCondBr(castResult, nextBlock, castFailBlock, GetLikelyFirstBranchMetadata());

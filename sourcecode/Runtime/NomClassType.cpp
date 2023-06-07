@@ -26,6 +26,11 @@
 #include "RTOutput.h"
 #include "Metadata.h"
 #include "StructuralValueHeader.h"
+#include "PWClass.h"
+#include "PWRefValue.h"
+#include "PWTypeArr.h"
+#include "PWInterface.h"
+#include "PWSuperInstance.h"
 
 using namespace llvm;
 namespace Nom
@@ -59,7 +64,7 @@ namespace Nom
 		}
 		NomClassType::InitFunctionPointer NomClassType::GetCPPInitializerFunction()
 		{
-			return (InitFunctionPointer)((intptr_t)(NomJIT::Instance().lookup("RT_NOM_ClassTypeInitializer")->getAddress()));
+			return (InitFunctionPointer)((uintptr_t)(NomJIT::Instance().lookup("RT_NOM_ClassTypeInitializer")->getValue()));
 		}
 		llvm::Function * NomClassType::GetInitializerFunction(llvm::Module & mod)
 		{
@@ -84,10 +89,10 @@ namespace Nom
 				BasicBlock *retBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 
 				builder->SetInsertPoint(mainBlock);
-				StoreInst *store = MakeStore(builder,mod, MakeInt((unsigned char)TypeKind::TKClass), builder->CreateGEP(ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
-				store = MakeStore(builder,mod, hash, builder->CreateGEP(ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
-				store = MakeStore(builder,mod, nomtype, builder->CreateGEP(ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
-				store = MakeStore(builder,mod, builder->CreatePointerCast(clspointer, RTInterface::GetLLVMType()->getPointerTo()),  builder->CreateGEP(ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Class) }));
+				StoreInst *store = MakeStore(builder,mod, MakeInt((unsigned char)TypeKind::TKClass), builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
+				store = MakeStore(builder,mod, hash, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
+				store = MakeStore(builder,mod, nomtype, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
+				store = MakeStore(builder,mod, clspointer, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Class) }));
 				builder->CreateBr(loopHead);
 
 				builder->SetInsertPoint(loopHead);
@@ -98,12 +103,12 @@ namespace Nom
 				builder->SetInsertPoint(loop);
 				Value *index = builder->CreateSub(phi, MakeInt<int>(1));
 				phi->addIncoming(index, loop);
-				LoadInst *load = MakeLoad(builder,mod,builder->CreateGEP(argsarr, index));
-				store = MakeStore(builder,mod, load, builder->CreateGEP(ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::TypeArgs), builder->CreateNeg(phi) }));
+				LoadInst *load = MakeLoad(builder,mod,TYPETYPE, builder->CreateGEP(arrtype(TYPETYPE,0), argsarr, index));
+				store = MakeStore(builder,mod, load, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, {MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::TypeArgs), builder->CreateNeg(phi)}));
 				builder->CreateBr(loopHead);
 
 				builder->SetInsertPoint(retBlock);
-				builder->CreateRet(builder->CreateGEP(ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head) }));
+				builder->CreateRet(builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head) }));
 			}
 			return fun;
 		}
@@ -283,21 +288,21 @@ namespace Nom
 					NomBuilder builder;
 					builder->SetInsertPoint(startBlock);
 					auto argiter = fun->arg_begin();
-					Value* self = argiter;
+					auto self = PWRefValue(argiter);
 					argiter++;
-					Value* castedValue = argiter;
+					auto castedValue = PWRefValue(argiter);
 
 					BasicBlock* failBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Cast Failed!");
 					BasicBlock* successBlock = BasicBlock::Create(LLVMCONTEXT, "success", fun);
 
 					BasicBlock* refValueBlock = nullptr, *intBlock = nullptr, * floatBlock = nullptr;
-					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, castedValue, &refValueBlock, &intBlock, &floatBlock, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+					castedValue.AsNomValue().GenerateRefOrPrimitiveValueSwitch(builder, &refValueBlock, &intBlock, &floatBlock, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
 					if (refValueBlock != nullptr)
 					{
 						builder->SetInsertPoint(refValueBlock);
-						auto vtable = RefValueHeader::GenerateReadVTablePointer(builder, castedValue);
-						auto clsptr = RTClass::GetInterfaceReference(builder, vtable);
+						auto vtable = castedValue.ReadVTable(builder);
+						auto clsptr = PWClass::FromVTable(vtable).GetInterface(builder);
 						if (!this->Named->IsInterface())
 						{
 							BasicBlock* directMatchBlock = BasicBlock::Create(LLVMCONTEXT, "directClassMatch", fun);
@@ -336,9 +341,9 @@ namespace Nom
 							{
 								foundMatchBlock = BasicBlock::Create(LLVMCONTEXT, "foundMatch", fun);
 								builder->SetInsertPoint(foundMatchBlock);
-								typeArgsPHI = builder->CreatePHI(SuperInstanceEntryType()->getPointerTo(), 2, "matchingEntry");
+								typeArgsPHI = builder->CreatePHI(NLLVMPointer(SuperInstanceEntryType()), 2, "matchingEntry");
 								auto origTypeArgs = ObjectHeader::GeneratePointerToTypeArguments(builder, castedValue);
-								auto typeArgs = MakeInvariantLoad(builder, typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic);
+								auto typeArgs = PWTypeArr(MakeInvariantLoad(builder, SuperInstanceEntryType(), typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic));
 								auto typeEqFun = RTTypeEq::Instance(false).GetLLVMElement(mod);
 								RTSubstStackValue rssv = RTSubstStackValue(builder, origTypeArgs);
 								BasicBlock* outBlock[2];
@@ -346,7 +351,7 @@ namespace Nom
 								int pos = 0;
 								for (auto& arg : this->Arguments)
 								{
-									auto targ = MakeInvariantLoad(builder, builder->CreateGEP(typeArgs, MakeInt32(-(pos + 1)) ), "typeArg", AtomicOrdering::NotAtomic);
+									auto targ = MakeInvariantLoad(builder, TYPETYPE, builder->CreateGEP(TYPETYPE, typeArgs, MakeInt32(-(pos + 1)) ), "typeArg", AtomicOrdering::NotAtomic);
 									auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ, rssv, arg->GetLLVMElement(mod), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()) });
 									isTypeEq->setCallingConv(NOMCC);
 									CreateExpect(builder, isTypeEq, MakeUInt(1, 1));
@@ -367,8 +372,8 @@ namespace Nom
 							}
 							if (this->Named->IsInterface())
 							{
-								auto supercount = RTInterface::GenerateReadSuperInterfaceCount(builder, clsptr);
-								auto supers = RTInterface::GenerateReadSuperInterfaces(builder, clsptr);
+								auto supercount = clsptr.ReadSuperInterfaceCount(builder);
+								auto supers = clsptr.ReadSuperInterfaces(builder);
 								BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$head", fun);
 								BasicBlock* loopBodyBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$body", fun);
 								auto origBlock = builder->GetInsertBlock();
@@ -383,8 +388,8 @@ namespace Nom
 								builder->CreateCondBr(stillEntriesLeft, loopBodyBlock, failBlock, GetLikelyFirstBranchMetadata());
 
 								builder->SetInsertPoint(loopBodyBlock);
-								auto entry = builder->CreateGEP(supers, posPHI);
-								auto superIface = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superInterface", AtomicOrdering::NotAtomic);
+								auto entry = supers.GetEntry(builder, posPHI);
+								auto superIface = MakeInvariantLoad(builder, entry.GetLLVMType(), entry, MakeInt32(SuperInstanceEntryFields::Class), "superInterface", AtomicOrdering::NotAtomic);
 								auto superMatch = CreatePointerEq(builder, superIface, this->Named->GetInterfaceDescriptor(mod));
 								posPHI->addIncoming(builder->CreateAdd(posPHI, MakeIntLike(posPHI, 1)), builder->GetInsertBlock());
 								builder->CreateCondBr(superMatch, foundMatchBlock, loopHeadBlock);
@@ -395,17 +400,17 @@ namespace Nom
 							}
 							else
 							{
-								auto supers = RTInterface::GenerateReadSuperInstances(builder, clsptr);
+								auto supers = clsptr.ReadSuperInstances(builder);
 								BasicBlock* checkSuperClassBlock = BasicBlock::Create(LLVMCONTEXT, "checkSuperClass", fun);
-								auto supercount = RTInterface::GenerateReadSuperClassCount(builder, clsptr);
+								auto supercount = clsptr.ReadSuperClassCount(builder);
 								auto superIndex = MakeIntLike(supercount, this->Named->GetSuperClassCount());
 								auto lessThan = builder->CreateICmpULT(superIndex, supercount);
 								CreateExpect(builder, lessThan, MakeUInt(1, 1));
 								builder->CreateCondBr(lessThan, checkSuperClassBlock, failBlock, GetLikelyFirstBranchMetadata());
 
 								builder->SetInsertPoint(checkSuperClassBlock);
-								auto entry = builder->CreateGEP(supers, superIndex);
-								auto superClass = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superClass", AtomicOrdering::NotAtomic);
+								auto entry = supers.GetEntry(builder, superIndex);
+								auto superClass = MakeInvariantLoad(builder, entry.GetLLVMType(), entry, MakeInt32(SuperInstanceEntryFields::Class), "superClass", AtomicOrdering::NotAtomic);
 								auto superMatch = CreatePointerEq(builder, superClass, this->Named->GetInterfaceDescriptor(mod));
 								CreateExpect(builder, lessThan, MakeUInt(1, 1));
 								builder->CreateCondBr(superMatch, foundMatchBlock, failBlock, GetLikelyFirstBranchMetadata());
@@ -462,7 +467,7 @@ namespace Nom
 				funptr = ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 			}
 			gv->setInitializer(RTClassType::GetConstant(mod, this, funptr));
-			return llvm::ConstantExpr::getGetElementPtr(gv->getType()->getElementType(), gv, llvm::ArrayRef<llvm::Constant *>({ MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(ttt, gv, llvm::ArrayRef<llvm::Constant *>({ MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head) }));
 		}
 
 		llvm::Value * NomClassType::GenerateRTInstantiation(NomBuilder& builder, CompileEnv* env) const
@@ -473,10 +478,10 @@ namespace Nom
 				argarr[0] = this->Named->GetLLVMElement(*(env->Module));
 				if (this->Arguments.size() > 0)
 				{
-					llvm::AllocaInst *typesarr = builder->CreateAlloca(RTTypeHead::GetLLVMType()->getPointerTo(), MakeInt<int32_t>(this->Arguments.size()));
+					llvm::AllocaInst *typesarr = builder->CreateAlloca(TYPETYPE, MakeInt<int32_t>(this->Arguments.size()));
 					for (size_t i = 0; i < this->Arguments.size(); i++)
 					{
-						MakeStore(builder,(*(env->Module)), this->Arguments[i]->GenerateRTInstantiation(builder, env), builder->CreateGEP(typesarr, MakeInt<int32_t>(i)));
+						MakeStore(builder,(*(env->Module)), this->Arguments[i]->GenerateRTInstantiation(builder, env), builder->CreateGEP(TYPETYPE, typesarr, MakeInt<int32_t>(i)));
 					}
 					argarr[1] = typesarr;
 				}
@@ -490,13 +495,14 @@ namespace Nom
 		}
 		llvm::Constant * NomClassType::findLLVMElement(llvm::Module & mod) const
 		{
+			llvm::StructType* ttt = RTClassType::GetLLVMType(this->Arguments.size());
 			llvm::SmallVector<char, 32> buf;
 			auto var = mod.getGlobalVariable(GetGlobalName());
 			if (var == nullptr)
 			{
 				return var;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(var->getType()->getElementType(), var, llvm::ArrayRef<llvm::Constant *>({MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head)}));
+			return llvm::ConstantExpr::getGetElementPtr(ttt, var, llvm::ArrayRef<llvm::Constant *>({MakeInt32(0), MakeInt32((unsigned char)RTClassTypeFields::Head)}));
 		}
 		intptr_t NomClassType::GetRTElement() const
 		{

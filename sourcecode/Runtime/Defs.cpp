@@ -15,15 +15,15 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		llvm::PointerType * BytecodeTypes::GetRefType() {
+		NLLVMPointer &BytecodeTypes::GetRefType() {
 			//static llvm::Type * refType = (llvm::StructType::create(Nom::Runtime::TheContext)->getPointerTo());
-			static llvm::PointerType *refType = RefValueHeader::GetLLVMType()->getPointerTo();
+			static NLLVMPointer refType = NLLVMPointer(RefValueHeader::GetLLVMType());
 			return refType;
 		}
 
-		llvm::PointerType * BytecodeTypes::GetTypeType()
+		NLLVMPointer &BytecodeTypes::GetTypeType()
 		{
-			static llvm::PointerType* typeType = RTTypeHead::GetLLVMType()->getPointerTo();
+			static NLLVMPointer typeType = NLLVMPointer(RTTypeHead::GetLLVMType());
 			return typeType;
 		}
 

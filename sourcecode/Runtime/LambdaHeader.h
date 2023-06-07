@@ -12,9 +12,6 @@ namespace Nom
 		{
 		public:
 			static llvm::StructType* GetLLVMType();
-			static llvm::Value* GenerateReadField(NomBuilder& builder, NomLambda* lambda, llvm::Value* thisObj, int32_t fieldindex);
-			static llvm::Value* GenerateReadField(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldIndex);
-			static llvm::Value* GenerateWriteField(NomBuilder& builder, llvm::Value* thisObj, int32_t argindex, llvm::Value* value);
 
 			static llvm::Value* GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* thisObj, int32_t argindex, const NomLambda* lambda);
 			static llvm::Value* GeneratePointerToTypeArguments(NomBuilder& builder, llvm::Value* thisObj, const NomLambda* lambda);

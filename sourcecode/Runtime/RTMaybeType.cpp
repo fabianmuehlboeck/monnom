@@ -6,6 +6,7 @@
 #include "NullClass.h"
 #include "Metadata.h"
 #include "CallingConvConf.h"
+#include "PWMaybeType.h"
 
 using namespace llvm;
 namespace Nom
@@ -81,7 +82,7 @@ namespace Nom
 		}
 		llvm::Value* RTMaybeType::GenerateReadPotentialType(NomBuilder& builder, llvm::Value* type)
 		{
-			return MakeLoad(builder, builder->CreatePointerCast(type, GetLLVMType()->getPointerTo()), MakeInt<RTMaybeTypeFields>(RTMaybeTypeFields::PotentialType));
+			return PWMaybeType(type).ReadPotentialType(builder);
 		}
 	}
 }

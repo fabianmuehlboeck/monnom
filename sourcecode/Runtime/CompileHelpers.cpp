@@ -11,6 +11,48 @@ namespace Nom
 {
 	namespace Runtime
 	{
+		llvm::Type* GetGEPTargetType(llvm::Type* origType, llvm::ArrayRef<llvm::Value*> arr)
+		{
+			if (arr.size() <= 1)
+			{
+				return origType;
+			}
+			llvm::Type* nextOrig = 0;
+			if (origType->isStructTy())
+			{
+				nextOrig = origType->getStructElementType(*((ConstantInt*)arr[1])->getValue().getRawData());
+			}
+			else if (origType->isArrayTy())
+			{
+				nextOrig = origType->getArrayElementType();
+			}
+			else
+			{
+				throw "Invalid GEP target";
+			}
+			return GetGEPTargetType(nextOrig, arr.take_back(arr.size() - 1));
+		}
+		llvm::Type* GetGEPTargetType(llvm::Type* origType, llvm::ArrayRef<llvm::Constant*> arr)
+		{
+			if (arr.size() <= 1)
+			{
+				return origType;
+			}
+			llvm::Type* nextOrig = 0;
+			if (origType->isStructTy())
+			{
+				nextOrig = origType->getStructElementType(*((ConstantInt*)arr[1])->getValue().getRawData());
+			}
+			else if (origType->isArrayTy())
+			{
+				nextOrig = origType->getArrayElementType();
+			}
+			else
+			{
+				throw "Invalid GEP target";
+			}
+			return GetGEPTargetType(nextOrig, arr.take_back(arr.size() - 1));
+		}
 		CallInst* GenerateFunctionCall(NomBuilder& builder, Module& mod, Value* fun, FunctionType* ftype, ArrayRef<Value*>& args, bool fastcall)
 		{
 			size_t argsize = args.size();
@@ -215,28 +257,6 @@ namespace Nom
 
 		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
 		{
-			//std::cout << "Storing value of type";
-			//llvm::raw_os_ostream out(std::cout);
-			//val->getType()->print(out);
-			//out.flush();
-			//std::cout << "into field of type";
-			//ptr->getType()->print(out);
-			//out.flush();
-			//std::cout.flush();
-			/*llvm::Value* pval = val;
-			if (pval->getType()->isIntegerTy()&&pval->getType()!=INTTYPE)
-			{
-				pval = builder->CreateSExtOrTrunc(pval, INTTYPE);
-			}
-			if (pval->getType() == INTTYPE)
-			{
-				pval = builder->CreateIntToPtr(pval, POINTERTYPE);
-			}
-			else if (pval->getType() == FLOATTYPE)
-			{
-				pval = builder->CreateIntToPtr(builder->CreateBitCast(pval, INTTYPE), POINTERTYPE);
-			}
-			builder->CreateCall(mod.getFunction("RT_NOM_PRINT_STORE"), { {builder->CreatePointerCast(pval,POINTERTYPE),builder->CreatePointerCast(ptr,POINTERTYPE)} });*/
 			llvm::StoreInst* store = builder->CreateStore(val, ptr);
 			store->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(val->getType())));
 			store->setAtomic(ordering);
@@ -249,7 +269,7 @@ namespace Nom
 		}
 
 		//Adds a zero index in front of the given indices list
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type * targetType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
 		{
 			auto indexcount = indices.size();
 			llvm::Value** indexbuf = makealloca(llvm::Value*, indexcount + 1);
@@ -258,31 +278,21 @@ namespace Nom
 			{
 				indexbuf[i + 1] = builder->CreateZExtOrTrunc(indices[i], inttype(32));
 			}
-			llvm::Value* actualpointer = builder->CreateGEP(ptr, llvm::ArrayRef<llvm::Value*>(indexbuf, indexcount + 1));
+			llvm::Value* actualpointer = builder->CreateGEP(targetType, ptr, llvm::ArrayRef<llvm::Value*>(indexbuf, indexcount + 1));
 			llvm::StoreInst* store = builder->CreateStore(val, actualpointer);
-			store->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(((PointerType*)actualpointer->getType())->getElementType())));
+			store->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(val->getType())));
 			store->setAtomic(ordering);
 			return store;
-		}
-
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
-		{
-			return MakeStore(builder, val, builder->CreatePointerCast(ptr, asType), indices, ordering);
 		}
 
 		//Adds a zero index in front of the given index
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type * targetType, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering)
 		{
-			llvm::Value* actualpointer = builder->CreateGEP(ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
+			llvm::Value* actualpointer = builder->CreateGEP(targetType, ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
 			llvm::StoreInst* store = builder->CreateStore(val, actualpointer);
-			store->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(((PointerType*)actualpointer->getType())->getElementType())));
+			store->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(val->getType())));
 			store->setAtomic(ordering);
 			return store;
-		}
-
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::AtomicOrdering ordering)
-		{
-			return MakeStore(builder, val, builder->CreatePointerCast(ptr, asType), index, ordering);
 		}
 
 		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
@@ -299,67 +309,38 @@ namespace Nom
 			return storeInst;
 		}
 
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
 		{
-			auto storeInst = MakeStore(builder, val, ptr, indices, ordering);
+			auto storeInst = MakeStore(builder, val, targetType, ptr, indices, ordering);
 			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return storeInst;
 		}
 
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering)
 		{
-			auto storeInst = MakeStore(builder, val, ptr, asType, indices, ordering);
+			auto storeInst = MakeStore(builder, val, targetType, ptr, index, ordering);
 			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return storeInst;
 		}
 
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering)
-		{
-			auto storeInst = MakeStore(builder, val, ptr, index, ordering);
-			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
-			return storeInst;
-		}
-
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::AtomicOrdering ordering)
-		{
-			auto storeInst = MakeStore(builder, val, ptr, asType, index, ordering);
-			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
-			return storeInst;
-		}
-
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Module& mod, llvm::Type * elementType, llvm::Value* ptr, llvm::AtomicOrdering ordering)
 		{
 
-			llvm::LoadInst* load = builder->CreateLoad(ptr);
-			/*llvm::Value* pval = load;
-			if (pval->getType()->isIntegerTy() && pval->getType() != INTTYPE)
-			{
-				pval = builder->CreateSExtOrTrunc(pval, INTTYPE);
-			}
-			if (pval->getType() == INTTYPE)
-			{
-				pval = builder->CreateIntToPtr(pval, POINTERTYPE);
-			}
-			else if (pval->getType() == FLOATTYPE)
-			{
-				pval = builder->CreateIntToPtr(builder->CreateBitCast(pval, INTTYPE), POINTERTYPE);
-			}
-			builder->CreateCall(mod.getFunction("RT_NOM_PRINT_LOAD"), { {builder->CreatePointerCast(pval,POINTERTYPE), builder->CreatePointerCast(ptr,POINTERTYPE)} });*/
-			//load->setAtomic(ordering);
-			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(((PointerType*)ptr->getType())->getElementType())));
+			llvm::LoadInst* load = builder->CreateLoad(elementType, ptr);
+			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(elementType)));
 			load->setAtomic(ordering);
 			return load;
 		}
 
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
-			auto li = MakeLoad(builder, *builder->GetInsertBlock()->getParent()->getParent(), ptr, ordering);;
+			auto li = MakeLoad(builder, *builder->GetInsertBlock()->getParent()->getParent(), elementType, ptr, ordering);;
 			li->setName(name);
 			return li;
 		}
 
 		//Adds a zero index in front of the given indices list
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
 			auto indexcount = indices.size();
 			llvm::Value** indexbuf = makealloca(llvm::Value*, indexcount + 1);
@@ -368,61 +349,47 @@ namespace Nom
 			{
 				indexbuf[i + 1] = builder->CreateZExtOrTrunc(indices[i], inttype(32));
 			}
-			llvm::Value* actualpointer = builder->CreateGEP(ptr, llvm::ArrayRef<llvm::Value*>(indexbuf, indexcount + 1));
-			llvm::LoadInst* load = builder->CreateLoad(actualpointer, name);
-			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(((PointerType*)actualpointer->getType())->getElementType())));
+			llvm::Value* actualpointer = builder->CreateGEP(elementType, ptr, llvm::ArrayRef<llvm::Value*>(indexbuf, indexcount + 1));
+			llvm::Type* loadedType = GetGEPTargetType(elementType, llvm::ArrayRef<llvm::Value*>(indexbuf, indexcount + 1));
+			llvm::LoadInst* load = builder->CreateLoad(loadedType, actualpointer, name);
+			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(loadedType)));
 			load->setAtomic(ordering);
 			return load;
-		}
-
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
-		{
-			return MakeLoad(builder, builder->CreatePointerCast(ptr, asType), indices, name, ordering);
 		}
 
 		//Adds a zero index in front of the given index
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
-			llvm::Value* actualpointer = builder->CreateGEP(ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
-			llvm::LoadInst* load = builder->CreateLoad(actualpointer, name);
-			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(((PointerType*)actualpointer->getType())->getElementType())));
+			llvm::Value* actualpointer = builder->CreateGEP(elementType, ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
+			llvm::Type* loadType = GetGEPTargetType(elementType, ArrayRef<llvm::Value*>({ MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) }));
+			llvm::LoadInst* load = builder->CreateLoad(loadType, actualpointer, name);
+			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(loadType)));
 			load->setAtomic(ordering);
 			return load;
 		}
 
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
-		{
-			return MakeLoad(builder, builder->CreatePointerCast(ptr, asType), index, name, ordering);
-		}
 
-
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering)
 		{
-			auto inst = MakeLoad(builder, mod, ptr, ordering);
+			auto inst = MakeLoad(builder, mod, elementType, ptr, ordering);
 			inst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return inst;
 		}
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
-			auto inst = MakeLoad(builder, ptr, name, ordering);
+			auto inst = MakeLoad(builder, elementType, ptr, name, ordering);
 			inst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return inst;
 		}
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
-			auto inst = MakeLoad(builder, ptr, indices, name, ordering);
+			auto inst = MakeLoad(builder, elementType, ptr, indices, name, ordering);
 			inst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return inst;
 		}
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::PointerType* asType, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
-			auto inst = MakeLoad(builder, ptr, asType, indices, name, ordering);
-			inst->setMetadata("invariant.group", getGeneralInvariantNode());
-			return inst;
-		}
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Value* ptr, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
-		{
-			auto inst = MakeLoad(builder, ptr, index, name, ordering);
+			auto inst = MakeLoad(builder, elementType, ptr, index, name, ordering);
 			inst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return inst;
 		}
@@ -430,61 +397,61 @@ namespace Nom
 
 		ReadFieldFunction GetReadFieldFunction()
 		{
-			static ReadFieldFunction fun = (ReadFieldFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_READFIELD")->getAddress());
+			static ReadFieldFunction fun = (ReadFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_READFIELD")->getValue());
 			return fun;
 		}
 		WriteFieldFunction GetWriteFieldFunction()
 		{
-			static WriteFieldFunction fun = (WriteFieldFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD")->getAddress());
+			static WriteFieldFunction fun = (WriteFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD")->getValue());
 			return fun;
 		}
 		FieldAddrFunction GetFieldAddrFunction()
 		{
-			static FieldAddrFunction fun = (FieldAddrFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_GETFIELDADDR")->getAddress());
+			static FieldAddrFunction fun = (FieldAddrFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_GETFIELDADDR")->getValue());
 			return fun;
 		}
 		ReadFieldFunction GetReadFieldFunction_ForInvoke()
 		{
-			static ReadFieldFunction fun = (ReadFieldFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_READFIELD_FORINVOKABLE")->getAddress());
+			static ReadFieldFunction fun = (ReadFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_READFIELD_FORINVOKABLE")->getValue());
 			return fun;
 		}
 		WriteFieldFunction GetWriteFieldFunction_ForInvoke()
 		{
-			static WriteFieldFunction fun = (WriteFieldFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD_FORINVOKABLE")->getAddress());
+			static WriteFieldFunction fun = (WriteFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD_FORINVOKABLE")->getValue());
 			return fun;
 		}
 		ReadTypeArgFunction GetReadTypeArgFunction()
 		{
-			static ReadTypeArgFunction fun = (ReadTypeArgFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_READTYPEARG")->getAddress());
+			static ReadTypeArgFunction fun = (ReadTypeArgFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_READTYPEARG")->getValue());
 			return fun;
 		}
 		WriteTypeArgFunction GetWriteTypeArgFunction()
 		{
-			static WriteTypeArgFunction fun = (WriteTypeArgFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITETYPEARG")->getAddress());
+			static WriteTypeArgFunction fun = (WriteTypeArgFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITETYPEARG")->getValue());
 			return fun;
 		}
 		WriteVTableFunction GetWriteVTableFunction()
 		{
-			static WriteVTableFunction fun = (WriteVTableFunction)(intptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEVTABLE")->getAddress());
+			static WriteVTableFunction fun = (WriteVTableFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEVTABLE")->getValue());
 			return fun;
 		}
 		void* GetGeneralLLVMFunction(llvm::StringRef name)
 		{
-			return (void*)(intptr_t)(NomJIT::Instance().lookup(name)->getAddress());
+			return (void*)(uintptr_t)(NomJIT::Instance().lookup(name)->getValue());
 		}
 		void* GetBooleanTrue()
 		{
-			static void* bval = (void*)(*((intptr_t*)(NomJIT::Instance().lookup("RT_NOM_TRUE")->getAddress())));
+			static void* bval = (void*)(*((uintptr_t*)(NomJIT::Instance().lookup("RT_NOM_TRUE")->getValue())));
 			return bval;
 		}
 		void* GetBooleanFalse()
 		{
-			static void* bval = (void*)(*((intptr_t*)(NomJIT::Instance().lookup("RT_NOM_FALSE")->getAddress())));
+			static void* bval = (void*)(*((uintptr_t*)(NomJIT::Instance().lookup("RT_NOM_FALSE")->getValue())));
 			return bval;
 		}
 		void* GetVoidObj()
 		{
-			static void* voidobj = (void*)((intptr_t)(Nom::Runtime::NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
+			static void* voidobj = (void*)((uintptr_t)(Nom::Runtime::NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
 			return voidobj;
 		}
 

@@ -15,6 +15,9 @@
 #include "RTRecord.h"
 #include "RTVTable.h"
 #include "CastStats.h"
+#include "PWStructVal.h"
+#include "PWTypeArr.h"
+#include "PWCastData.h"
 
 using namespace llvm;
 using namespace std;
@@ -35,7 +38,7 @@ namespace Nom
 					arrtype(TYPETYPE, 0),																				//Closure type args
 					RefValueHeader::GetLLVMType(),																		//vtable
 					(NomLambdaOptimizationLevel > 0 ? static_cast<llvm::Type*>(POINTERTYPE) : arrtype(POINTERTYPE, 0)),	//potential space for raw invoke pointer
-					POINTERTYPE																							//cast data
+					POINTERTYPE.AsLLVMType()																			//cast data
 				);
 			}
 			return shst;
@@ -43,40 +46,36 @@ namespace Nom
 
 		void StructuralValueHeader::GenerateInitializationCode(NomBuilder& builder, llvm::Value* refValue, llvm::ArrayRef<llvm::Value*> typeArguments, llvm::Constant* vTablePtr, llvm::Constant* rawInvokePointer)
 		{
-			auto castedDescriptor = builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo());
+			auto castedDescriptor = refValue;
 			int targIndex = -1;
 			for (auto& targ : typeArguments)
 			{
-				auto targAddress = builder->CreateGEP(castedDescriptor, { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::TypeArgs), MakeInt32(targIndex) });
+				auto targAddress = builder->CreateGEP(GetLLVMType(), refValue, {MakeInt32(0), MakeInt32(StructuralValueHeaderFields::TypeArgs), MakeInt32(targIndex)});
 				MakeInvariantStore(builder, targ, targAddress);
 				targIndex--;
 			}
-			RefValueHeader::GenerateInitializerCode(builder, builder->CreateGEP(castedDescriptor, { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::RefValueHeader) }), vTablePtr, rawInvokePointer);
+			RefValueHeader::GenerateInitializerCode(builder, builder->CreateGEP(GetLLVMType(), refValue, { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::RefValueHeader) }), vTablePtr, rawInvokePointer);
 		}
 
 		llvm::Value* StructuralValueHeader::GenerateReadTypeArgsPtr(NomBuilder& builder, llvm::Value* sValue)
 		{
-			return builder->CreateGEP(builder->CreatePointerCast(sValue, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::TypeArgs) });
+			return PWStructVal(sValue).PointerToTypeArgs(builder);
 		}
 
 		llvm::Value* StructuralValueHeader::GenerateReadCastData(NomBuilder& builder, llvm::Value* sValue)
 		{
-			auto loadInst = MakeLoad(builder, sValue, GetLLVMType()->getPointerTo(), MakeInt32(StructuralValueHeaderFields::CastData), "castData", AtomicOrdering::Acquire);
-			return loadInst;
+			return PWStructVal(sValue).ReadCastData(builder);
 		}
 
 		llvm::Value* StructuralValueHeader::GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* sValue, llvm::Value* index)
 		{
-			auto targAddress = builder->CreateGEP(builder->CreatePointerCast(sValue, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::TypeArgs), builder->CreateSub(MakeInt32(-1), builder->CreateZExtOrTrunc(index, inttype(32))) });
-			auto loadInst = MakeInvariantLoad(builder, targAddress, "typeArgument");
-			return loadInst;
+			return PWStructVal(sValue).ReadTypeArgument(builder, index);
 		}
 
 
 		llvm::Value* StructuralValueHeader::GenerateWriteCastTypePointerCMPXCHG(NomBuilder& builder, llvm::Value* thisObj, llvm::Value* newPtr, llvm::Value* oldPtr)
 		{
-			auto argPtr = builder->CreateGEP(builder->CreatePointerCast(thisObj, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::CastData) });
-			return builder->CreateAtomicCmpXchg(argPtr, oldPtr, newPtr, AtomicOrdering::AcquireRelease, AtomicOrdering::Acquire);
+			return PWStructVal(thisObj).WriteCastDataCMPXCHG(builder, oldPtr, newPtr);
 		}
 
 		void StructuralValueHeader::GenerateMonotonicStructuralCast(NomBuilder& builder, llvm::Function* fun, llvm::BasicBlock* successBlock, llvm::BasicBlock* failBlock, llvm::Value* value, NomClassTypeRef rightType, llvm::Value* outerStack)

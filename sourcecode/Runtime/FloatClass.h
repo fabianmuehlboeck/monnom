@@ -28,6 +28,7 @@ namespace Nom
 			// Inherited via AvailableExternally
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
+			virtual llvm::Type* GetLLVMElementType(llvm::Module& mod) const override;
 		};
 	}
 }

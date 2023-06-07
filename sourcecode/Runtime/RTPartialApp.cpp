@@ -21,7 +21,7 @@ namespace Nom
 			static llvm::StructType* pat = llvm::StructType::create(LLVMCONTEXT, { 
 				RTVTable::GetLLVMType(),
 				numtype(uint64_t), 
-				arrtype(llvm::StructType::get(numtype(uint64_t), POINTERTYPE), 0)  
+				arrtype(llvm::StructType::get(numtype(uint64_t), POINTERTYPE.AsLLVMType()), 0)  
 				}, "RT_NOM_PartialAppDescriptor");
 			return pat;
 		}
@@ -35,9 +35,9 @@ namespace Nom
 			int pos = 0;
 			for (auto &entry : entries)
 			{
-				cbuf[pos] = llvm::ConstantStruct::get(llvm::StructType::get(numtype(uint64_t), POINTERTYPE), GetKeyConstant(std::get<0>(std::get<0>(entry)), std::get<1>(std::get<0>(entry))), std::get<1>(entry));
+				cbuf[pos] = llvm::ConstantStruct::get(llvm::StructType::get(numtype(uint64_t), POINTERTYPE.AsLLVMType()), GetKeyConstant(std::get<0>(std::get<0>(entry)), std::get<1>(std::get<0>(entry))), std::get<1>(entry));
 			}
-			auto arr = llvm::ConstantArray::get(arrtype(llvm::StructType::get(numtype(uint64_t), POINTERTYPE), entries.size()), llvm::ArrayRef<llvm::Constant*>(cbuf, entries.size()));
+			auto arr = llvm::ConstantArray::get(arrtype(llvm::StructType::get(numtype(uint64_t), POINTERTYPE.AsLLVMType()), entries.size()), llvm::ArrayRef<llvm::Constant*>(cbuf, entries.size()));
 			return ConstantStruct::get(llvm::StructType::get(numtype(uint64_t), arr->getType()), MakeInt<uint64_t>(entries.size()), arr);
 		}
 

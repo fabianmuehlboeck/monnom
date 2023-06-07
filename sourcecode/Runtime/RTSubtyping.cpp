@@ -367,7 +367,7 @@ namespace Nom
 			if (once)
 			{
 				once = false;
-				talst->setBody(talst->getPointerTo(), TYPETYPE->getPointerTo());
+				talst->setBody((llvm::PointerType*)NLLVMPointer(talst), (llvm::PointerType*)NLLVMPointer(TYPETYPE));
 			}
 			return talst;
 		}

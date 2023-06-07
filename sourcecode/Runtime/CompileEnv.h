@@ -230,7 +230,7 @@ namespace Nom
 
 		class CastedValueCompileEnv : public CompileEnv
 		{
-		private:
+		protected:
 			const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs;
 			const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs;
 			llvm::Function* const function;
@@ -270,6 +270,14 @@ namespace Nom
 
 			virtual llvm::Value* PopDispatchPair() override;
 
+		};
+
+		class CastedValueCompileEnvIndirect : public CastedValueCompileEnv
+		{
+		public:
+			CastedValueCompileEnvIndirect(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, int regular_args_begin, int funValueArgCount, llvm::Value* instanceTypeArrPtr);
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 		};
 	}
 }

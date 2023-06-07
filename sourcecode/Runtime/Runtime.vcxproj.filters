@@ -70,6 +70,21 @@
     <Filter Include="Runtime\Config">
       <UniqueIdentifier>{c71a7b2b-d8b7-4603-8da7-6043dd1e6f96}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Wrappers">
+      <UniqueIdentifier>{b0ca19a8-518d-4d3b-a0af-14e5da8131df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Wrappers\Types">
+      <UniqueIdentifier>{3fb626cc-e2bb-4a9c-9361-6632ad0e73d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Wrappers\Values">
+      <UniqueIdentifier>{3e5951e7-4166-4dee-99c9-b367704844e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Wrappers\Helpers">
+      <UniqueIdentifier>{e12edfe6-fc22-461b-addc-62e0e8fbe8b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Wrappers\Globals">
+      <UniqueIdentifier>{bc8c30c3-8713-4b1e-aea0-25aa82f56ac9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="instructions\CallCheckedStaticMethod.cpp">
@@ -284,9 +299,6 @@
     </ClCompile>
     <ClCompile Include="RTDictionary.cpp">
       <Filter>Runtime</Filter>
-    </ClCompile>
-    <ClCompile Include="RTDescriptor.cpp">
-      <Filter>Runtime Data</Filter>
     </ClCompile>
     <ClCompile Include="instructions\CreateClosure.cpp">
       <Filter>Instructions</Filter>
@@ -534,6 +546,87 @@
     <ClCompile Include="RTConfig.cpp">
       <Filter>Runtime\Config</Filter>
     </ClCompile>
+    <ClCompile Include="PWrapper.cpp">
+      <Filter>Wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWTypeVar.cpp">
+      <Filter>Wrappers\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="PWTypeArr.cpp">
+      <Filter>Wrappers\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="PWType.cpp">
+      <Filter>Wrappers\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="PWMaybeType.cpp">
+      <Filter>Wrappers\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="PWLambda.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWObject.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWPartialApp.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWRecord.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWRefValue.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWStructVal.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWCastData.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWCastFunction.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWCheckReturnValueFunction.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWSignature.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWSubstStack.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWSuperInstance.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWClass.cpp">
+      <Filter>Wrappers\Globals</Filter>
+    </ClCompile>
+    <ClCompile Include="PWInterface.cpp">
+      <Filter>Wrappers\Globals</Filter>
+    </ClCompile>
+    <ClCompile Include="PWVTable.cpp">
+      <Filter>Wrappers\Globals</Filter>
+    </ClCompile>
+    <ClCompile Include="PWClassType.cpp">
+      <Filter>Wrappers\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="PWInstanceType.cpp">
+      <Filter>Wrappers\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="PWNomType.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWArr.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWInt.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWFloat.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWPtr.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -778,9 +871,6 @@
     </ClInclude>
     <ClInclude Include="RTDictionary.h">
       <Filter>Runtime</Filter>
-    </ClInclude>
-    <ClInclude Include="RTDescriptor.h">
-      <Filter>Runtime Data</Filter>
     </ClInclude>
     <ClInclude Include="instructions\CreateClosure.h">
       <Filter>Instructions</Filter>
@@ -1054,6 +1144,87 @@
     </ClInclude>
     <ClInclude Include="RTConfig_LambdaOpt.h">
       <Filter>Runtime\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="PWrapper.h">
+      <Filter>Wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWTypeVar.h">
+      <Filter>Wrappers\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="PWTypeArr.h">
+      <Filter>Wrappers\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="PWType.h">
+      <Filter>Wrappers\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="PWMaybeType.h">
+      <Filter>Wrappers\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="PWLambda.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWObject.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWPartialApp.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWRecord.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWRefValue.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWStructVal.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWCastData.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWCastFunction.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWCheckReturnValueFunction.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWSignature.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWSubstStack.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWSuperInstance.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWClass.h">
+      <Filter>Wrappers\Globals</Filter>
+    </ClInclude>
+    <ClInclude Include="PWInterface.h">
+      <Filter>Wrappers\Globals</Filter>
+    </ClInclude>
+    <ClInclude Include="PWVTable.h">
+      <Filter>Wrappers\Globals</Filter>
+    </ClInclude>
+    <ClInclude Include="PWClassType.h">
+      <Filter>Wrappers\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="PWInstanceType.h">
+      <Filter>Wrappers\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="PWNomType.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWArr.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWInt.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWFloat.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWPtr.h">
+      <Filter>Wrappers\Values</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -34,6 +34,11 @@
 #include "RTDictionary.h"
 #include "StructuralValueHeader.h"
 #include "Metadata.h"
+#include "PWTypeArr.h"
+#include "PWSubstStack.h"
+#include "PWPtr.h"
+#include "PWTypeVar.h"
+#include "PWSuperInstance.h"
 
 using namespace llvm;
 using namespace std;
@@ -54,13 +59,13 @@ namespace Nom
 			{
 				if (env->GetLocalTypeArgumentCount() > 0)
 				{
-					auto targarr = builder->CreateAlloca(TYPETYPE, MakeInt(targcount), "targarr");
-					RTSubstStackValue rtss = RTSubstStackValue(builder, builder->CreateGEP(targarr, MakeInt32(targcount)), nullptr, MakeInt32(targcount), targarr);
+					PWTypeArr targarr = PWTypeArr::Alloca(builder, targcount, "targarr");
+					RTSubstStackValue rtss = RTSubstStackValue(builder, targarr.SubArr(builder, targcount), nullptr, MakeInt32(targcount), targarr);
 					for (int32_t i = 0; i < targcount; i++)
 					{
 						if (type == nullptr || type->ContainsVariableIndex(i))
 						{
-							MakeInvariantStore(builder, env->GetTypeArgument(builder, i), builder->CreateGEP(targarr, MakeInt32(targcount - (i + 1))));
+							targarr.Get(builder, targcount - (i + 1)).InvariantStore(builder, PWType(env->GetTypeArgument(builder, i)));
 						}
 					}
 					rtss.MakeTypeListInvariant(builder);
@@ -204,10 +209,11 @@ namespace Nom
 					{
 						foundMatchBlock = BasicBlock::Create(LLVMCONTEXT, "foundMatch", fun);
 						builder->SetInsertPoint(foundMatchBlock);
-						typeArgsPHI = builder->CreatePHI(SuperInstanceEntryType()->getPointerTo(), 2, "matchingEntry");
+						typeArgsPHI = builder->CreatePHI(NLLVMPointer(SuperInstanceEntryType()), 2, "matchingEntry");
 						auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
 						auto origTypeArgs = ObjectHeader::GeneratePointerToTypeArguments(builder, value);
-						auto typeArgs = MakeInvariantLoad(builder, typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic);
+						PWSuperInstance(typeArgsPHI).
+						auto typeArgs = MakeInvariantLoad(builder, , typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic);
 						auto typeEqFun = RTTypeEq::Instance(false).GetLLVMElement(*fun->getParent());
 						RTSubstStackValue rssv = RTSubstStackValue(builder, origTypeArgs);
 						BasicBlock* outBlock[2];

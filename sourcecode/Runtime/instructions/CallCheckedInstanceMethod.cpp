@@ -163,7 +163,7 @@ namespace Nom
 					builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
 					for (int j = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - 1; j >= 2; j--)
 					{
-						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr, MakeInt32(j), "arginarray"), AtomicOrdering::NotAtomic);
+						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr->getType(), argsasarr, MakeInt32(j), "arginarray"), AtomicOrdering::NotAtomic);
 					}
 					//invariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
 					argarr[RTConfig_NumberOfVarargsArguments] = builder->CreatePointerCast(argsasarr, POINTERTYPE);
@@ -194,7 +194,7 @@ namespace Nom
 					builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
 					for (int j = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - 1; j >= 2; j--)
 					{
-						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr, MakeInt32(j), "arginarray"), AtomicOrdering::NotAtomic);
+						MakeStore(builder, WrapAsPointer(builder, argarr[j + 1]), builder->CreateGEP(argsasarr->getType(), argsasarr, MakeInt32(j), "arginarray"), AtomicOrdering::NotAtomic);
 					}
 					//invariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), builder->CreatePointerCast(argsasarr, POINTERTYPE) });
 					argarr[RTConfig_NumberOfVarargsArguments] = builder->CreatePointerCast(argsasarr, POINTERTYPE);
