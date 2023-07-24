@@ -8,12 +8,20 @@ namespace Nom
 {
 	namespace Runtime
 	{
+		llvm::Type* PWType::GetLLVMType()
+		{
+			return RTTypeHead::GetLLVMType();
+		}
+		llvm::Type* PWType::GetWrappedLLVMType()
+		{
+			return NLLVMPointer(GetLLVMType());
+		}
 		void PWType::InitializeType(NomBuilder& builder, TypeKind kind, llvm::Value* hash, PWNomType nomtypeptr, PWCastFunction castFun)
 		{
-			MakeInvariantStore(builder, MakeInt((unsigned char)kind), RTTypeHead::GetLLVMType(), wrapped, MakeInt32((unsigned char)RTTypeHeadFields::Kind));
-			MakeInvariantStore(builder, hash, RTTypeHead::GetLLVMType(), wrapped, MakeInt32((unsigned char)RTTypeHeadFields::Hash));
-			MakeInvariantStore(builder, nomtypeptr, RTTypeHead::GetLLVMType(), wrapped, MakeInt32((unsigned char)RTTypeHeadFields::NomType));
-			MakeInvariantStore(builder, castFun, RTTypeHead::GetLLVMType(), wrapped, MakeInt32((unsigned char)RTTypeHeadFields::CastFun));
+			MakeInvariantStore(builder, MakeInt(kind), RTTypeHead::GetLLVMType(), wrapped, MakeInt32(RTTypeHeadFields::Kind));
+			MakeInvariantStore(builder, hash, RTTypeHead::GetLLVMType(), wrapped, MakeInt32(RTTypeHeadFields::Hash));
+			MakeInvariantStore(builder, nomtypeptr, RTTypeHead::GetLLVMType(), wrapped, MakeInt32(RTTypeHeadFields::NomType));
+			MakeInvariantStore(builder, castFun, RTTypeHead::GetLLVMType(), wrapped, MakeInt32(RTTypeHeadFields::CastFun));
 		}
 		llvm::Value* PWType::ReadKind(NomBuilder& builder)
 		{

@@ -1,5 +1,3 @@
-
-
 namespace Nom
 {
 	namespace Runtime

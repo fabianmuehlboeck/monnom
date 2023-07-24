@@ -6,4 +6,9 @@
 //#define GC_DEBUG 1
 #endif
 #define GC_INITIAL_HEAP_SIZE 1048576
+#define GC_NOT_DLL
+PUSHDIAGSUPPRESSION
 #include "gc.h"
+POPDIAGSUPPRESSION
+
+void gc_init();

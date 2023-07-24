@@ -103,7 +103,7 @@ namespace Nom
 		ConstantID NomConstantContext::AddTypeList(LocalConstantID lid, const llvm::SmallVector<LocalConstantID, 8> types)
 		{
 			llvm::SmallVector<ConstantID, 8> tps(types.size(), 0);
-			for (int i = types.size() - 1; i >= 0; i--)
+			for (size_t i = 0; i < types.size(); i++)
 			{
 				tps[i] = GetGlobalID(types[i]);
 			}
@@ -125,24 +125,14 @@ namespace Nom
 			idmap[lid] = NomConstants::AddDynamicType(TryGetGlobalID(lid));
 			return idmap[lid];
 		}
-		ConstantID NomConstantContext::AddTypeVar(LocalConstantID lid, int index)
+		ConstantID NomConstantContext::AddTypeVar(LocalConstantID lid, size_t index)
 		{
 			idmap[lid] = NomConstants::AddTypeVariable(index, TryGetGlobalID(lid));
 			return idmap[lid];
 		}
 		ConstantID NomConstantContext::AddTypeParameters(LocalConstantID lid, llvm::ArrayRef<NomTypeParameterConstant *> parameters)
 		{
-			//int argsize = parameters.size();
-			//NomTypeParameterConstant** argarr = nullptr;
-			//if (argsize != 0)
-			//{
-			//	argarr = makealloca(NomTypeParameterConstant*, argsize);
-			//	for (int i = 0; i < argsize; i++)
-			//	{
-			//		argarr[i] = new NomTypeParameterConstant(parameters[i].Variance, GetGlobalID(parameters[i].LowerBound), GetGlobalID(parameters[i].UpperBound));
-			//	}
-			//}
-			idmap[lid] = NomConstants::AddTypeParameters(/*llvm::ArrayRef<NomTypeParameterConstant *>(argarr, argsize)*/ parameters, TryGetGlobalID(lid));
+			idmap[lid] = NomConstants::AddTypeParameters(parameters, TryGetGlobalID(lid));
 			return idmap[lid];
 		}
 
@@ -207,12 +197,12 @@ namespace Nom
 				auto targs = NomConstants::GetTypeList(typeArgs)->GetTypeList(context);
 				auto clsargs = clstype->Arguments;
 				NomTypeRef* carr = nullptr;
-				const int clsargscount = clsargs.size();
-				const int targcount = targs.size() + clsargscount;
+				auto clsargscount = clsargs.size();
+				auto targcount = targs.size() + clsargscount;
 				if (targcount > 0)
 				{
-					carr = (NomTypeRef*)nmalloc(sizeof(NomTypeRef) * targcount);
-					for (int i = 0; i < targcount; i++)
+					carr = makenmalloc(NomTypeRef, targcount);
+					for (decltype(targcount) i = 0; i < targcount; i++)
 					{
 						if (i < clsargscount)
 						{
@@ -280,10 +270,6 @@ namespace Nom
 			if (cls == nullptr)
 			{
 				throw new std::exception();
-				////cls = NomClass::getClass(((NomStringConstant*)NomConstants::Get(Name))->GetText());
-				//auto libname = NomConstants::GetString(this->Library)->GetText()->ToStdString();
-				//auto clsname = NomConstants::GetString(this->Name)->GetText();
-				//cls = Loader::GetInstance()->GetLibrary(&libname)->GetClass(clsname);
 			}
 			return cls;
 		}
@@ -292,7 +278,6 @@ namespace Nom
 		{
 			if (cls == nullptr)
 			{
-				//cls = NomClass::getClass(((NomStringConstant*)NomConstants::Get(Name))->GetText());
 				auto libname = NomConstants::GetString(this->Library)->GetText()->ToStdString();
 				auto clsname = NomConstants::GetString(this->Name)->GetText();
 				cls = Loader::GetInstance()->GetLibrary(&libname)->GetClass(clsname, mod);
@@ -313,7 +298,7 @@ namespace Nom
 			//MEMLEAK : AAAH
 			//if (typeRefs == nullptr)
 			{
-				typeRefs = (NomTypeRef*)nmalloc(sizeof(NomTypeRef) * types.size());
+				typeRefs = makenmalloc(NomTypeRef, types.size());
 				for (size_t i = types.size(); i > 0;)
 				{
 					i--;
@@ -338,24 +323,11 @@ namespace Nom
 			}
 			cout << ")";
 		}
-		//ClassTypeList NomClassTypeListConstant::GetClassTypeList()
-		//{
-		//	ClassTypeList ret;
-		//	for (auto& typeconst : types)
-		//	{
-		//		ret->push_back(NomConstants::GetClassType(typeconst)->GetClassType());
-		//	}
-		//	return ret;
-		//}
 		const NomInterface* NomInterfaceConstant::GetInterface() const
 		{
 			if (iface == nullptr)
 			{
 				throw new std::exception();
-			//	//iface = NomInterface::GetInterface(((NomStringConstant*)NomConstants::Get(Name))->GetText());
-			//	auto libname = NomConstants::GetString(Library)->GetText()->ToStdString();
-			//	auto ifacename = NomConstants::GetString(Name)->GetText();
-			//	iface = Loader::GetInstance()->GetLibrary(&libname)->GetInterface(ifacename);
 			}
 			return iface;
 		}
@@ -379,21 +351,6 @@ namespace Nom
 			NomConstants::PrintConstant(Name, resolve);
 		}
 
-		//static NomClassTypeListConstant * GetClassTypeList(const ConstantID constant)
-		//{
-		//	if (constant == 0)
-		//	{
-		//		static NomClassTypeListConstant defaultConst{ llvm::SmallVector<ConstantID, 8>() };
-		//		return &defaultConst;
-		//	}
-		//	NomConstant *cnstnt = constants()[constant];
-		//	if (cnstnt->Type != NomConstantType::CTClassTypeList)
-		//	{
-		//		throw new std::exception();
-		//	}
-		//	return (NomClassTypeListConstant *)cnstnt;
-		//}
-
 		void NomConstants::PrintConstant(const ConstantID constant, bool resolve)
 		{
 			cout << "$" << std::dec << constant;
@@ -409,7 +366,7 @@ namespace Nom
 		{
 			if (constant == 0)
 			{
-				static NomStringConstant emptyStringConstant = NomStringConstant(NomString(""));
+				[[clang::no_destroy]] static NomStringConstant emptyStringConstant = NomStringConstant(NomString(""));
 				return &emptyStringConstant;
 			}
 			NomConstant* cnstnt = constants()[constant];
@@ -417,7 +374,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomStringConstant*)cnstnt;
+			return static_cast<NomStringConstant*>(cnstnt);
 		}
 
 		NomClassConstant* NomConstants::GetClass(const ConstantID constant)
@@ -427,7 +384,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomClassConstant*)cnstnt;
+			return static_cast<NomClassConstant*>(cnstnt);
 		}
 
 		NomLambdaConstant* NomConstants::GetLambda(const ConstantID constant)
@@ -437,7 +394,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomLambdaConstant*)cnstnt;
+			return static_cast<NomLambdaConstant*>(cnstnt);
 		}
 
 		NomRecordConstant* NomConstants::GetRecord(const ConstantID constant)
@@ -447,7 +404,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomRecordConstant*)cnstnt;
+			return static_cast<NomRecordConstant*>(cnstnt);
 		}
 
 		NomMethodConstant* NomConstants::GetMethod(const ConstantID constant)
@@ -457,7 +414,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomMethodConstant*)cnstnt;
+			return static_cast<NomMethodConstant*>(cnstnt);
 		}
 
 		NomStaticMethodConstant* NomConstants::GetStaticMethod(const ConstantID constant)
@@ -467,7 +424,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomStaticMethodConstant*)cnstnt;
+			return static_cast<NomStaticMethodConstant*>(cnstnt);
 		}
 
 		NomConstructorConstant* NomConstants::GetConstructor(const ConstantID constant)
@@ -477,14 +434,14 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomConstructorConstant*)cnstnt;
+			return static_cast<NomConstructorConstant*>(cnstnt);
 		}
 
 		NomTypeListConstant* NomConstants::GetTypeList(const ConstantID constant)
 		{
 			if (constant == 0)
 			{
-				static NomTypeListConstant defaultConst{ llvm::SmallVector<ConstantID, 8>() };
+				[[clang::no_destroy]] static NomTypeListConstant defaultConst{ llvm::SmallVector<ConstantID, 8>() };
 				return &defaultConst;
 			}
 			NomConstant* cnstnt = constants()[constant];
@@ -492,7 +449,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomTypeListConstant*)cnstnt;
+			return static_cast<NomTypeListConstant*>(cnstnt);
 		}
 
 		NomClassTypeConstant* NomConstants::GetClassType(const ConstantID constant)
@@ -502,7 +459,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomClassTypeConstant*)cnstnt;
+			return static_cast<NomClassTypeConstant*>(cnstnt);
 		}
 		NomSuperClassConstant* NomConstants::GetSuperClass(const ConstantID constant)
 		{
@@ -511,14 +468,14 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomSuperClassConstant*)cnstnt;
+			return static_cast<NomSuperClassConstant*>(cnstnt);
 		}
 		NomSuperInterfacesConstant* NomConstants::GetSuperInterfaces(const ConstantID constant)
 		{
 			if (constant == 0)
 			{
-				static llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4 > entries;
-				static NomSuperInterfacesConstant defaultConst(entries);
+				[[clang::no_destroy]] static llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4 > entries;
+				[[clang::no_destroy]]  static NomSuperInterfacesConstant defaultConst(entries);
 				return &defaultConst;
 			}
 			NomConstant* cnstnt = constants()[constant];
@@ -526,7 +483,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomSuperInterfacesConstant*)cnstnt;
+			return static_cast<NomSuperInterfacesConstant*>(cnstnt);
 		}
 		NomInterfaceConstant* NomConstants::GetInterface(const ConstantID constant)
 		{
@@ -535,13 +492,13 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomInterfaceConstant*)cnstnt;
+			return static_cast<NomInterfaceConstant*>(cnstnt);
 		}
 		NomTypeParametersConstant* NomConstants::GetTypeParameters(const ConstantID constant)
 		{
 			if (constant == 0)
 			{
-				static NomTypeParametersConstant defaultConst(llvm::ArrayRef< NomTypeParameterConstant*>((NomTypeParameterConstant**)nullptr, (size_t)0));
+				[[clang::no_destroy]] static NomTypeParametersConstant defaultConst(llvm::ArrayRef< NomTypeParameterConstant*>(static_cast<NomTypeParameterConstant**>(nullptr), static_cast<size_t>(0)));
 				return &defaultConst;
 			}
 			NomConstant* cnstnt = constants()[constant];
@@ -549,7 +506,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return (NomTypeParametersConstant*)cnstnt;
+			return static_cast<NomTypeParametersConstant*>(cnstnt);
 		}
 		NomTypeRef NomConstants::GetType(NomSubstitutionContextRef context, const ConstantID constant, bool defaultBottom)
 		{
@@ -564,7 +521,7 @@ namespace Nom
 			NomConstant* nc = constants()[constant];
 			if (nc->Type == NomConstantType::CTClassType)
 			{
-				return ((NomClassTypeConstant*)nc)->GetClassType(context);
+				return (static_cast<NomClassTypeConstant*>(nc))->GetClassType(context);
 			}
 			if (nc->Type == NomConstantType::CTIntersection)
 			{
@@ -572,7 +529,7 @@ namespace Nom
 			}
 			if (nc->Type == NomConstantType::CTTypeVar)
 			{
-				return ((NomTypeVarConstant*)nc)->GetTypeRef(context);
+				return (static_cast<NomTypeVarConstant*>(nc))->GetTypeRef(context);
 			}
 			if (nc->Type == NomConstantType::CTBottom)
 			{
@@ -584,7 +541,7 @@ namespace Nom
 			}
 			if (nc->Type == NomConstantType::CTMaybe)
 			{
-				return ((NomMaybeTypeConstant*)nc)->GetTypeRef(context);
+				return (static_cast<NomMaybeTypeConstant*>(nc))->GetTypeRef(context);
 			}
 			//if(nc->Type == NomConstantType::) //Bottom
 			//TODO: other types
@@ -644,16 +601,6 @@ namespace Nom
 			constants()[cid] = (new NomRecordConstant());
 			return cid;
 		}
-
-		//static ConstantID AddTypeParameter(ParameterVariance variance, const ConstantID lowerBound, const ConstantID upperBound, ConstantID cid = 0)
-		//{
-		//	if (cid == 0)
-		//	{
-		//		cid = GetConstantID();
-		//	}
-		//	constants()[cid] = (new NomTypeParameterConstant(variance, lowerBound, upperBound));
-		//	return cid;
-		//}
 
 		ConstantID NomConstants::AddMethod(const ConstantID cls, const ConstantID name, const ConstantID typeArgs, const ConstantID argTypes, ConstantID cid)
 		{
@@ -735,7 +682,7 @@ namespace Nom
 			return cid;
 		}
 
-		ConstantID NomConstants::AddTypeVariable(int index, ConstantID cid)
+		ConstantID NomConstants::AddTypeVariable(size_t index, ConstantID cid)
 		{
 			if (cid == 0)
 			{
@@ -796,12 +743,10 @@ namespace Nom
 			if (obj == nullptr)
 			{
 				obj = Text.GetLLVMConstant(mod);
-				//obj = CPP_NOM_CreateInstance(_RTStringClassRTC, 0, nullptr, nullptr);
-				//obj->Fields() = (intptr_t)&Text;
 			}
 			return obj;
 		}
-		void NomStringConstant::Print(bool resolve)
+		void NomStringConstant::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "\"" << Text.ToStdString() << "\"";
 		}
@@ -844,7 +789,7 @@ namespace Nom
 		{
 			return context->GetTypeVariable(index);
 		}
-		void NomTypeVarConstant::Print(bool resolve)
+		void NomTypeVarConstant::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "TypeVar " << std::dec << index;
 		}
@@ -852,15 +797,15 @@ namespace Nom
 		{
 			return lambda;
 		}
-		void NomLambdaConstant::SetLambda(NomLambda* lambda) const
+		void NomLambdaConstant::SetLambda(NomLambda* _lambda) const
 		{
 			if (this->lambda != nullptr)
 			{
 				throw new std::exception(); //should only happen once; at lambda creation
 			}
-			this->lambda = lambda;
+			this->lambda = _lambda;
 		}
-		void NomLambdaConstant::Print(bool resolve)
+		void NomLambdaConstant::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "Lambda";
 		}
@@ -897,11 +842,11 @@ namespace Nom
 			}
 			cout << ")";
 		}
-		void NomBottomConstant::Print(bool resolve)
+		void NomBottomConstant::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "Bottom";
 		}
-		void NomDynamicTypeConstant::Print(bool resolve)
+		void NomDynamicTypeConstant::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "Dyn";
 		}
@@ -909,11 +854,11 @@ namespace Nom
 		{
 			return this->structure;
 		}
-		void NomRecordConstant::SetStruct(NomRecord* structure) const
+		void NomRecordConstant::SetStruct(NomRecord* _structure) const
 		{
-			this->structure = structure;
+			this->structure = _structure;
 		}
-		void NomRecordConstant::Print(bool resolve)
+		void NomRecordConstant::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "Record";
 		}
@@ -934,5 +879,5 @@ namespace Nom
 		{
 			result.push_back(ptype);
 		}
-}
+	}
 }

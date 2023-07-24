@@ -2,8 +2,10 @@
 #include <unordered_map>
 #include "BoehmAllocator.h"
 #include "CompileEnv.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 #include "Context.h"
 #include "ARTRep.h"
 #include "NomInstantiationRef.h"
@@ -33,20 +35,19 @@ namespace Nom
 			ObjectHeader();
 		public:
 			static llvm::StructType *GetLLVMType();
-			static llvm::StructType* GetLLVMType(int fieldcount, int typeargcount, bool rawInvoke);
+			static llvm::StructType* GetLLVMType(size_t fieldcount, size_t typeargcount, bool rawInvoke);
 			static llvm::Constant* GetConstant(llvm::Constant* clsdesc, llvm::Constant* fields=nullptr, llvm::Constant* typeargs=nullptr, llvm::Constant* invokeptr=nullptr);
 			static llvm::Constant * GetGlobal(llvm::Module &mod, llvm::GlobalValue::LinkageTypes linkage, llvm::Twine name, llvm::Constant * clsdesc, llvm::Constant * fields=nullptr, llvm::Constant * typeargs=nullptr, bool isConstant = true);
 
 			static llvm::Constant* FindGlobal(llvm::Module& mod, const std::string & name);
 
-			static llvm::Value *GenerateReadTypeArgument(NomBuilder &builder, llvm::Value * objPointer, int32_t argindex);
-			static void GenerateWriteTypeArgument(NomBuilder &builder, llvm::Value * objPointer, int32_t argindex, llvm::Value * val);
+			static llvm::Value *GenerateReadTypeArgument(NomBuilder &builder, llvm::Value * objPointer, size_t argindex);
+			static void GenerateWriteTypeArgument(NomBuilder &builder, llvm::Value * objPointer, size_t argindex, llvm::Value * val);
 
 			static llvm::Value* GeneratePointerToTypeArguments(NomBuilder& builder, llvm::Value * objPointer);
 
-			static llvm::Value *ReadField(NomBuilder &builder, llvm::Value * objPointer, int32_t fieldindex, bool targetHasRawInvoke);
-			static llvm::Value* ReadField(NomBuilder& builder, llvm::Value* objPointer, llvm::Value* fieldindex, bool targetHasRawInvoke);
-			static void WriteField(NomBuilder &builder, llvm::Value * objPointer, int32_t fieldindex, llvm::Value * val, bool targetHasRawInvoke);
+			static llvm::Value *ReadField(NomBuilder &builder, llvm::Value * objPointer, size_t fieldindex, bool targetHasRawInvoke);
+			static void WriteField(NomBuilder &builder, llvm::Value * objPointer, size_t fieldindex, llvm::Value * val, bool targetHasRawInvoke);
 
 			static void WriteField(NomBuilder& builder, llvm::Value* objPointer, llvm::Value* fieldindex, llvm::Value* val, bool targetHasRawInvoke);
 
@@ -61,12 +62,12 @@ namespace Nom
 
 			static size_t SizeOf()
 			{
-				static const size_t size = (size_t)GetLLVMLayout()->getSizeInBytes(); return size;
+				static const size_t size = static_cast<size_t>(GetLLVMLayout()->getSizeInBytes()); return size;
 			}
 
 
-			static llvm::Value *GetDispatchMethodPointer(NomBuilder &builder, CompileEnv* env, RegIndex reg, int lineno, NomInstantiationRef<const NomMethod> method);
-			static llvm::Value* GetInterfaceMethodTableFunction(NomBuilder& builder, CompileEnv* env, RegIndex reg, llvm::Constant* index, int lineno);
+			static llvm::Value *GetDispatchMethodPointer(NomBuilder &builder, CompileEnv* env, RegIndex reg, size_t lineno, NomInstantiationRef<const NomMethod> method);
+			static llvm::Value* GetInterfaceMethodTableFunction(NomBuilder& builder, CompileEnv* env, RegIndex reg, llvm::Constant* index, size_t lineno);
 		};
 	}
 }

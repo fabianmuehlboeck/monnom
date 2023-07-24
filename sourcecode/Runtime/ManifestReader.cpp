@@ -1,5 +1,4 @@
 #include "ManifestReader.h"
-#include "pugixml/pugixml.hpp"
 #include "VersionNumber.h"
 
 using namespace pugi;
@@ -38,18 +37,18 @@ namespace Nom
 			auto interfaces = libnode.child("interfaces");
 			auto mainclass = libnode.child("mainclass");
 			
-			VersionNumber libVersion = VersionNumber(libnode.attribute("major").as_uint(), libnode.attribute("minor").as_uint(), libnode.attribute("revision").as_uint(), libnode.attribute("build").as_uint());
+			VersionNumber libVersion = VersionNumber(static_cast<uint16_t>(libnode.attribute("major").as_uint()), static_cast<uint16_t>(libnode.attribute("minor").as_uint()), static_cast<uint16_t>(libnode.attribute("revision").as_uint()), static_cast<uint16_t>(libnode.attribute("build").as_uint()));
 			VersionNumber compFromVersion = libVersion;
 			xml_node versionnode = libnode.child("compatiblefrom");
 			if (versionnode)
 			{
-				compFromVersion = VersionNumber(versionnode.attribute("major").as_uint(), versionnode.attribute("minor").as_uint(), versionnode.attribute("revision").as_uint(), versionnode.attribute("build").as_uint());
+				compFromVersion = VersionNumber(static_cast<uint16_t>(versionnode.attribute("major").as_uint()), static_cast<uint16_t>(versionnode.attribute("minor").as_uint()), static_cast<uint16_t>(versionnode.attribute("revision").as_uint()), static_cast<uint16_t>(versionnode.attribute("build").as_uint()));
 			}
 			VersionNumber compToVersion = libVersion;
 			versionnode = libnode.child("compatibleto");
 			if (versionnode)
 			{
-				compToVersion = VersionNumber(versionnode.attribute("major").as_uint(), versionnode.attribute("minor").as_uint(), versionnode.attribute("revision").as_uint(), versionnode.attribute("build").as_uint());
+				compToVersion = VersionNumber(static_cast<uint16_t>(versionnode.attribute("major").as_uint()), static_cast<uint16_t>(versionnode.attribute("minor").as_uint()), static_cast<uint16_t>(versionnode.attribute("revision").as_uint()), static_cast<uint16_t>(versionnode.attribute("build").as_uint()));
 			}
 			bool isDeprecated = false;
 
@@ -68,7 +67,7 @@ namespace Nom
 			{
 				for (auto child : deps.children())
 				{
-					manifest->Dependencies.emplace_back(child.attribute("name").as_string(), VersionNumber(child.attribute("major").as_int(), child.attribute("minor").as_int(), child.attribute("revision").as_int(), child.attribute("buld").as_int()));
+					manifest->Dependencies.emplace_back(child.attribute("name").as_string(), VersionNumber(static_cast<uint16_t>(child.attribute("major").as_uint()), static_cast<uint16_t>(child.attribute("minor").as_uint()), static_cast<uint16_t>(child.attribute("revision").as_uint()), static_cast<uint16_t>(child.attribute("build").as_uint())));
 				}
 			}
 			if (!classes.empty())

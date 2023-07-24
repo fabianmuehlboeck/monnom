@@ -19,8 +19,8 @@ namespace Nom
 		private:
 			NomFloatObjects();
 		public:
-			static NomFloatObjects* GetInstance() { static NomFloatObjects obj; return &obj; }
-			~NomFloatObjects() {}
+			static NomFloatObjects* GetInstance() { [[clang::no_destroy]] static NomFloatObjects obj; return &obj; }
+			~NomFloatObjects() override {}
 
 			static llvm::Constant* GetPosZero(llvm::Module& mod);
 			static llvm::Constant* GetNegZero(llvm::Module& mod);
@@ -28,7 +28,9 @@ namespace Nom
 			// Inherited via AvailableExternally
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
-			virtual llvm::Type* GetLLVMElementType(llvm::Module& mod) const override;
 		};
 	}
 }
+
+extern "C" DLLEXPORT const void* LIB_NOM_Float_ToString_1(const double value);
+extern "C" DLLEXPORT int64_t LIB_NOM_Float_Compare_1(const double value, const double other);

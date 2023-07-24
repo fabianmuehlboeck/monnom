@@ -1,7 +1,9 @@
 #pragma once
 #include "NomValue.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
+POPDIAGSUPPRESSION
 #include "NomType.h"
 #include "IntClass.h"
 #include "FloatClass.h"
@@ -13,7 +15,6 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		//void GeneratePrimitiveTypeCase(NomBuilder &builder, NomValue & value, []void (**handleInt)(NomBuilder& builder, NomValue&, NomValue*), []void (*handleFloat)(NomBuilder& builder, NomValue&, NomValue*), []void (*handleRef)(NomBuilder& builder, NomValue&, llvm::Value*, NomValue*), NomValue *returnValues, int numReturns=1);
 		template<class HandleInt, class HandleFloat, class HandleRef>
 		void GeneratePrimitiveTypeCase(NomBuilder& builder, NomValue& value, HandleInt handleInt, HandleFloat handleFloat, HandleRef handleRef, NomValue* returnValues, int numReturns)
 		{

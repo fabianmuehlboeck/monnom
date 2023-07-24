@@ -11,11 +11,11 @@ namespace Nom
 		private:
 			std::vector<std::pair<RegIndex, RegIndex>> Incomings;
 		public:
-			const int Target;
-			BranchInstruction(int target):NomInstruction(OpCode::Branch), Target(target)
+			const size_t Target;
+			BranchInstruction(size_t target):NomInstruction(OpCode::Branch), Target(target)
 			{
 			}
-			~BranchInstruction();
+			~BranchInstruction() override;
 
 			void AddIncoming(RegIndex to, RegIndex from)
 			{
@@ -23,13 +23,12 @@ namespace Nom
 			}
 
 			// Inherited via NomInstruction
-			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomInstruction
 			virtual void Print(bool resolve = false) override; 
 			
 			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override;
 		};
-
 	}
 }

@@ -2,12 +2,14 @@
 #include "Context.h"
 #include "RTVTable.h"
 #include "Defs.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/raw_os_ostream.h"
+POPDIAGSUPPRESSION
 #include "CompileHelpers.h"
 #include "RTOutput.h"
 #include "StringClass.h"
 #include <iostream>
-#include "llvm/Support/raw_os_ostream.h"
 #include "RTInterfaceTableEntry.h"
 #include "IntClass.h"
 #include "FloatClass.h"
@@ -20,6 +22,9 @@
 #include "StructuralValueHeader.h"
 #include "Metadata.h"
 #include "NomMaybeType.h"
+#include "PWRefValue.h"
+#include "PWPtr.h"
+#include "PWObject.h"
 
 using namespace llvm;
 using namespace std;
@@ -50,7 +55,7 @@ namespace Nom
 		}
 		llvm::Value* RefValueHeader::GenerateReadVTablePointer(NomBuilder& builder, llvm::Value* refValue)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), MakeInt32(RefValueHeaderFields::InterfaceTable));
+			return PWRefValue(refValue).ReadVTable(builder);
 		}
 
 		MDNode* GetNominalVsStructuralBranchWeights()
@@ -59,18 +64,18 @@ namespace Nom
 			return mdn;
 		}
 
-		int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, int refWeight, int intWeight, int floatWeight, int boolWeight)
+		unsigned int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
 		{
 			return GenerateRefOrPrimitiveValueSwitch(builder, value, refValueBlock, intBlock, floatBlock, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, refWeight, intWeight, floatWeight, boolWeight);
 		}
 
-		int RefValueHeader::GenerateNominalStructuralSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vTableVar, llvm::BasicBlock** nominalObjectBlockVar, llvm::BasicBlock** structuralValueBlockVar)
+		unsigned int RefValueHeader::GenerateNominalStructuralSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vTableVar, llvm::BasicBlock** nominalObjectBlockVar, llvm::BasicBlock** structuralValueBlockVar)
 		{
 			if (vTableVar != nullptr && *vTableVar == nullptr)
 			{
 				*vTableVar = RefValueHeader::GenerateReadVTablePointer(builder, refValue);
 			}
-			if ((refValue.GetNomType()->GetKind() == TypeKind::TKClass && !(((NomClassTypeRef)refValue.GetNomType())->Named->IsInterface())) || (refValue.GetNomType()->GetKind() == TypeKind::TKMaybe && ((NomMaybeTypeRef)refValue.GetNomType())->PotentialType->GetKind() == TypeKind::TKClass && !(((NomClassTypeRef)((NomMaybeTypeRef)refValue.GetNomType())->PotentialType)->Named->IsFunctional())))
+			if ((refValue.GetNomType()->GetKind() == TypeKind::TKClass && !((static_cast<NomClassTypeRef>(refValue.GetNomType()))->Named->IsInterface())) || (refValue.GetNomType()->GetKind() == TypeKind::TKMaybe && (static_cast<NomMaybeTypeRef>(refValue.GetNomType()))->PotentialType->GetKind() == TypeKind::TKClass && !((static_cast<NomClassTypeRef>((static_cast<NomMaybeTypeRef>(refValue.GetNomType()))->PotentialType)->Named->IsFunctional()))))
 			{
 				if (nominalObjectBlockVar == nullptr)
 				{
@@ -130,7 +135,7 @@ namespace Nom
 			return 2;
 		}
 
-		int RefValueHeader::GenerateStructuralValueKindSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
+		unsigned int RefValueHeader::GenerateStructuralValueKindSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
 		{
 			auto fun = builder->GetInsertBlock()->getParent();
 			if (vtableVar != nullptr && *vtableVar == nullptr)
@@ -201,19 +206,19 @@ namespace Nom
 			}
 			auto vtableKind = RTVTable::GenerateReadKind(builder, vtable);
 			auto switchInst = builder->CreateSwitch(vtableKind, *partialAppBlock, 2, GetBranchWeightsForBlocks({ *partialAppBlock, *lambdaBlock, *recordBlock }));
-			switchInst->addCase(MakeIntLike(vtableKind, (char)RTDescriptorKind::Lambda), *lambdaBlock);
-			switchInst->addCase(MakeIntLike(vtableKind, (char)RTDescriptorKind::Record), *recordBlock);
+			switchInst->addCase(MakeIntLike(vtableKind, static_cast<char>(RTDescriptorKind::Lambda)), *lambdaBlock);
+			switchInst->addCase(MakeIntLike(vtableKind, static_cast<char>(RTDescriptorKind::Record)), *recordBlock);
 			return 3;
 		}
 
-		int RefValueHeader::GenerateRefValueKindSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
+		unsigned int RefValueHeader::GenerateRefValueKindSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
 		{
 			BasicBlock* structuralObjectBlock = nullptr;
-			int ret = GenerateNominalStructuralSwitch(builder, refValue, vtableVar, nominalObjectBlock, &structuralObjectBlock);
+			unsigned int ret = GenerateNominalStructuralSwitch(builder, refValue, vtableVar, nominalObjectBlock, &structuralObjectBlock);
 			if (structuralObjectBlock != nullptr)
 			{
 				builder->SetInsertPoint(structuralObjectBlock);
-				return ret - 1 + GenerateStructuralValueKindSwitch(builder, refValue, vtableVar, lambdaBlock, recordBlock, partialAppBlock);
+				return ret + GenerateStructuralValueKindSwitch(builder, refValue, vtableVar, lambdaBlock, recordBlock, partialAppBlock) - 1;
 			}
 			return 1;
 		}
@@ -241,7 +246,7 @@ namespace Nom
 			}
 		}
 
-		int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar, int refWeight, int intWeight, int floatWeight, int boolWeight)
+		unsigned int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -321,7 +326,7 @@ namespace Nom
 			bool floatsPossible = !value.GetNomType()->IsDisjoint(GetFloatClassType());
 			bool boolsPossible = !value.GetNomType()->IsDisjoint(GetFloatClassType());
 
-			int cases = 1; //could always be normal reference at this point
+			unsigned int cases = 1; //could always be normal reference at this point
 
 			BasicBlock* _packedIntBlock = nullptr;
 			BasicBlock* _primitiveIntBlock = nullptr;
@@ -472,7 +477,7 @@ namespace Nom
 			}
 			else
 			{
-				uint64_t caseweights[3] = { (uint64_t)floatWeight, (uint64_t)boolRefWeight, (uint64_t)intWeight };
+				uint64_t caseweights[3] = { floatWeight, boolRefWeight, intWeight };
 				SwitchInst* tagSwitch = builder->CreateSwitch(tag, _maskedFloatBlock, 3, GetBranchWeights(ArrayRef<uint64_t>(caseweights, 3)));
 				tagSwitch->addCase(MakeUInt(2, 0), _refValueBlock);
 				tagSwitch->addCase(MakeUInt(2, 3), _packedIntBlock);
@@ -492,7 +497,7 @@ namespace Nom
 					builder->CreateCondBr(isInt, unboxIntBlock, _refValueBlock, (intWeight > boolRefWeight && intWeight > floatWeight)?GetLikelyFirstBranchMetadata():GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(unboxIntBlock);
-					auto unboxedInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE, "unboxedInt");
+					auto unboxedInt = builder->CreatePtrToInt(PWObject(value).ReadField(builder, MakeInt32(0), false), INTTYPE, "unboxedInt");
 					_primitiveIntPHI->addIncoming(unboxedInt, unboxIntBlock);
 					builder->CreateBr(_primitiveIntBlock);
 				}
@@ -507,7 +512,7 @@ namespace Nom
 					builder->CreateCondBr(isFloat, unboxFloatBlock, _refValueBlock, (floatWeight > boolRefWeight) ? GetLikelyFirstBranchMetadata() : GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(unboxFloatBlock);
-					auto unboxedFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE), FLOATTYPE, "unboxedFloat");
+					auto unboxedFloat = builder->CreateBitCast(builder->CreatePtrToInt(PWObject(value).ReadField(builder, MakeInt32(0), false), INTTYPE), FLOATTYPE, "unboxedFloat");
 					_primitiveFloatPHI->addIncoming(unboxedFloat, unboxFloatBlock);
 					builder->CreateBr(_primitiveFloatBlock);
 				}
@@ -538,7 +543,7 @@ namespace Nom
 		}
 		llvm::Value* RefValueHeader::GenerateReadTypeTag(NomBuilder& builder, llvm::Value* refValue)
 		{
-			return builder->CreateTrunc(builder->CreatePtrToInt(MakeLoad(builder, builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), MakeInt32(RefValueHeaderFields::InterfaceTable)), numtype(intptr_t)), IntegerType::get(LLVMCONTEXT, 3));
+			return PWRefValue(refValue).ReadTypeTag(builder);
 		}
 		llvm::Value* RefValueHeader::GenerateGetReserveTypeArgsFromVTablePointer(NomBuilder& builder, llvm::Value* vtablePtr)
 		{
@@ -546,14 +551,13 @@ namespace Nom
 			return builder->CreateTrunc(builder->CreateLShr(pointerAsInt, MakeIntLike(pointerAsInt, bitsin(intptr_t) / 2)), numtype(int32_t));
 		}
 
-		llvm::Value* RefValueHeader::GenerateWriteVTablePointer(NomBuilder& builder, llvm::Value* refValue, llvm::Value* vtableptr)
+		void RefValueHeader::GenerateWriteVTablePointer(NomBuilder& builder, llvm::Value* refValue, llvm::Value* vtableptr)
 		{
-			return MakeInvariantStore(builder, builder->CreatePointerCast(vtableptr, RTVTable::GetLLVMType()->getPointerTo()), builder->CreateGEP(builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RefValueHeaderFields::InterfaceTable) }));
+			PWRefValue(refValue).WriteVTable(builder, vtableptr);
 		}
 		llvm::Value* RefValueHeader::GenerateWriteVTablePointerCMPXCHG(NomBuilder& builder, llvm::Value* refValue, llvm::Value* vtableptr, llvm::Value* vtableValue)
 		{
-			auto vtableAddress = builder->CreateGEP(builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RefValueHeaderFields::InterfaceTable) });
-			return builder->CreateAtomicCmpXchg(vtableAddress, builder->CreatePointerCast(vtableValue, RTVTable::GetLLVMType()->getPointerTo()), builder->CreatePointerCast(vtableptr, RTVTable::GetLLVMType()->getPointerTo()), AtomicOrdering::AcquireRelease, AtomicOrdering::Acquire);
+			return PWRefValue(refValue).WriteVTableCMPXCHG(builder, vtableptr, vtableValue);
 		}
 		void RefValueHeader::GenerateInitializerCode(NomBuilder& builder, llvm::Value* valueHeader, llvm::Constant* vTablePointer, llvm::Constant* rawInvokePointer)
 		{
@@ -564,19 +568,19 @@ namespace Nom
 			}
 		}
 
-		llvm::Value* RefValueHeader::GetInterfaceMethodTableFunction(NomBuilder& builder, CompileEnv* env, RegIndex reg, llvm::Constant* index, int lineno)
+		llvm::Value* RefValueHeader::GetInterfaceMethodTableFunction(NomBuilder& builder, CompileEnv* env, RegIndex reg, llvm::Constant* index, [[maybe_unused]] size_t lineno)
 		{
 			Function* fun = builder->GetInsertBlock()->getParent();
 			auto recreg = (*env)[reg];
 
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
-			BasicBlock* mergeBlock;
-			PHINode* tablePHI;
+			BasicBlock* mergeBlock = nullptr;
+			PHINode* tablePHI = nullptr;
 
 			GenerateRefOrPrimitiveValueSwitch(builder, recreg, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
 
-			int count = (refValueBlock != nullptr ? 1 : 0) + (packedIntBlock != nullptr ? 1 : 0) + (packedFloatBlock != nullptr ? 1 : 0) + (primitiveIntBlock != nullptr ? 1 : 0) + (primitiveFloatBlock != nullptr ? 1 : 0) + (primitiveBoolBlock != nullptr ? 1 : 0);
+			unsigned int count = (refValueBlock != nullptr ? 1 : 0) + (packedIntBlock != nullptr ? 1 : 0) + (packedFloatBlock != nullptr ? 1 : 0) + (primitiveIntBlock != nullptr ? 1 : 0) + (primitiveFloatBlock != nullptr ? 1 : 0) + (primitiveBoolBlock != nullptr ? 1 : 0);
 
 			if (count == 0)
 			{
@@ -682,191 +686,21 @@ namespace Nom
 			}
 			builder->SetInsertPoint(mergeBlock);
 			return tablePHI;
-			//BasicBlock* incomingBlock = builder->GetInsertBlock();
-			//
-			//if (recreg.GetNomType()->PossiblyPrimitive())
-			//{
-			//	BasicBlock* isInt = BasicBlock::Create(LLVMCONTEXT, "imp_int", env->Function);
-			//	BasicBlock* isFloat = BasicBlock::Create(LLVMCONTEXT, "imp_float", env->Function);
-			//	BasicBlock* isRef = BasicBlock::Create(LLVMCONTEXT, "imp_rec", env->Function);
-			//	incomingBlock = BasicBlock::Create(LLVMCONTEXT, "imp_merge", env->Function);
-
-			//	CreateRefKindSwitch(builder, recreg, isFloat, isRef, isInt);
-
-			//	builder->SetInsertPoint(isInt);
-			//	auto intTable = builder->CreatePointerCast(NomIntClass::GetInstance()->GetInterfaceTableLookup(*incomingBlock->getParent()->getParent(), llvm::GlobalValue::LinkageTypes::ExternalLinkage), GetIMTFunctionType()->getPointerTo()); //ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*env->Function->getParent()), RTVTable::GetLLVMType()->getPointerTo());
-			//	builder->CreateBr(incomingBlock);
-
-			//	builder->SetInsertPoint(isFloat);
-			//	auto floatTable = builder->CreatePointerCast(NomFloatClass::GetInstance()->GetInterfaceTableLookup(*incomingBlock->getParent()->getParent(), llvm::GlobalValue::LinkageTypes::ExternalLinkage), GetIMTFunctionType()->getPointerTo()); //ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*env->Function->getParent()), RTVTable::GetLLVMType()->getPointerTo());
-			//	builder->CreateBr(incomingBlock);
-
-			//	builder->SetInsertPoint(isRef);
-			//	Value* vtable = GenerateReadVTablePointer(builder, recreg);
-			//	auto refTable = RTVTable::GenerateReadInterfaceMethodTableEntry(builder, vtable, index);
-			//	builder->CreateBr(incomingBlock);
-
-			//	builder->SetInsertPoint(incomingBlock);
-			//	PHINode* tablePHI = builder->CreatePHI(GetIMTFunctionType()->getPointerTo(), 3, "imt");
-			//	tablePHI->addIncoming(intTable, isInt);
-			//	tablePHI->addIncoming(floatTable, isFloat);
-			//	tablePHI->addIncoming(refTable, isRef);
-
-			//	return tablePHI;
-
-			//}
-			//Value* vtable = GenerateReadVTablePointer(builder, recreg);
-			//return RTVTable::GenerateReadInterfaceMethodTableEntry(builder, vtable, index);
 		}
 
 		llvm::Value* RefValueHeader::GenerateReadRawInvoke(NomBuilder& builder, llvm::Value* refValue)
 		{
-			if (NomLambdaOptimizationLevel == 0)
-			{
-				throw new std::exception();
-			}
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), { MakeInt32(RefValueHeaderFields::RawInvoke),MakeInt32(0) });
+			return PWRefValue(refValue).ReadRawInvoke(builder);
 		}
 
 
 		void RefValueHeader::GenerateWriteRawInvoke(NomBuilder& builder, llvm::Value* refValue, llvm::Value* rawInvokePointer)
 		{
-			if (NomLambdaOptimizationLevel == 0)
-			{
-				throw new std::exception();
-			}
-			MakeStore(builder, builder->CreatePointerCast(rawInvokePointer, POINTERTYPE), builder->CreateGEP(builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32((unsigned char)RefValueHeaderFields::RawInvoke),MakeInt<int32_t>(0) }));
+			PWRefValue(refValue).WriteRawInvoke(builder, rawInvokePointer);
 		}
 		llvm::AtomicCmpXchgInst* RefValueHeader::GenerateWriteRawInvokeCMPXCHG(NomBuilder& builder, llvm::Value* refValue, llvm::Value* previousValueForCMPXCHG, llvm::Value* rawInvokePointer)
 		{
-			if (NomLambdaOptimizationLevel == 0)
-			{
-				throw new std::exception();
-			}
-			return builder->CreateAtomicCmpXchg(builder->CreateGEP(builder->CreatePointerCast(refValue, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32((unsigned char)RefValueHeaderFields::RawInvoke),MakeInt<int32_t>(0) }),
-				previousValueForCMPXCHG,
-				builder->CreatePointerCast(rawInvokePointer, POINTERTYPE),
-				llvm::AtomicOrdering::Monotonic,
-				llvm::AtomicOrdering::Monotonic);
+			return PWRefValue(refValue).WriteRawInvokeCMPXCHG(builder, rawInvokePointer, previousValueForCMPXCHG);
 		}
-
-		//llvm::Value* RefValueHeader::GetInterfaceMethodPointer(NomBuilder& builder, CompileEnv* env, RegIndex reg, int lineno, InterfaceID iface, int offset)
-		//{
-		//	BasicBlock* incomingBlock = builder->GetInsertBlock();
-		//	BasicBlock* regularTable = BasicBlock::Create(LLVMCONTEXT, "regularITable", env->Function);
-		//	BasicBlock* multiCastList = BasicBlock::Create(LLVMCONTEXT, "multiCastList", env->Function);
-
-		//	//BasicBlock* checkBlock = BasicBlock::Create(LLVMCONTEXT, "", env->Function);
-		//	//BasicBlock* loopBlock = BasicBlock::Create(LLVMCONTEXT, "", env->Function);
-		//	//BasicBlock* lookupBlock = BasicBlock::Create(LLVMCONTEXT, "", env->Function);
-		//	//BasicBlock* afterBlock = BasicBlock::Create(LLVMCONTEXT, "", env->Function);
-
-		//	auto recreg = (*env)[reg];
-
-		//	//load pointer to vtable
-		//	Value* vtable;
-		//	if (recreg.GetNomType()->PossiblyPrimitive())
-		//	{
-		//		BasicBlock* isInt = BasicBlock::Create(LLVMCONTEXT, "imp_int", env->Function);
-		//		BasicBlock* isFloat = BasicBlock::Create(LLVMCONTEXT, "imp_float", env->Function);
-		//		BasicBlock* isRef = BasicBlock::Create(LLVMCONTEXT, "imp_rec", env->Function);
-		//		incomingBlock = BasicBlock::Create(LLVMCONTEXT, "imp_merge", env->Function);
-
-		//		//Value * tag = builder->CreateTrunc(builder->CreatePtrToInt(recreg, INTTYPE, "recasint"), numtype(2), "rectag");
-		//		CreateRefKindSwitch(builder, recreg, isFloat, isRef, isInt);
-
-		//		builder->SetInsertPoint(isInt);
-		//		auto intTable = ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*env->Function->getParent()), RTVTable::GetLLVMType()->getPointerTo());
-		//		builder->CreateBr(incomingBlock);
-
-		//		builder->SetInsertPoint(isFloat);
-		//		auto floatTable = ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*env->Function->getParent()), RTVTable::GetLLVMType()->getPointerTo());
-		//		builder->CreateBr(incomingBlock);
-
-		//		builder->SetInsertPoint(isRef);
-		//		auto refTable = GenerateReadVTablePointer(builder, recreg);
-		//		builder->CreateBr(incomingBlock);
-
-		//		builder->SetInsertPoint(incomingBlock);
-		//		auto vtablephi = builder->CreatePHI(RTVTable::GetLLVMType()->getPointerTo(), 3, "vtable");
-		//		vtablephi->addIncoming(intTable, isInt);
-		//		vtablephi->addIncoming(floatTable, isFloat);
-		//		vtablephi->addIncoming(refTable, isRef);
-		//		vtable = vtablephi;
-		//	}
-		//	else
-		//	{
-
-		//		vtable = GenerateReadVTablePointer(builder, recreg); 
-		//	}
-
-		//	//Value* mtablesizeaddr = builder->CreateGEP(clsdescptr_typed, { MakeInt32(0), MakeInt32((unsigned char)RTClassFields::InterfaceTableSize) });
-		//	auto ifaceTableOffset = RTVTable::GenerateReadInterfaceTableOffset(builder, vtable);
-		//	auto flag = builder->CreateTrunc(ifaceTableOffset, inttype(1), "itableflag");
-		//	builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { flag, MakeUInt(1, 1) });
-		//	builder->CreateCondBr(flag, regularTable, multiCastList);
-
-		//	//builder->SetInsertPoint(regularTable);
-		//	//auto indexPHI = builder->CreatePHI(inttype(32), 2, "itableIndex");
-		//	//indexPHI->addIncoming(MakeInt32(0), incomingBlock);
-		//	//indexPHI->addIncoming(builder->CreateAdd(indexPHI, MakeInt32(1)), regularTable);
-		//	//Value* mtablesize = RTVTable::GenerateReadNumInterfaceTableEntries(builder, vtable); //RTClass::GenerateReadInterfaceTableSize(builder, *(env->Module), clsdescptr_typed);  //MakeLoad(builder, *(env->Module), mtablesizeaddr);
-		//	//Value* mtableptraddr = builder->CreateGEP(clsdescptr_typed, { MakeInt32(0), MakeInt32((unsigned char)RTClassFields::InterfaceTable) }); //load pointer to method table
-		//	//Value* entry = RTVTable::GetInterfaceTableEntryPointer(builder, vtable, ifaceTableOffset, MakeInt<InterfaceID>(iface));
-		//	//Value* entryKey = RTInterfaceTableEntry::GenerateReadKey(builder, entry);
-		//	//auto keyMatch = builder->CreateICmpEQ(builder->CreatePtrToInt(entryKey, numtype(InterfaceID)), MakeInt<InterfaceID>(iface), "match");
-		//	//builder->CreateCondBr(keyMatch, afterBlock, regularTable);
-		//	//builder->CreateBr(afterBlock);
-
-		//	//Value* mtableptr = RTVTable::GenerateReadFirstInterfaceTableEntryPointer(builder, vtable);  //RTClass::GenerateReadInterfaceTable(builder, *(env->Module), clsdescptr_typed); //MakeLoad(builder, *(env->Module), mtableptraddr);
-
-		//	builder->SetInsertPoint(multiCastList);
-		//	static const char* notimplemented_errorMessage = "Multicast interface dispatch not implemented!";
-		//	builder->CreateCall(RTOutput_Fail::GetLLVMElement(*env->Module), GetLLVMPointer(notimplemented_errorMessage))->setCallingConv(RTOutput_Fail::GetLLVMElement(*env->Module)->getCallingConv());
-		//	CreateDummyReturn(builder, env->Function);
-
-
-		//	builder->SetInsertPoint(regularTable);
-		//	auto address = builder->CreateSub(ifaceTableOffset, MakeInt<intptr_t>(1), "lookup-Address");
-		//	return builder->CreateIntToPtr(address, GetIMTFunctionType()->getPointerTo());
-
-		//	//auto ifacelookupfun = builder->CreateIntToPtr(address, NomClass::GetInterfaceTableLookupType()->getPointerTo());
-		//	//auto ifaceoffset = builder->CreateCall(NomClass::GetInterfaceTableLookupType(), ifacelookupfun, {/*vtable,*/ MakeInt<InterfaceID>(iface)/*, MakeInt<int32_t>(offset)*/}, "ifaceoffset");
-		//	//ifaceoffset->setCallingConv(NOMCC);
-		//	////return ifaceoffset;//actually a method pointer now
-		//	//return RTVTable::GenerateReadMethodTableEntry(builder, vtable, builder->CreateAdd(ifaceoffset, MakeInt32(-1 - offset)));
-
-		//	//builder->CreateBr(checkBlock);
-		//	//builder->SetInsertPoint(checkBlock);
-		//	//llvm::PHINode* phi = builder->CreatePHI(numtype(size_t), 2);
-		//	//phi->addIncoming(zero, incomingBlock);
-		//	//phi->addIncoming(builder->CreateAdd(phi, MakeInt<size_t>(1)), loopBlock);
-
-		//	//builder->CreateCondBr(builder->CreateICmpSLT(phi, mtablesize), loopBlock, afterBlock);
-
-		//	//builder->SetInsertPoint(loopBlock);
-		//	//Value* ikeyaddr = builder->CreateGEP(mtableptr, { {phi, MakeInt32(0)} });
-		//	//Value* ikey = MakeLoad(builder, *(env->Module), ikeyaddr);
-
-		//	//builder->CreateCondBr(builder->CreateICmpEQ(ikey, MakeInt<InterfaceID>(iface)), lookupBlock, checkBlock);
-
-		//	//builder->SetInsertPoint(lookupBlock);
-
-		//	//Value* ifaceTableAddr = builder->CreateGEP(mtableptr, { {phi, MakeInt32(1)} });
-		//	//Value* ifaceTable = MakeLoad(builder, *(env->Module), ifaceTableAddr);
-
-		//	//Value* resultAddr = builder->CreateGEP(ifaceTable, { { MakeInt32(0), MakeInt32(offset)} });
-		//	//Value* result = MakeLoad(builder, *(env->Module), resultAddr);
-
-		//	//builder->CreateBr(afterBlock);
-
-		//	//builder->SetInsertPoint(afterBlock);
-		//	//PHINode* phi2 = builder->CreatePHI(POINTERTYPE, 2);
-		//	//phi2->addIncoming(ConstantPointerNull::get(POINTERTYPE), checkBlock);
-		//	//phi2->addIncoming(result, lookupBlock);
-		//	//return phi2;
-		//	//return RTVTable::GenerateReadMethodTableEntry(builder, vtable, builder->CreateAdd(RTInterfaceTableEntry::GenerateReadMethodOffset(builder, entry), MakeInt32(-1 - offset)));
-		//	//return RTVTable::GenerateReadMethodTableEntry(builder, vtable, builder->CreateAdd(RTInterfaceTableEntry::GenerateReadMethodOffset(builder, entry), MakeInt32(-1 - offset)));
-		//}
 	}
 }

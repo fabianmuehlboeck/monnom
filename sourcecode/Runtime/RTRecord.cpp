@@ -36,11 +36,11 @@ namespace Nom
 
 		llvm::Value* RTRecord::GenerateReadFieldCount(NomBuilder& builder, llvm::Value* descriptor)
 		{
-			return MakeInvariantLoad(builder, descriptor, RTRecord::GetLLVMType()->getPointerTo(), MakeInt32(RTStructFields::FieldCount), "fieldCount", AtomicOrdering::NotAtomic);
+			return MakeInvariantLoad(builder, RTRecord::GetLLVMType(), descriptor, MakeInt32(RTStructFields::FieldCount), "fieldCount", AtomicOrdering::NotAtomic);
 		}
 		llvm::Value* RTRecord::GenerateReadTypeArgCount(NomBuilder& builder, llvm::Value* descriptor)
 		{
-			return MakeInvariantLoad(builder, descriptor, RTRecord::GetLLVMType()->getPointerTo(), MakeInt32(RTStructFields::TypeArgCount), "typeArgCount", AtomicOrdering::NotAtomic);
+			return MakeInvariantLoad(builder, RTRecord::GetLLVMType(), descriptor, MakeInt32(RTStructFields::TypeArgCount), "typeArgCount", AtomicOrdering::NotAtomic);
 		}
 	}
 }

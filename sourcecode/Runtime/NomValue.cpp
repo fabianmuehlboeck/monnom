@@ -48,7 +48,7 @@ namespace Nom
 			}
 			return GetDynamicType();
 		}
-		void __NomValueContainerDebugCheck(NomTypeRef type, llvm::Type* valType)
+		void _nomValueContainerDebugCheck(NomTypeRef type, llvm::Type* valType)
 		{
 			if (type->IsSubtype(GetIntClassType()))
 			{
@@ -74,7 +74,7 @@ namespace Nom
 		{
 			return PWRefValue(val);
 		}
-		int NomValue::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar, int refWeight, int intWeight, int floatWeight, int boolWeight)
+		int NomValue::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -305,7 +305,7 @@ namespace Nom
 			}
 			else
 			{
-				uint64_t caseweights[3] = { (uint64_t)floatWeight, (uint64_t)boolRefWeight, (uint64_t)intWeight };
+				uint64_t caseweights[3] = { floatWeight, boolRefWeight, intWeight };
 				SwitchInst* tagSwitch = builder->CreateSwitch(tag, _maskedFloatBlock, 3, GetBranchWeights(ArrayRef<uint64_t>(caseweights, 3)));
 				tagSwitch->addCase(MakeUInt(2, 0), _refValueBlock);
 				tagSwitch->addCase(MakeUInt(2, 3), _packedIntBlock);
@@ -369,7 +369,7 @@ namespace Nom
 
 			return cases;
 		}
-		int NomValue::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, int refWeight, int intWeight, int floatWeight, int boolWeight)
+		int NomValue::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
 		{
 			return GenerateRefOrPrimitiveValueSwitch(builder, refValueBlock, intBlock, floatBlock, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, refWeight, intWeight, floatWeight, boolWeight);
 		}

@@ -1,6 +1,5 @@
 #include "RTDisjointness.h"
 #include "Context.h"
-#include "llvm/IR/IRBuilder.h"
 #include "Defs.h"
 #include "RTCast.h"
 #include "CallingConvConf.h"
@@ -16,7 +15,7 @@ namespace Nom
 		}
 		RTDisjointness& RTDisjointness::Instance()
 		{
-			static RTDisjointness rtd; return rtd;
+			[[clang::no_destroy]] static RTDisjointness rtd; return rtd;
 		}
 		RTDisjointness::~RTDisjointness()
 		{

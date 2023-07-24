@@ -8,19 +8,17 @@ namespace Nom
 	{
 		class NomMethod;
 		class NomCallableVersion;
-		class NomMethodTableEntry /*: public AvailableExternally<llvm::Function>*/
+		class NomMethodTableEntry
 		{
 		public:
-			NomMethodTableEntry(const NomMethod* method, llvm::FunctionType* functionType, int offset);
+			NomMethodTableEntry(const NomMethod* method, llvm::FunctionType* functionType, size_t offset);
 
 			const NomMethod* const Method;
 			const NomCallableVersion* const CallableVersion;
 
-			const int Offset;
+			const size_t Offset;
 			bool PerfectOverrideMatch(NomMethodTableEntry* other, TypeList outerSubstitutions);
-			//// Inherited via AvailableExternally
-			//virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
-			//virtual llvm::Function* findLLVMElement(llvm::Module& mod) const override;
+
 		};
 	}
 }

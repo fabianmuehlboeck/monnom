@@ -36,3 +36,5 @@ namespace Nom
 }
 
 extern "C" DLLEXPORT void* NOM_RT_Fail(const char* errstr);
+
+extern "C" DLLEXPORT void NOM_RT_PrintReverseName(const char* str, size_t id);

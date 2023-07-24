@@ -2,7 +2,9 @@
 #include "NomType.h"
 #include "Defs.h"
 #include "CompileEnv.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/IRBuilder.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {
@@ -14,7 +16,7 @@ namespace Nom
 			NomBottomType();
 		public:
 			virtual ~NomBottomType() override;
-			static NomBottomTypeRef Instance() { static NomBottomType type; return &type; }
+			static NomBottomTypeRef Instance() { [[clang::no_destroy]] static NomBottomType type; return &type; }
 			
 			bool IsSubtype(NomTypeRef other, bool optimistic=false) const override;
 			bool IsSubtype(NomBottomTypeRef other, bool optimistic=false) const override;
@@ -33,18 +35,12 @@ namespace Nom
 
 			virtual llvm::Type * GetLLVMType() const override;
 
-			//virtual const RTTypeBlock GetRTType() const = 0;
-
 			virtual const std::string GetSymbolRep() const override;
 
-			//virtual llvm::Constant *GetTypeTemplate(llvm::Module &mod) const override;
-			//virtual llvm::StructType * GetTypeTemplateType() const override;
-			//virtual llvm::Constant * GetTypeTemplateReference(uint64_t offset) const override;
 			virtual TypeKind GetKind() const override
 			{
 				return TypeKind::TKBottom;
 			}
-			//llvm::Constant * GetRTType() const override;
 			size_t GetHashCode() const override {
 				return 0;
 			}
@@ -54,7 +50,7 @@ namespace Nom
 			virtual llvm::Constant * findLLVMElement(llvm::Module & mod) const override;
 
 			// Inherited via NomType
-			virtual intptr_t GetRTElement() const override;
+			virtual uintptr_t GetRTElement() const override;
 
 			// Inherited via NomType
 			virtual NomClassTypeRef GetClassInstantiation(const NomNamed * named) const override;
@@ -85,7 +81,7 @@ namespace Nom
 			virtual TypeReferenceType GetTypeReferenceType() const override;
 
 			// Inherited via NomType
-			virtual bool ContainsVariableIndex(int index) const override;
+			virtual bool ContainsVariableIndex(size_t index) const override;
 		};
 
 	}

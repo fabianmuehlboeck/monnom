@@ -1,3 +1,5 @@
+PUSHDIAGSUPPRESSION
+POPDIAGSUPPRESSION
 #include "CompileHelpers.h"
 #include "CompileEnv.h"
 #include "NomJIT.h"
@@ -17,10 +19,10 @@ namespace Nom
 			{
 				return origType;
 			}
-			llvm::Type* nextOrig = 0;
+			llvm::Type* nextOrig = nullptr;
 			if (origType->isStructTy())
 			{
-				nextOrig = origType->getStructElementType(*((ConstantInt*)arr[1])->getValue().getRawData());
+				nextOrig = origType->getStructElementType(static_cast<unsigned int>(*(static_cast<ConstantInt*>(arr[1]))->getValue().getRawData()));
 			}
 			else if (origType->isArrayTy())
 			{
@@ -38,10 +40,10 @@ namespace Nom
 			{
 				return origType;
 			}
-			llvm::Type* nextOrig = 0;
+			llvm::Type* nextOrig = nullptr;
 			if (origType->isStructTy())
 			{
-				nextOrig = origType->getStructElementType(*((ConstantInt*)arr[1])->getValue().getRawData());
+				nextOrig = origType->getStructElementType(static_cast<unsigned int>(*(static_cast<ConstantInt*>(arr[1]))->getValue().getRawData()));
 			}
 			else if (origType->isArrayTy())
 			{
@@ -53,14 +55,14 @@ namespace Nom
 			}
 			return GetGEPTargetType(nextOrig, arr.take_back(arr.size() - 1));
 		}
-		CallInst* GenerateFunctionCall(NomBuilder& builder, Module& mod, Value* fun, FunctionType* ftype, ArrayRef<Value*>& args, bool fastcall)
+		CallInst* GenerateFunctionCall(NomBuilder& builder, [[maybe_unused]] Module& mod, Value* fun, FunctionType* ftype, ArrayRef<Value*>& args, bool fastcall)
 		{
 			size_t argsize = args.size();
 			Value** pargs = makealloca(Value*, argsize);
 			for (size_t i = 0; i != argsize; i++)
 			{
 				Type* argtype = args[i]->getType();
-				Type* paramtype = ftype->getParamType(i);
+				Type* paramtype = ftype->getParamType(static_cast<unsigned int>(i));
 				if (argtype == paramtype)
 				{
 					pargs[i] = args[i];
@@ -134,7 +136,7 @@ namespace Nom
 			return ci;
 		}
 
-		CallInst* GenerateFunctionCall(NomBuilder& builder, Module& mod, Function* fun, ArrayRef<Value*>& args, bool fastcall)
+		CallInst* GenerateFunctionCall(NomBuilder& builder, [[maybe_unused]]  Module& mod, Function* fun, ArrayRef<Value*>& args, bool fastcall)
 		{
 			size_t argsize = args.size();
 			Value** pargs = makealloca(Value*, argsize);
@@ -142,21 +144,13 @@ namespace Nom
 			for (size_t i = 0; i != argsize; i++)
 			{
 				Type* argtype = args[i]->getType();
-				Type* paramtype = ftype->getParamType(i);
+				Type* paramtype = ftype->getParamType(static_cast<unsigned int>(i));
 				if (argtype == paramtype)
 				{
 					pargs[i] = args[i];
 					continue;
 				}
-				if (paramtype == TYPETYPE)
-				{
-					if (!argtype->isPointerTy())
-					{
-						throw new exception();
-					}
-					pargs[i] = builder->CreatePointerCast(args[i], TYPETYPE);
-				}
-				else if (paramtype == INTTYPE)
+				if (paramtype == INTTYPE)
 				{
 					if (argtype != REFTYPE)
 					{
@@ -200,11 +194,11 @@ namespace Nom
 						pargs[i] = PackFloat(builder, args[i]);
 						continue;
 					}
-					else if (argtype->isPointerTy())
-					{
-						pargs[i] = builder->CreatePointerCast(args[i], REFTYPE);
-						continue;
-					}
+					//else if (argtype->isPointerTy())
+					//{
+					//	pargs[i] = builder->CreatePointerCast(args[i], REFTYPE);
+					//	continue;
+					//}
 					throw new exception();
 				}
 			}
@@ -221,7 +215,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			return builder->CreateICmpEQ(builder->CreatePtrToInt(val, numtype(intptr_t)), ConstantExpr::getPtrToInt(ConstantPointerNull::get((PointerType*)val->getType()), numtype(intptr_t)), "ISNULL");
+			return builder->CreateICmpEQ(builder->CreatePtrToInt(val, numtype(intptr_t)), ConstantExpr::getPtrToInt(ConstantPointerNull::get(static_cast<PointerType*>(val->getType())), numtype(intptr_t)), "ISNULL");
 		}
 		void CreateDummyReturn(NomBuilder& builder, llvm::Function* fun)
 		{
@@ -243,7 +237,7 @@ namespace Nom
 			}
 			if (rettype->isPointerTy())
 			{
-				builder->CreateRet(ConstantPointerNull::get((PointerType*)rettype));
+				builder->CreateRet(ConstantPointerNull::get(static_cast<PointerType*>(rettype)));
 				return;
 			}
 			if (rettype->isStructTy())
@@ -255,17 +249,12 @@ namespace Nom
 
 		}
 
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
 		{
 			llvm::StoreInst* store = builder->CreateStore(val, ptr);
 			store->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(val->getType())));
 			store->setAtomic(ordering);
 			return store;
-		}
-
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
-		{
-			return MakeStore(builder, *builder->GetInsertBlock()->getParent()->getParent(), val, ptr, ordering);
 		}
 
 		//Adds a zero index in front of the given indices list
@@ -286,7 +275,7 @@ namespace Nom
 		}
 
 		//Adds a zero index in front of the given index
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type * targetType, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWInt32 index, llvm::AtomicOrdering ordering)
 		{
 			llvm::Value* actualpointer = builder->CreateGEP(targetType, ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
 			llvm::StoreInst* store = builder->CreateStore(val, actualpointer);
@@ -294,12 +283,13 @@ namespace Nom
 			store->setAtomic(ordering);
 			return store;
 		}
-
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWCInt32 index, llvm::AtomicOrdering ordering)
 		{
-			auto storeInst = MakeStore(builder, mod, val, ptr, ordering);
-			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
-			return storeInst;
+			llvm::Value* actualpointer = builder->CreateGEP(targetType, ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
+			llvm::StoreInst* store = builder->CreateStore(val, actualpointer);
+			store->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(val->getType())));
+			store->setAtomic(ordering);
+			return store;
 		}
 
 		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering)
@@ -316,27 +306,26 @@ namespace Nom
 			return storeInst;
 		}
 
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering)
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWInt32 index, llvm::AtomicOrdering ordering)
+		{
+			auto storeInst = MakeStore(builder, val, targetType, ptr, index, ordering);
+			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return storeInst;
+		}
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWCInt32 index, llvm::AtomicOrdering ordering)
 		{
 			auto storeInst = MakeStore(builder, val, targetType, ptr, index, ordering);
 			storeInst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return storeInst;
 		}
 
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Module& mod, llvm::Type * elementType, llvm::Value* ptr, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
-
 			llvm::LoadInst* load = builder->CreateLoad(elementType, ptr);
 			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(elementType)));
 			load->setAtomic(ordering);
+			load->setName(name);
 			return load;
-		}
-
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
-		{
-			auto li = MakeLoad(builder, *builder->GetInsertBlock()->getParent()->getParent(), elementType, ptr, ordering);;
-			li->setName(name);
-			return li;
 		}
 
 		//Adds a zero index in front of the given indices list
@@ -358,7 +347,16 @@ namespace Nom
 		}
 
 		//Adds a zero index in front of the given index
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWInt32 index, llvm::Twine name, llvm::AtomicOrdering ordering)
+		{
+			llvm::Value* actualpointer = builder->CreateGEP(elementType, ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
+			llvm::Type* loadType = GetGEPTargetType(elementType, ArrayRef<llvm::Value*>({ MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) }));
+			llvm::LoadInst* load = builder->CreateLoad(loadType, actualpointer, name);
+			load->setAlignment(llvm::Align(GetNomJITDataLayout().getTypeSizeInBits(loadType)));
+			load->setAtomic(ordering);
+			return load;
+		}
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWCInt32 index, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
 			llvm::Value* actualpointer = builder->CreateGEP(elementType, ptr, { MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) });
 			llvm::Type* loadType = GetGEPTargetType(elementType, ArrayRef<llvm::Value*>({ MakeInt32(0), builder->CreateZExtOrTrunc(index, inttype(32)) }));
@@ -368,13 +366,6 @@ namespace Nom
 			return load;
 		}
 
-
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Module& mod, llvm::Value* ptr, llvm::AtomicOrdering ordering)
-		{
-			auto inst = MakeLoad(builder, mod, elementType, ptr, ordering);
-			inst->setMetadata("invariant.group", getGeneralInvariantNode());
-			return inst;
-		}
 		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
 			auto inst = MakeLoad(builder, elementType, ptr, name, ordering);
@@ -387,7 +378,13 @@ namespace Nom
 			inst->setMetadata("invariant.group", getGeneralInvariantNode());
 			return inst;
 		}
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Value* index, llvm::Twine name, llvm::AtomicOrdering ordering)
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWInt32 index, llvm::Twine name, llvm::AtomicOrdering ordering)
+		{
+			auto inst = MakeLoad(builder, elementType, ptr, index, name, ordering);
+			inst->setMetadata("invariant.group", getGeneralInvariantNode());
+			return inst;
+		}
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWCInt32 index, llvm::Twine name, llvm::AtomicOrdering ordering)
 		{
 			auto inst = MakeLoad(builder, elementType, ptr, index, name, ordering);
 			inst->setMetadata("invariant.group", getGeneralInvariantNode());
@@ -397,88 +394,88 @@ namespace Nom
 
 		ReadFieldFunction GetReadFieldFunction()
 		{
-			static ReadFieldFunction fun = (ReadFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_READFIELD")->getValue());
+			static ReadFieldFunction fun = reinterpret_cast<ReadFieldFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_READFIELD")->getValue()));
 			return fun;
 		}
 		WriteFieldFunction GetWriteFieldFunction()
 		{
-			static WriteFieldFunction fun = (WriteFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD")->getValue());
+			static WriteFieldFunction fun = reinterpret_cast<WriteFieldFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD")->getValue()));
 			return fun;
 		}
 		FieldAddrFunction GetFieldAddrFunction()
 		{
-			static FieldAddrFunction fun = (FieldAddrFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_GETFIELDADDR")->getValue());
+			static FieldAddrFunction fun = reinterpret_cast<FieldAddrFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_GETFIELDADDR")->getValue()));
 			return fun;
 		}
 		ReadFieldFunction GetReadFieldFunction_ForInvoke()
 		{
-			static ReadFieldFunction fun = (ReadFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_READFIELD_FORINVOKABLE")->getValue());
+			static ReadFieldFunction fun = reinterpret_cast<ReadFieldFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_READFIELD_FORINVOKABLE")->getValue()));
 			return fun;
 		}
 		WriteFieldFunction GetWriteFieldFunction_ForInvoke()
 		{
-			static WriteFieldFunction fun = (WriteFieldFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD_FORINVOKABLE")->getValue());
+			static WriteFieldFunction fun = reinterpret_cast<WriteFieldFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_WRITEFIELD_FORINVOKABLE")->getValue()));
 			return fun;
 		}
 		ReadTypeArgFunction GetReadTypeArgFunction()
 		{
-			static ReadTypeArgFunction fun = (ReadTypeArgFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_READTYPEARG")->getValue());
+			static ReadTypeArgFunction fun = reinterpret_cast<ReadTypeArgFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_READTYPEARG")->getValue()));
 			return fun;
 		}
 		WriteTypeArgFunction GetWriteTypeArgFunction()
 		{
-			static WriteTypeArgFunction fun = (WriteTypeArgFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITETYPEARG")->getValue());
+			static WriteTypeArgFunction fun = reinterpret_cast<WriteTypeArgFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_WRITETYPEARG")->getValue()));
 			return fun;
 		}
 		WriteVTableFunction GetWriteVTableFunction()
 		{
-			static WriteVTableFunction fun = (WriteVTableFunction)(uintptr_t)(NomJIT::Instance().lookup("RT_NOM_WRITEVTABLE")->getValue());
+			static WriteVTableFunction fun = reinterpret_cast<WriteVTableFunction>(reinterpret_cast<uintptr_t>(NomJIT::Instance().lookup("RT_NOM_WRITEVTABLE")->getValue()));
 			return fun;
 		}
 		void* GetGeneralLLVMFunction(llvm::StringRef name)
 		{
-			return (void*)(uintptr_t)(NomJIT::Instance().lookup(name)->getValue());
+			return reinterpret_cast<void*>(*(reinterpret_cast<uintptr_t*>(NomJIT::Instance().lookup(name)->getValue())));
 		}
 		void* GetBooleanTrue()
 		{
-			static void* bval = (void*)(*((uintptr_t*)(NomJIT::Instance().lookup("RT_NOM_TRUE")->getValue())));
+			static void* bval = reinterpret_cast<void*>(*(reinterpret_cast<uintptr_t*>(NomJIT::Instance().lookup("RT_NOM_TRUE")->getValue())));
 			return bval;
 		}
 		void* GetBooleanFalse()
 		{
-			static void* bval = (void*)(*((uintptr_t*)(NomJIT::Instance().lookup("RT_NOM_FALSE")->getValue())));
+			static void* bval = reinterpret_cast<void*>(*(reinterpret_cast<uintptr_t*>(NomJIT::Instance().lookup("RT_NOM_FALSE")->getValue())));
 			return bval;
 		}
 		void* GetVoidObj()
 		{
-			static void* voidobj = (void*)((uintptr_t)(Nom::Runtime::NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
+			static void* voidobj = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(Nom::Runtime::NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
 			return voidobj;
 		}
 
 
 		llvm::Constant* EnsureIntegerSize(llvm::Constant* cnst, int bitwidth)
 		{
-			int size = cnst->getType()->getPrimitiveSizeInBits();
+			int size = static_cast<int>(cnst->getType()->getPrimitiveSizeInBits());
 			if (size < bitwidth)
 			{
-				cnst = ConstantExpr::getZExt(cnst, inttype(bitwidth));
+				cnst = ConstantExpr::getZExt(cnst, inttype(static_cast<unsigned int>(bitwidth)));
 			}
 			else if (size > bitwidth)
 			{
-				cnst = ConstantExpr::getTrunc(cnst, inttype(bitwidth));
+				cnst = ConstantExpr::getTrunc(cnst, inttype(static_cast<unsigned int>(bitwidth)));
 			}
 			return cnst;
 		}
 		llvm::Value* EnsureIntegerSize(NomBuilder& builder, llvm::Value* val, int bitwidth)
 		{
-			int size = val->getType()->getPrimitiveSizeInBits();
+			int size = static_cast<int>(val->getType()->getPrimitiveSizeInBits());
 			if (size < bitwidth)
 			{
-				val = builder->CreateZExt(val, inttype(bitwidth));
+				val = builder->CreateZExt(val, inttype(static_cast<unsigned int>(bitwidth)));
 			}
 			else if (size > bitwidth)
 			{
-				val = builder->CreateTrunc(val, inttype(bitwidth));
+				val = builder->CreateTrunc(val, inttype(static_cast<unsigned int>(bitwidth)));
 			}
 			return val;
 		}
@@ -512,35 +509,35 @@ namespace Nom
 		}
 		llvm::ConstantInt* MakeUInt(size_t size, uint64_t val)
 		{
-			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, size), val, false);
+			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(size)), val, false);
 		}
 		llvm::ConstantInt* MakeSInt(size_t size, int64_t val)
 		{
-			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, size), val, true);
+			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(size)), static_cast<uint64_t>(val), true);
 		}
 		llvm::ConstantInt* MakeInt(size_t size, int64_t val)
 		{
-			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, size), static_cast<uint64_t>(val), true);
+			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(size)), static_cast<uint64_t>(val), true);
 		}
-		llvm::ConstantInt* MakeInt32(int32_t val)
+		PWCInt32 MakeInt32(int32_t val)
 		{
 			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, 32), bit_cast<uint32_t, int32_t>(val), true);
 		}
-		llvm::ConstantInt* MakeInt32(uint32_t val)
+		PWCInt32 MakeInt32(uint32_t val)
 		{
 			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, 32), val, true);
 		}
-		llvm::ConstantInt* MakeInt32(uint64_t val)
+		PWCInt32 MakeInt32(uint64_t val)
 		{
-			return MakeInt32((uint32_t)val);
+			return MakeInt32(static_cast<uint32_t>(val));
 		}
-		llvm::ConstantInt* MakeInt32(int64_t val)
+		PWCInt32 MakeInt32(int64_t val)
 		{
-			return MakeInt32((int32_t)val);
+			return MakeInt32(static_cast<uint32_t>(val));
 		}
 		llvm::ConstantInt* MakeInt(size_t size, uint64_t val)
 		{
-			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, size), val, false);
+			return llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(size)), val, false);
 		}
 		llvm::ConstantInt* MakeIntLike(llvm::Value* value, uint64_t val)
 		{
@@ -548,7 +545,7 @@ namespace Nom
 			{
 				throw new std::exception();//TODO: Exception
 			}
-			return ConstantInt::get((llvm::IntegerType*)(value->getType()), val);
+			return ConstantInt::get(static_cast<llvm::IntegerType*>(value->getType()), val);
 		}
 		llvm::Constant* GetLLVMRef(const void* const ptr)
 		{
@@ -568,10 +565,10 @@ namespace Nom
 		}
 		llvm::Constant* GetMask(int length, int leadingZeroes, int trailingZeroes)
 		{
-			auto ret = ConstantExpr::getXor(llvm::ConstantInt::getAllOnesValue(IntegerType::get(LLVMCONTEXT, length - leadingZeroes)), ConstantExpr::getZExt(llvm::ConstantInt::getAllOnesValue(IntegerType::get(LLVMCONTEXT, trailingZeroes)), IntegerType::get(LLVMCONTEXT, length - leadingZeroes)));
+			auto ret = ConstantExpr::getXor(llvm::ConstantInt::getAllOnesValue(IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(length - leadingZeroes))), ConstantExpr::getZExt(llvm::ConstantInt::getAllOnesValue(IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(trailingZeroes))), IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(length - leadingZeroes))));
 			if (leadingZeroes > 0)
 			{
-				ret = ConstantExpr::getZExt(ret, IntegerType::get(LLVMCONTEXT, length));
+				ret = ConstantExpr::getZExt(ret, IntegerType::get(LLVMCONTEXT, static_cast<unsigned int>(length)));
 			}
 			return ret;
 		}

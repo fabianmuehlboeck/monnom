@@ -46,9 +46,9 @@ namespace Nom
 			Manifest(std::string name, VersionNumber version, VersionNumber compatibleFrom, VersionNumber compatibleTo, bool isSecurityRisk, bool isDeprecated);
 			~Manifest();
 
-			void SetMainClass(std::string&& mainClassName)
+			void SetMainClass(std::string&& _mainClassName)
 			{
-				this->mainClassName = mainClassName;
+				this->mainClassName = _mainClassName;
 			}
 			bool HasMainClass() { return mainClassName.length() > 0; }
 			const std::string &MainClassName() { return mainClassName; }

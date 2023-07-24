@@ -18,7 +18,7 @@ namespace Nom
 		{
 		}
 
-		void ReturnVoidInstruction::Compile(NomBuilder &builder, CompileEnv* env, int lineno)
+		void ReturnVoidInstruction::Compile(NomBuilder &builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			auto rettype = builder->GetInsertBlock()->getParent()->getFunctionType()->getReturnType();
 			if (rettype != REFTYPE && rettype != POINTERTYPE)
@@ -28,11 +28,11 @@ namespace Nom
 			builder->CreateRet(llvm::ConstantExpr::getPointerCast(NomVoidObject::GetInstance()->GetLLVMElement(*(env->Module)), rettype));
 			env->basicBlockTerminated = true;
 		}
-		void ReturnVoidInstruction::Print(bool resolve)
+		void ReturnVoidInstruction::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "ReturnVoid\n";
 		}
-		void ReturnVoidInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void ReturnVoidInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 	}

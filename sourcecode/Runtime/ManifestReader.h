@@ -1,6 +1,8 @@
 #pragma once
 #include "CharStream.h"
+PUSHDIAGSUPPRESSION
 #include "pugixml/pugixml.hpp"
+POPDIAGSUPPRESSION
 #include "Manifest.h"
 #include <iostream>
 
@@ -14,7 +16,7 @@ namespace Nom
 		private:
 			ManifestReader();
 		public:
-			static ManifestReader& Instance() { static ManifestReader instance; return instance; }
+			static ManifestReader& Instance() { [[clang::no_destroy]] static ManifestReader instance; return instance; }
 			~ManifestReader();
 
 			Manifest* ReadManifest(pugi::xml_document &doc);

@@ -1,5 +1,10 @@
 #include "NomJIT.h"
 #include "NomVMInterface.h"
+#include <fstream>
+#include <iostream>
+#include <atomic>
+#include <forward_list>
+PUSHDIAGSUPPRESSION
 #include "llvm/Pass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -11,42 +16,39 @@
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/IR/Verifier.h"
-#include "NomJITLight.h"
-#include <iostream>
-#include <atomic>
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
+#define NOM_OMITJITPROFILING
+#ifndef NOM_OMITJITPROFILING
+#include <jitprofiling.h>
+#include "llvm/Object/SymbolSize.h"
+#endif
+POPDIAGSUPPRESSION
+#include "NomJITLight.h"
 #include "StringClass.h"
-#include <forward_list>
 #include "RTConfig.h"
 #include "CompileHelpers.h"
 #include "RTOutput.h"
-#include <fstream>
 #include "CastStats.h"
 #include "NomNameRepository.h"
 #include "FunctionTimings.h"
-#include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include <jitprofiling.h>
-#include "llvm/Object/SymbolSize.h"
 
 using namespace llvm;
 using namespace llvm::orc;
 using namespace Nom::Runtime;
 using namespace std;
-//
-//NomJIT::NomJIT() :  TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-//ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
-//CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
-//	llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
-//}
+
 
 namespace Nom
 {
 	namespace Runtime
 	{
+#ifndef NOM_OMITJITPROFILING
 		class NomJITEventListener : public llvm::JITEventListener
 		{
 		public:
@@ -111,60 +113,23 @@ namespace Nom
 				//}
 			}
 		};
-
+#endif
 
 		const llvm::DataLayout& GetNomJITDataLayout() { return NomJIT::Instance().getDataLayout(); }
 
-
-		/*NomJIT::NomJIT(JITTargetMachineBuilder JTMB, DataLayout DL) : ObjectLayer(ES,
-			[]() { return std::make_unique<SectionMemoryManager>(); }),
-			CompileLayer(ES, ObjectLayer,
-				std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
-			OptimizeLayer(ES, CompileLayer, optimizeModule), DL(std::move(DL)),
-			Mangle(ES, this->DL), Ctx(std::make_unique<LLVMContext>()),
-			MainJD(ES.createJITDylib("<main>")) {
-			MainJD.addGenerator(
-				cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
-					DL.getGlobalPrefix())));*/
-		NomJIT::NomJIT(std::unique_ptr<LLJIT>&& llj) : //DL(lljit->getDataLayout()),
+		NomJIT::NomJIT(std::unique_ptr<LLJIT>&& llj) : 
 			Ctx(std::make_unique<LLVMContext>()), lljit(std::move(llj)) {
 			lljit->getMainJITDylib().addGenerator(
 				cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
 					getDataLayout().getGlobalPrefix())));
-			/*}
 
-				Resolver(createLegacyLookupResolver(
-				ES,
-				[this](const std::string& Name) -> JITSymbol {
-					if (auto Sym = OptimizeLayer.findSymbol(Name, false))
-						return Sym;
-					else if (auto SymAddr =
-						RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-						return JITSymbol(SymAddr, JITSymbolFlags::Exported);
-					else if (auto Err = Sym.takeError())
-						return std::move(Err);
-					return nullptr; getDataLayout();
-				},
-				[](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
-				TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-					ObjectLayer(ES,
-						[this](VModuleKey) {
-							return RTDyldObjectLinkingLayer::Resources{
-								std::make_shared<SectionMemoryManager>(), Resolver };
-						}),
-					CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
-							OptimizeLayer(CompileLayer, [this](std::unique_ptr<Module> M) {
-							return optimizeModule(std::move(M));
-								}) {*/
 			lljit->getIRTransformLayer().setTransform(optimizeModule);
-			//llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
-			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_GCALLOC", (void*)&CPP_NOM_GCALLOC);
-			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_Print", (void*)&CPP_NOM_Print);
-			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_NEWALLOC", (void*)&CPP_NOM_NEWALLOC);
-			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_RECORDALLOC", (void*)&CPP_NOM_RECORDALLOC);
-			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_CLOSUREALLOC", (void*)&CPP_NOM_CLOSUREALLOC);
-			llvm::sys::DynamicLibrary::AddSymbol("NOM_RT_Fail", (void*)&NOM_RT_Fail);
-			////TM->setOptLevel(llvm::CodeGenOpt::Default);
+			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_GCALLOC", reinterpret_cast<void*>(&CPP_NOM_GCALLOC));
+			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_Print", reinterpret_cast<void*>(&CPP_NOM_Print));
+			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_NEWALLOC", reinterpret_cast<void*>(&CPP_NOM_NEWALLOC));
+			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_RECORDALLOC", reinterpret_cast<void*>(&CPP_NOM_RECORDALLOC));
+			llvm::sys::DynamicLibrary::AddSymbol("CPP_NOM_CLOSUREALLOC", reinterpret_cast<void*>(&CPP_NOM_CLOSUREALLOC));
+			llvm::sys::DynamicLibrary::AddSymbol("NOM_RT_Fail", reinterpret_cast<void*>(&NOM_RT_Fail));
 		}
 
 		llvm::Expected<std::unique_ptr<NomJIT>> NomJIT::Create() {
@@ -180,7 +145,9 @@ namespace Nom
 							oll->setOverrideObjectFlagsWithResponsibilityFlags(true);
 							oll->setAutoClaimResponsibilityForObjectSymbols(true);
 						}
+#ifndef NOM_OMITJITPROFILING
 						oll->registerJITEventListener(NomJITEventListener::GetListener());
+#endif
 						return std::move(oll);
 			};
 			auto JIT = JITbuilder.create();
@@ -198,14 +165,12 @@ namespace Nom
 		{
 		}
 		Expected<ThreadSafeModule>
-			NomJIT::optimizeModule(ThreadSafeModule TSM, const MaterializationResponsibility& R) {
-			//std::unique_ptr<Module> Nom::Runtime::NomJIT::optimizeModule(std::unique_ptr<Module> M) {
-				// Create a function pass manager.
+			NomJIT::optimizeModule(ThreadSafeModule TSM, [[maybe_unused]] const MaterializationResponsibility& R) {
 			TSM.withModuleDo([](Module& M) {
 
+				llvm::raw_os_ostream out(std::cout);
 				for (auto& F : M)
 				{
-					llvm::raw_os_ostream out(std::cout);
 					if (verifyFunction(F, &out))
 					{
 						F.print(out, nullptr);
@@ -225,69 +190,98 @@ namespace Nom
 						pobof.flush();
 						pobof.close();
 					}
-					llvm::PassManagerBuilder pmb;
-					pmb.OptLevel = NomOptLevel;
-					auto FPM = std::make_unique<legacy::FunctionPassManager>(&M);
-					auto MPM = std::make_unique<legacy::PassManager>();
+					LoopAnalysisManager LAM;
+					FunctionAnalysisManager FAM;
+					CGSCCAnalysisManager CGAM;
+					ModuleAnalysisManager MAM;
+					PassBuilder PB;
 
-					FPM->add(createVerifierPass(false));
+					PB.registerModuleAnalyses(MAM);
+					PB.registerCGSCCAnalyses(CGAM);
+					PB.registerFunctionAnalyses(FAM);
+					PB.registerLoopAnalyses(LAM);
+					PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-					pmb.Inliner = createFunctionInliningPass();
+					OptimizationLevel optLevel;
+					switch (NomOptLevel)
+					{
+					case 0:
+						optLevel = OptimizationLevel::O0;
+						break;
+					case 1:
+						optLevel = OptimizationLevel::O1;
+						break;
+					case 2:
+						optLevel = OptimizationLevel::O2;
+						break;
+					default:
+					case 3:
+						optLevel = OptimizationLevel::O3;
+						break;
+					}
+
+					legacy::FunctionPassManager FPM=legacy::FunctionPassManager(&M);
+					ModulePassManager MPM;
+					if (optLevel.getSpeedupLevel() != 0)
+					{
+						MPM = PB.buildPerModuleDefaultPipeline(optLevel);
+					}
+					else
+					{
+						MPM = ModulePassManager();
+					}
+
+					FPM.add(createVerifierPass(false));
 
 					//if (TM)
 					//{
 					//	TM->adjustPassManager(pmb);
 					//}
 
-					FPM->add(createAtomicExpandPass());
-					pmb.populateFunctionPassManager(*FPM);
-					pmb.populateModulePassManager(*MPM);
+					FPM.add(createAtomicExpandPass());
 
 					// Add some optimizations.
-					//FPM->add(createInstructionCombiningPass());
-					//FPM->add(createReassociatePass());
-					//FPM->add(createGVNPass());
-					//FPM->add(createCFGSimplificationPass());
-					/*FPM->add(createLoopIdiomPass());
-					FPM->add(createLoopUnrollPass());
-					FPM->add(createInstructionCombiningPass());
-					FPM->add(createReassociatePass());
-					FPM->add(createGVNPass());
-					FPM->add(createCFGSimplificationPass());
-					FPM->add(createCorrelatedValuePropagationPass());
-					FPM->add(createConstantPropagationPass());
-					FPM->add(createPartiallyInlineLibCallsPass());*/
-					FPM->add(createTailCallEliminationPass());
-					pmb.populateLTOPassManager(*MPM);
+					FPM.add(createTailCallEliminationPass());
 
-					FPM->add(createLoopUnrollPass(2, false, false, -1, -1, -1, -1, -1, 2));
-					FPM->add(createLoopUnswitchPass());
-					FPM->add(createLICMPass());
-					FPM->add(createLoopUnrollPass(2, false, false, -1, -1, -1, -1, -1, 2));
-					FPM->add(createLoopUnswitchPass());
-					FPM->add(createLICMPass());
-					FPM->add(createInductiveRangeCheckEliminationPass());
-					FPM->add(createTailCallEliminationPass());
+					FPM.add(createLoopUnrollPass(2, false, false, -1, -1, -1, -1, -1, 2));
+					FPM.add(createLICMPass());
+					FPM.add(createLoopUnrollPass(2, false, false, -1, -1, -1, -1, -1, 2));
+					FPM.add(createLICMPass());
+					FPM.add(createInductiveRangeCheckEliminationPass());
+					FPM.add(createTailCallEliminationPass());
 
 					if (RTConfig_AdditionalOptPasses)
 					{
-						llvm::PassManagerBuilder pmb2;
-						pmb2.OptLevel = 2;
-						pmb2.populateFunctionPassManager(*FPM);
-						pmb2.populateModulePassManager(*MPM);
-						pmb2.populateLTOPassManager(*MPM);
-						FPM->add(createTailCallEliminationPass());
+						//llvm::PassManagerBuilder pmb2;
+						//pmb2.OptLevel = 2;
+						//pmb2.populateFunctionPassManager(*FPM);
+						//pmb2.populateModulePassManager(*MPM);
+						//pmb2.populateLTOPassManager(*MPM);
+						//FPM->add(createTailCallEliminationPass());
 					}
-					FPM->doInitialization();
+					FPM.doInitialization();
 
 					// Run the optimizations over all functions in the module being added to
 					// the JIT.
 					for (auto& F : M)
-						FPM->run(F);
+					{
+						if (verifyFunction(F, &out))
+						{
+							F.print(out, nullptr);
+							out.flush();
+							std::cout.flush();
+						}
+						FPM.run(F);
+					}
 
-					FPM->doFinalization();
-					MPM->add(createVerifierPass(false));
-					MPM->run(M);
+					FPM.doFinalization();
+					MPM.addPass(VerifierPass(false));
+					MPM.run(M, MAM);
+
+					for (auto& F : M)
+					{
+						FPM.run(F);
+					}
 				}
 
 				if (NomFunctionTimingLevel > 2)
@@ -311,12 +305,8 @@ namespace Nom
 						{
 							if (&b == &entryBlock)
 							{
-								for (auto& i : b)
-								{
-									builder.SetInsertPoint(&i);
-									builder.CreateCall(GetEnterFunctionFunction(M), llvm::ArrayRef<llvm::Value*>{MakeInt<size_t>(funnameid)});
-									break;
-								}
+								builder.SetInsertPoint(&b, b.getFirstInsertionPt());
+								builder.CreateCall(GetEnterFunctionFunction(M), llvm::ArrayRef<llvm::Value*>{MakeInt<size_t>(funnameid)});
 							}
 
 							auto term = b.getTerminator();
@@ -359,17 +349,10 @@ namespace Nom
 								break;
 							}
 						}
-						for (auto& b : F)
-						{
-							for (auto& i : b)
-							{
-								builder.SetInsertPoint(&i);
-								//builder.CreateCall(dbgfun, { GetLLVMPointer(&strlist->front()), ConstantInt::get(inttype, 0), MakeInt<decltype(NomDebugPrintLevel)>(2) });
-								builder.CreateCall(dbgfun, { MakeInt<size_t>(funnameid), MakeInt<size_t>(0), MakeInt<NomDebugPrintValueType>(NomDebugPrintValueType::Nothing), MakeInt<int64_t>(0), MakeInt<decltype(NomDebugPrintLevel)>(2) });
-								break;
-							}
-							break;
-						}
+
+						llvm::BasicBlock* firstBlock = &F.getEntryBlock();
+						builder.SetInsertPoint(firstBlock, firstBlock->getFirstInsertionPt());
+						builder.CreateCall(dbgfun, { MakeInt<size_t>(funnameid), MakeInt<size_t>(0), MakeInt<NomDebugPrintValueType>(NomDebugPrintValueType::Nothing), MakeInt<int64_t>(0), MakeInt<decltype(NomDebugPrintLevel)>(2) });
 
 						size_t pos = 1;
 						for (auto& b : F)
@@ -426,7 +409,6 @@ namespace Nom
 				}
 				if (NomVerbose)
 				{
-					llvm::raw_os_ostream out(std::cout);
 					M.print(out, nullptr);
 					out.flush();
 					std::cout.flush();
@@ -453,7 +435,7 @@ namespace Nom
 		}
 		void* GetVoidObject()
 		{
-			static void* voidObj = (void*)((intptr_t)NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ"));
+			static void* voidObj = reinterpret_cast<void*>(NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ"));
 			return voidObj;
 		}
 }

@@ -9,12 +9,12 @@ namespace Nom
 		}
 		NomNameRepository& NomNameRepository::Instance()
 		{
-			static NomNameRepository nnr;
+			[[clang::no_destroy]] static NomNameRepository nnr;
 			return nnr;
 		}
 		NomNameRepository& NomNameRepository::ProfilingInstance()
 		{
-			static NomNameRepository nnr;
+			[[clang::no_destroy]] static NomNameRepository nnr;
 			return nnr;
 		}
 		NomNameRepository::~NomNameRepository()
@@ -32,7 +32,7 @@ namespace Nom
 			backlink.push_back(&(names.find(str)->first));
 			return nextid;
 		}
-		size_t NomNameRepository::GetDispatchID(int32_t typeArgCount, int32_t argCount)
+		size_t NomNameRepository::GetDispatchID(size_t typeArgCount, size_t argCount)
 		{
 			std::string name = "@@" + std::to_string(typeArgCount) + "^" + std::to_string(argCount) + "&";
 			return GetNameID(name);

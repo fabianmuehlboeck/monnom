@@ -32,13 +32,13 @@ namespace Nom
 			return lhtype;
 		}
 
-		llvm::Value* LambdaHeader::GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* thisObj, int32_t argindex, const NomLambda* lambda)
+		llvm::Value* LambdaHeader::GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* thisObj, size_t argindex, [[maybe_unused]] const NomLambda* lambda)
 		{
 			return PWLambda(thisObj).ReadTypeArgument(builder, argindex);
 		}
 		llvm::Value* LambdaHeader::GeneratePointerToTypeArguments(NomBuilder& builder, llvm::Value* thisObj, const NomLambda *lambda)
 		{
-			return PWLambdaPrecise(thisObj, lambda).PointerToTypeArgs(builder);
+			return PWLambdaPrecise(thisObj, lambda).PointerToTypeArguments(builder);
 		}
 		void LambdaHeader::GenerateConstructorCode(NomBuilder& builder, llvm::ArrayRef<llvm::Value*> typeArguments, llvm::ArrayRef<llvm::Value*> arguments, llvm::Constant* descriptorRef, const NomLambda *lambda)
 		{
@@ -49,13 +49,13 @@ namespace Nom
 
 			PWLambda newlambda = newmem;
 
-			int fieldIndex=0;
+			size_t fieldIndex=0;
 			for (auto arg : arguments)
 			{
 				newlambda.WriteField(builder, fieldIndex, EnsurePacked(builder, arg));
 				fieldIndex++;
 			}
-			int targIndex = 0;
+			size_t targIndex = 0;
 			if (NomLambdaOptimizationLevel > 0)
 			{
 				RefValueHeader::GenerateWriteRawInvoke(builder, newmem, ConstantPointerNull::get(POINTERTYPE));

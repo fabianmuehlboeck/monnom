@@ -1,8 +1,16 @@
 #pragma once
 #include "PWrapper.h"
 #include "NomBuilder.h"
-#include "CompileHelpers.h"
 #include "PWInt.h"
+#include "CompileHelpers.h"
+PUSHDIAGSUPPRESSION
+#include "llvm/IR/Constants.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/AtomicOrdering.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {
@@ -15,33 +23,37 @@ namespace Nom
 			{
 				return NLLVMPointer(T::GetLLVMType());
 			}
-			PWPtr(llvm::Value* wrapped) : PWrapper(wrapped)
+			static llvm::Type* GetWrappedLLVMType()
+			{
+				return POINTERTYPE;
+			}
+			PWPtr(llvm::Value* _wrapped) : PWrapper(_wrapped)
 			{
 
 			}
-			T Load(NomBuilder& builder, llvm::Twine name = "lv", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered)
+			T Load(NomBuilder& builder, llvm::Twine name = "lv", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered) const
 			{
-				return T(MakeLoad(builder, T::GetLLVMType(), wrapped, ordering));
+				return T(MakeLoad(builder, T::GetWrappedLLVMType(), wrapped, name, ordering));
 			}
-			T InvariantLoad(NomBuilder& builder, llvm::Twine name = "lv", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered)
+			T InvariantLoad(NomBuilder& builder, llvm::Twine name = "lv", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered) const
 			{
-				return T(MakeInvariantLoad(builder, T::GetLLVMType(), wrapped, ordering));
+				return T(MakeInvariantLoad(builder, T::GetWrappedLLVMType(), wrapped, name, ordering));
 			}
-			void Store(NomBuilder& builder, T value, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered)
+			void Store(NomBuilder& builder, T value, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered) const
 			{
 				MakeStore(builder, value, wrapped, ordering);
 			}
-			void InvariantStore(NomBuilder& builder, T value, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered)
+			void InvariantStore(NomBuilder& builder, T value, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered) const
 			{
 				MakeInvariantStore(builder, value, wrapped, ordering);
 			}
-			PWPtr<T> Get(NomBuilder& builder, PWInt32 index, llvm::Twine name = "succ")
+			PWPtr<T> Get(NomBuilder& builder, PWInt32 index, llvm::Twine name = "succ") const
 			{
-				return PWPtr<T>(builder->CreateGEP(T::GetLLVMType(), wrapped, { index }, name));
+				return PWPtr<T>(builder->CreateGEP(T::GetWrappedLLVMType(), wrapped, { index }, name));
 			}
-			PWPtr<T> GetNeg(NomBuilder& builder, PWInt32 index, llvm::Twine name = "prec")
+			PWPtr<T> GetNeg(NomBuilder& builder, PWInt32 index, llvm::Twine name = "prec") const
 			{
-				return PWPtr<T>(builder->CreateGEP(T::GetLLVMType(), wrapped, { builder->CreateNeg(index, "negIndex") }, name));
+				return PWPtr<T>(builder->CreateGEP(T::GetWrappedLLVMType(), wrapped, { builder->CreateNeg(index, "negIndex") }, name));
 			}
 		};
 	}

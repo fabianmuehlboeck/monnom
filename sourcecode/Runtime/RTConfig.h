@@ -18,7 +18,7 @@ extern std::string NomPath;
 extern std::vector<std::string> NomDebugFunctions;
 extern std::vector<std::string> NomApplicationArgs;
 extern bool NomRuntimeStopAtEnd;
-extern int NomWarmupRuns;
+extern unsigned int NomWarmupRuns;
 extern bool RTConfig_AdditionalOptPasses;
 extern std::ostream * RT_debugout;
 

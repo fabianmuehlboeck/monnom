@@ -1,7 +1,9 @@
 #pragma once
 #include "Defs.h"
 #include "AvailableExternally.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Constants.h"
+POPDIAGSUPPRESSION
 #include "NomMemberContext.h"
 #include "NomField.h"
 #include "NomCallable.h"
@@ -35,7 +37,7 @@ namespace Nom
 			// Inherited via NomCallable
 			virtual const llvm::ArrayRef<NomTypeParameterRef> GetDirectTypeParameters() const override;
 			virtual size_t GetDirectTypeParametersCount() const override;
-			virtual NomTypeParameterRef GetLocalTypeParameter(int index) const override;
+			virtual NomTypeParameterRef GetLocalTypeParameter(size_t index) const override;
 			virtual const NomMemberContext* GetParent() const override;
 			virtual const std::string& GetName() const override;
 			virtual llvm::ArrayRef<NomTypeParameterRef> GetArgumentTypeParameters() const override;

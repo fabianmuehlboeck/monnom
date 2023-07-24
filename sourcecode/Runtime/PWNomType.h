@@ -12,11 +12,11 @@ namespace Nom
 		class PWNomType : public PWrapper
 		{
 		public:
-			PWNomType(llvm::Value* wrapped) : PWrapper(wrapped)
+			PWNomType(llvm::Value* _wrapped) : PWrapper(_wrapped)
 			{
 
 			}
-			PWNomType(NomType* tp) : PWrapper(llvm::ConstantExpr::getIntToPtr(llvm::ConstantInt::get(numtype(intptr_t), (intptr_t)tp), llvm::PointerType::get(LLVMCONTEXT, 0)))
+			PWNomType(NomType* tp) : PWrapper(llvm::ConstantExpr::getIntToPtr(llvm::ConstantInt::get(numtype(intptr_t), reinterpret_cast<uintptr_t>(tp)), llvm::PointerType::get(LLVMCONTEXT, 0)))
 			{
 
 			}

@@ -22,15 +22,15 @@ namespace Nom
 		}
 		void* NomString::GetStringObject() const
 		{
-			void* ret = (void*)(((char**)gcalloc(ObjectHeader::SizeOf()+sizeof(char *))) + 1);
-			GetWriteVTableFunction()(ret, *((void**)(NomJIT::Instance().lookup("NOM_CDREF_String_0")->getValue())));
+			void* ret = reinterpret_cast<void*>((reinterpret_cast<char**>(gcalloc(ObjectHeader::SizeOf()+sizeof(char *)))) + 1);
+			GetWriteVTableFunction()(ret, *(reinterpret_cast<void**>(NomJIT::Instance().lookup("NOM_CDREF_String_0")->getValue())));
 			GetWriteFieldFunction()(ret, 0, const_cast<NomString*>(this));
 			return ret;
 		}
 		
 		const std::string *getStringID(NomStringRef str)
 		{
-			static std::unordered_map<NomStringRef, std::string, NomStringHash, NomStringEquality> stringKeys;
+			[[clang::no_destroy]] static std::unordered_map<NomStringRef, std::string, NomStringHash, NomStringEquality> stringKeys;
 			auto result = stringKeys.find(str);
 			if (result != stringKeys.end())
 			{
@@ -42,13 +42,12 @@ namespace Nom
 
 		llvm::Constant* NomString::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			return ObjectHeader::GetGlobal(mod, linkage, llvm::Twine(getStringID(this)->data()), NomStringClass::GetInstance()->GetLLVMElement(mod), llvm::ConstantArray::get(arrtype(REFTYPE, 1), { llvm::ConstantExpr::getIntToPtr(MakeInt((const intptr_t)this), REFTYPE) }));
+			return ObjectHeader::GetGlobal(mod, linkage, llvm::Twine(getStringID(this)->data()), NomStringClass::GetInstance()->GetLLVMElement(mod), llvm::ConstantArray::get(arrtype(REFTYPE, 1), { llvm::ConstantExpr::getIntToPtr(MakeInt(reinterpret_cast<const intptr_t>(this)), REFTYPE) }));
 		}
 
 		llvm::Constant* NomString::findLLVMElement(llvm::Module& mod) const
 		{
 			return ObjectHeader::FindGlobal(mod, *getStringID(this));
-			//return mod.getGlobalVariable(getStringID(this)->data());
 		}
 	}
 }

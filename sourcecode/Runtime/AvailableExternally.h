@@ -1,6 +1,8 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalValue.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {
@@ -13,8 +15,10 @@ namespace Nom
 			mutable llvm::Module *mainModule = nullptr;
 		public:
 			AvailableExternally() {}
-			~AvailableExternally() {}
-			virtual llvm::Type* GetLLVMElementType(llvm::Module& mod) const;
+			virtual ~AvailableExternally() {}
+			AvailableExternally(const AvailableExternally&) = default;
+			AvailableExternally(AvailableExternally&&) = default;
+
 			T *GetLLVMElement(llvm::Module &mod) const
 			{
 				T *ret = this->findLLVMElement(mod);

@@ -2,7 +2,6 @@
 
 #include "Defs.h"
 #include "NomTypeDecls.h"
-#include "CompileEnv.h"
 #include "NomBuilder.h"
 #include "NomValue.h"
 
@@ -10,6 +9,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
+		class CompileEnv;
 		enum class TypeFlags : unsigned char { Reference = 0, FloatZero = 1, Float = 2, Integer = 3 };
 
 		llvm::Value* EnsureUnpackedInt(NomBuilder &builder, CompileEnv* env, NomValue& val);

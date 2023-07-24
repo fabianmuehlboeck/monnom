@@ -3,7 +3,9 @@
 #include <unordered_map>
 #include "NomAlloc.h"
 #include "NomNameRepository.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/DynamicLibrary.h"
+POPDIAGSUPPRESSION
 #include <vector>
 
 #define RBUFSIZE 500
@@ -44,20 +46,20 @@ static size_t dynamicMethodCalls = 0;
 
 static size_t dynamicFieldLookups = 0;
 
-const std::string** debugFunNames;
-size_t* profileCounterArray;
-vector<size_t>* detailedProfileCounterArray;
-TIMERTYPE lasttimestamp;
+static const std::string** debugFunNames;
+static size_t* profileCounterArray;
+static vector<size_t>* detailedProfileCounterArray;
+static TIMERTYPE lasttimestamp;
 #ifdef _WIN32
-TIMETYPE avgtime;
+static TIMETYPE avgtime;
 #endif
-int64_t timestampcount = 0;
+static int64_t timestampcount = 0;
 
-uint64_t general_allocations = 0;
-uint64_t object_allocations = 0;
-uint64_t closure_allocations = 0;
-uint64_t record_allocations = 0;
-uint64_t classtype_allocations = 0;
+static uint64_t general_allocations = 0;
+static uint64_t object_allocations = 0;
+static uint64_t closure_allocations = 0;
+static uint64_t record_allocations = 0;
+static uint64_t classtype_allocations = 0;
 
 DLLEXPORT void RT_NOM_STATS_IncCasts()
 {
@@ -158,7 +160,7 @@ DLLEXPORT void RT_NOM_STATS_IncProfileCounter(size_t funnameid)
 }
 
 #ifdef _WIN32
-double find_timer_frequency()
+static double find_timer_frequency()
 {
 	static double timer_frequency;
 	static bool once = true;
@@ -170,7 +172,7 @@ double find_timer_frequency()
 		{
 			throw new std::exception();
 		}
-		timer_frequency = (double)(ttf.QuadPart);
+		timer_frequency = static_cast<double>(ttf.QuadPart);
 	}
 	return timer_frequency;
 }
@@ -207,16 +209,11 @@ DLLEXPORT void RT_NOM_STATS_IncCastTime(TIMERTYPE origTimerVal)
 	LARGE_INTEGER current;
 	if (QueryPerformanceCounter(&current))
 	{
-		timeUnitsInCasts += current.QuadPart - origTimerVal.QuadPart;
-		//double floatdiff = difference.QuadPart / Nom::Runtime::find_timer_frequency();
-		//printf("%f Seconds\n", floatdiff);
-		//return (void*)((intptr_t)(Nom::Runtime::NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
+		timeUnitsInCasts += static_cast<size_t>(current.QuadPart - origTimerVal.QuadPart);
 	}
 	else
 	{
 		std::cout << "ERROR obtaining performance counter value";
-		//throw new std::exception();
-		//ThrowException(&stackframe, "Could not retrieve thread timings!");
 	}
 #else
 #ifdef CLOCK_THREAD_CPUTIME_ID
@@ -298,8 +295,8 @@ public:
 	double Seconds;
 };
 
-std::vector<ProgramPos> slowPositions;
-double slowestSoFar = -1;
+[[clang::no_destroy]] static std::vector<ProgramPos> slowPositions;
+static double slowestSoFar = -1;
 
 DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebugPrintValueType valueType, int64_t value, decltype(NomDebugPrintLevel) level)
 {
@@ -313,7 +310,7 @@ DLLEXPORT void RT_NOM_STATS_DebugLine(size_t funnameid, size_t linenum, NomDebug
 			TIMETYPE difference = currentTime.QuadPart - lasttimestamp.QuadPart;
 			if (difference > avgtime * 2 && timestampcount > 10)
 			{
-				double seconds = ((double)(difference - avgtime)) / find_timer_frequency();
+				double seconds = (static_cast<double>(difference - avgtime)) / find_timer_frequency();
 				if (seconds > slowestSoFar || slowPositions.size() < 100)
 				{
 					auto iter = slowPositions.begin();
@@ -497,10 +494,10 @@ namespace Nom
 	{
 		void InitializeProfileCounter()
 		{
-			llvm::sys::DynamicLibrary::AddSymbol("RT_NOM_STATS_DebugLine", (void*)&RT_NOM_STATS_DebugLine);
+			llvm::sys::DynamicLibrary::AddSymbol("RT_NOM_STATS_DebugLine", reinterpret_cast<void*>(& RT_NOM_STATS_DebugLine));
 			auto maxid = NomNameRepository::ProfilingInstance().GetMaxID();
-			debugFunNames = (const std::string**)nmalloc(sizeof(std::string*) * (maxid + 1));
-			profileCounterArray = (size_t*)nmalloc(sizeof(size_t) * (maxid + 1));
+			debugFunNames = makenmalloc(const std::string*, (maxid + 1));
+			profileCounterArray = makenmalloc(size_t, (maxid + 1));
 			if (NomStatsLevel >= 3)
 			{
 				detailedProfileCounterArray = new vector<size_t>[maxid + 1];
@@ -551,12 +548,12 @@ namespace Nom
 			outstream << "\n#Dynamic Field Lookups: " << std::dec << dynamicFieldLookups;
 
 #ifdef _WIN32
-			double castSeconds = timeUnitsInCasts / find_timer_frequency();
+			double castSeconds = static_cast<double>(timeUnitsInCasts) / find_timer_frequency();
 #else
 #ifdef CLOCK_THREAD_CPUTIME_ID
-			double castSeconds = ((double)timeUnitsInCasts) / 10000000.0;
+			double castSeconds = static_cast<double>(timeUnitsInCasts) / 10000000.0;
 #else
-			double castSeconds = ((double)timeUnitsInCasts) / CLOCKS_PER_SEC;
+			double castSeconds = static_cast<double>(timeUnitsInCasts) / CLOCKS_PER_SEC;
 #endif
 #endif
 			outstream << "\nTime spent in casts: " << std::dec << castSeconds << " Seconds";
@@ -590,7 +587,7 @@ namespace Nom
 						vector<size_t>& dpca = detailedProfileCounterArray[i];
 						if (dpca.size() > 0)
 						{
-							for (int j = 0; j < dpca.size(); j++)
+							for (std::vector<size_t>::size_type j = 0; j < dpca.size(); j++)
 							{
 								if (dpca[j] > 0)
 								{

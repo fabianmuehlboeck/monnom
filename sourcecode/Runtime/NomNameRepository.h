@@ -18,7 +18,7 @@ namespace Nom
 			static NomNameRepository& ProfilingInstance();
 			~NomNameRepository();
 			size_t GetNameID(const std::string& str);
-			size_t GetDispatchID(int32_t typeArgCount, int32_t argCount);
+			size_t GetDispatchID(size_t typeArgCount, size_t argCount);
 			const std::string* GetNameFromID(size_t id);
 			size_t GetMaxID();
 		};

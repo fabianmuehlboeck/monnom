@@ -8,9 +8,9 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		IComparableInterface::IComparableInterface() : NomInterface("IComparable_1"), NomInterfaceInternal(new NomString("IComparable_1"))
+		IComparableInterface::IComparableInterface() : NomInterface(), NomInterfaceInternal(new NomString("IComparable_1"))
 		{
-			NomTypeParameterRef* ntparr = (NomTypeParameterRef*)nmalloc(sizeof(NomTypeParameterRef));
+			NomTypeParameterRef* ntparr = makenmalloc(NomTypeParameterRef, 1);
 			ntparr[0] = new NomTypeParameterInternal(this, 0, NomType::AnythingRef, NomType::NothingRef);
 			SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef>(ntparr, 1));
 			SetSuperInterfaces();
@@ -24,7 +24,7 @@ namespace Nom
 
 		IComparableInterface* IComparableInterface::GetInstance()
 		{
-			static IComparableInterface ici;
+			[[clang::no_destroy]] static IComparableInterface ici;
 			static bool once = true;
 			if (once)
 			{
@@ -33,13 +33,12 @@ namespace Nom
 				meth->SetDirectTypeParameters();
 				meth->SetReturnType(NomIntClass::GetInstance()->GetType());
 
-				NomTypeRef* argarr = (NomTypeRef*)nmalloc(sizeof(NomTypeRef));
+				NomTypeRef* argarr = makenmalloc(NomTypeRef, 1);
 				argarr[0] = ici.GetTypeParameter(0)->GetVariable();
 
 				meth->SetArgumentTypes(llvm::ArrayRef<NomTypeRef>(argarr, 1));
 
 				ici.AddMethod(meth);
-				//ici.PreprocessInheritance();
 			}
 			return &ici;
 		}

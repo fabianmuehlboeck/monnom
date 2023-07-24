@@ -17,3 +17,6 @@ namespace Nom
 		};
 	}
 }
+extern "C" DLLEXPORT void* LIB_NOM_Timer_PrintDifference_1(void* timer) noexcept(false);
+extern "C" DLLEXPORT void* LIB_NOM_Timer_Constructor_0(void* timer) noexcept(false);
+

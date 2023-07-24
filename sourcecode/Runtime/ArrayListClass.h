@@ -33,3 +33,15 @@ namespace Nom
 		};
 	}
 }
+
+extern "C" DLLEXPORT void* LIB_NOM_ArrayList_GetEnumerator_0(void* arrlist);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayListEnumerator_MoveNext_0(void* iter) noexcept(false);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayListEnumerator_Current_0(void* iter) noexcept(false);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Constructor_0(void* arraylist, void* targ);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Length_0(void* arraylist);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Add_1(void* arraylist, void* elem);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Contains_1(void* arraylist, void* elem);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Get_1(void* arraylist, void* index) noexcept(false);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Set_2(void* arraylist, void* index, void* value) noexcept(false);
+extern "C" DLLEXPORT void* LIB_NOM_ArrayListEnumerator_Constructor_0(void* ArrayListEnumerator, void* targ, void* arraylist);
+

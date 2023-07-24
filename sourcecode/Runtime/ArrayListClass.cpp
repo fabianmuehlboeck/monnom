@@ -31,7 +31,7 @@ typedef BoehmVector<void*> ReferenceList;
 
 extern "C" DLLEXPORT void* LIB_NOM_ArrayList_GetEnumerator_0(void* arrlist)
 {
-	static EnumeratorConstructorType enumeratorConstructor = (EnumeratorConstructorType)GetGeneralLLVMFunction("RT_NOM_CCC_ArrayListEnumerator_1$$$CONSTRUCT$$$0$$CArrayList_1$VAR$$");
+	static EnumeratorConstructorType enumeratorConstructor = reinterpret_cast<EnumeratorConstructorType>(GetGeneralLLVMFunction("RT_NOM_CCC_ArrayListEnumerator_1$$$CONSTRUCT$$$0$$CArrayList_1$VAR$$"));
 	void* typeArg = GetReadTypeArgFunction()(arrlist, 0);
 	return enumeratorConstructor(typeArg, arrlist);
 }
@@ -41,29 +41,21 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayListEnumerator_MoveNext_0(void* iter) no
 	static auto writeField = GetWriteFieldFunction();
 	static auto readField = GetReadFieldFunction();
 	void* arraylist = readField(iter, 0);
-	size_t version = (size_t)readField(iter, 1);
-	size_t listversion = (size_t)readField(arraylist, 0);
+	size_t version = reinterpret_cast<size_t>(readField(iter, 1));
+	size_t listversion = reinterpret_cast<size_t>(readField(arraylist, 0));
 	if (version != listversion)
 	{
 		throw new std::exception();
 	}
-	intptr_t* data = (intptr_t*)readField(iter, 3);
-	size_t pos = (size_t)readField(iter, 4);
-	size_t size = (size_t)readField(iter, 5);
+	intptr_t* data = static_cast<intptr_t*>(readField(iter, 3));
+	size_t pos = reinterpret_cast<size_t>(readField(iter, 4));
+	size_t size = reinterpret_cast<size_t>(readField(iter, 5));
 	if (pos < size)
 	{
-		writeField(iter, 4, (void*)(pos + 1));
-		writeField(iter, 2, (void*)data[pos]);
+		writeField(iter, 4, reinterpret_cast<void*>(pos + 1));
+		writeField(iter, 2, reinterpret_cast<void*>(data[pos]));
 		return GetBooleanTrue();
 	}
-	//ReferenceList::iterator* current = (ReferenceList::iterator*)(((char*)arraylist) - (sizeof(intptr_t) * 3) - sizeof(ReferenceList::iterator));
-	//ReferenceList::iterator* end = (ReferenceList::iterator*)(((char*)arraylist) - (sizeof(intptr_t) * 3) - (sizeof(ReferenceList::iterator) * 2));
-	//if (*current != *end)
-	//{
-	//	writeField(iter, 2, *(*(current)));
-	//	(*current)++;
-	//	return GetBooleanTrue();
-	//}
 	writeField(iter, 2, nullptr);
 	return GetBooleanFalse();
 }
@@ -72,8 +64,8 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayListEnumerator_Current_0(void* iter) noe
 {
 	static auto readField = GetReadFieldFunction();
 	void* arraylist = readField(iter, 0);
-	size_t version = (size_t)readField(iter, 1);
-	size_t listversion = (size_t)readField(arraylist, 0);
+	size_t version = reinterpret_cast<size_t>(readField(iter, 1));
+	size_t listversion = reinterpret_cast<size_t>(readField(arraylist, 0));
 	if (version != listversion)
 	{
 		throw new std::exception();
@@ -92,8 +84,8 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Constructor_0(void* arraylist, void
 	static auto writeField = GetWriteFieldFunction();
 	static auto fieldAddr = GetFieldAddrFunction();
 	writeTypeArg(arraylist, 0, targ);
-	writeField(arraylist, 0, (void*)1);
-	void* valueptr = (void*)(fieldAddr(arraylist, 1));
+	writeField(arraylist, 0, reinterpret_cast<void*>(1));
+	void* valueptr = reinterpret_cast<void*>(fieldAddr(arraylist, 1));
 	new(valueptr) ReferenceList();
 	return arraylist;
 }
@@ -101,8 +93,8 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Constructor_0(void* arraylist, void
 extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Length_0(void* arraylist)
 {
 	static auto fieldAddr = GetFieldAddrFunction();
-	ReferenceList* lst = (ReferenceList*)(fieldAddr(arraylist, 1));
-	return (void*)((intptr_t)lst->size());
+	ReferenceList* lst = reinterpret_cast<ReferenceList*>(fieldAddr(arraylist, 1));
+	return reinterpret_cast<void*>(static_cast<intptr_t>(lst->size()));
 }
 
 extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Add_1(void* arraylist, void* elem)
@@ -110,9 +102,9 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Add_1(void* arraylist, void* elem)
 	static auto writeField = GetWriteFieldFunction();
 	static auto readField = GetReadFieldFunction();
 	static auto fieldAddr = GetFieldAddrFunction();
-	ReferenceList* lst = (ReferenceList*)(fieldAddr(arraylist, 1));
+	ReferenceList* lst = reinterpret_cast<ReferenceList*>(fieldAddr(arraylist, 1));
 	lst->push_back(elem);
-	writeField(arraylist, 0, (void*)(((size_t)readField(arraylist, 0)) + 1));
+	writeField(arraylist, 0, reinterpret_cast<void*>((reinterpret_cast<size_t>(readField(arraylist, 0)) + 1)));
 	return GetVoidObj();
 }
 
@@ -120,13 +112,13 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Contains_1(void* arraylist, void* e
 {
 	static auto readField = GetReadFieldFunction();
 	static auto fieldAddr = GetFieldAddrFunction();
-	ReferenceList* lst = (ReferenceList*)(fieldAddr(arraylist, 1));
+	ReferenceList* lst = reinterpret_cast<ReferenceList*>(fieldAddr(arraylist, 1));
 	auto iter = lst->begin();
 	auto end = lst->end();
 	while (iter != end)
 	{
 		void* val = *iter;
-		if (((intptr_t)val) == ((intptr_t)elem))
+		if ((reinterpret_cast<intptr_t>(val)) == (reinterpret_cast<intptr_t>(elem)))
 		{
 			return GetBooleanTrue();
 		}
@@ -139,9 +131,9 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Get_1(void* arraylist, void* index)
 {
 	static auto readField = GetReadFieldFunction();
 	static auto fieldAddr = GetFieldAddrFunction();
-	ReferenceList* lst = (ReferenceList*)(fieldAddr(arraylist, 1));
-	uint64_t indexval = (uint64_t)index;
-	if (indexval < 0 || indexval >= lst->size())
+	ReferenceList* lst = reinterpret_cast<ReferenceList*>(fieldAddr(arraylist, 1));
+	uint64_t indexval = reinterpret_cast<uint64_t>(index);
+	if (indexval >= lst->size())
 	{
 		throw new std::exception();
 	}
@@ -152,9 +144,9 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Set_2(void* arraylist, void* index,
 {
 	static auto readField = GetReadFieldFunction();
 	static auto fieldAddr = GetFieldAddrFunction();
-	ReferenceList* lst = (ReferenceList*)(fieldAddr(arraylist, 1));
-	uint64_t indexval = (uint64_t)index;
-	if (indexval < 0 || indexval >= lst->size())
+	ReferenceList* lst = reinterpret_cast<ReferenceList*>(fieldAddr(arraylist, 1));
+	uint64_t indexval = reinterpret_cast<uint64_t>(index);
+	if (indexval >= lst->size())
 	{
 		throw new std::exception();
 	}
@@ -171,14 +163,10 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayListEnumerator_Constructor_0(void* Array
 	writeField(ArrayListEnumerator, 0, arraylist);
 	writeField(ArrayListEnumerator, 1, readField(arraylist, 0));
 	writeField(ArrayListEnumerator, 2, nullptr);
-	//ReferenceList::iterator* valueptr = (ReferenceList::iterator*)(((char*)arraylist) - (sizeof(intptr_t) * 3) - sizeof(ReferenceList::iterator));
-	ReferenceList* lst = (ReferenceList*)(fieldAddr(arraylist, 1));
+	ReferenceList* lst = reinterpret_cast<ReferenceList*>(fieldAddr(arraylist, 1));
 	writeField(ArrayListEnumerator, 3, lst->data());
-	writeField(ArrayListEnumerator, 4, (void*)0);
-	writeField(ArrayListEnumerator, 5, (void*)(lst->size()));
-	//*valueptr = std::move(lst->begin());
-	//valueptr = (ReferenceList::iterator*)(((char*)arraylist) - (sizeof(intptr_t) * 3) - (sizeof(ReferenceList::iterator) * 2));
-	//*valueptr = std::move(lst->end());
+	writeField(ArrayListEnumerator, 4, reinterpret_cast<void*>(0));
+	writeField(ArrayListEnumerator, 5, reinterpret_cast<void*>(lst->size()));
 	return ArrayListEnumerator;
 }
 
@@ -186,9 +174,9 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		ArrayListClass::ArrayListClass() : NomInterface("ArrayList_1"), NomClassInternal(new NomString("ArrayList_1"))
+		ArrayListClass::ArrayListClass() : NomInterface(), NomClassInternal(new NomString("ArrayList_1"))
 		{
-			NomTypeParameterRef* ntparr = (NomTypeParameterRef*)nmalloc(sizeof(NomTypeParameterRef));
+			NomTypeParameterRef* ntparr = makenmalloc(NomTypeParameterRef,1);
 			ntparr[0] = new NomTypeParameterInternal(this, 0, NomType::AnythingRef, NomType::NothingRef);
 			SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef>(ntparr, 1));
 			this->SetSuperClass();
@@ -197,10 +185,10 @@ namespace Nom
 			NomTypeRef* ownargarr = new NomTypeRef[1]{ ownarg };
 			NomTypeRef* intargarr = new NomTypeRef[2]{ NomIntClass::GetInstance()->GetType(), ownarg  };
 
-			auto ienumerableInst = new NomInstantiationRef<NomInterface>(IEnumerableInterface::GetInstance(), TypeList(ownargarr,(size_t)1));
-			auto ienumeratorType = IEnumeratorInterface::GetInstance()->GetType(TypeList(ownargarr, (size_t)1));
+			auto ienumerableInst = new NomInstantiationRef<NomInterface>(IEnumerableInterface::GetInstance(), TypeList(ownargarr,static_cast<size_t>(1)));
+			auto ienumeratorType = IEnumeratorInterface::GetInstance()->GetType(TypeList(ownargarr, static_cast<size_t>(1)));
 
-			this->SetSuperInterfaces(ArrayRef<NomInstantiationRef<NomInterface>>(ienumerableInst, 1));
+			this->SetSuperInterfaces(ArrayRef<NomInstantiationRef<NomInterface> >(ienumerableInst, 1));
 
 			NomMethodInternal* getenum = new NomMethodInternal(this, "GetEnumerator", "LIB_NOM_ArrayList_GetEnumerator_0", true);
 			getenum->SetDirectTypeParameters();
@@ -209,7 +197,7 @@ namespace Nom
 
 			this->AddMethod(getenum);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_GetEnumerator_0", (void*)&LIB_NOM_ArrayList_GetEnumerator_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_GetEnumerator_0", reinterpret_cast<void*>(&LIB_NOM_ArrayList_GetEnumerator_0));
 
 			NomMethodInternal* add = new NomMethodInternal(this, "Add", "LIB_NOM_ArrayList_Add_1", true);
 			add->SetDirectTypeParameters();
@@ -218,7 +206,7 @@ namespace Nom
 
 			this->AddMethod(add);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Add_1", (void*)&LIB_NOM_ArrayList_Add_1);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Add_1", reinterpret_cast<void*>(&LIB_NOM_ArrayList_Add_1));
 
 			NomMethodInternal* contains = new NomMethodInternal(this, "Contains", "LIB_NOM_ArrayList_Contains_1", true);
 			contains->SetDirectTypeParameters();
@@ -227,7 +215,7 @@ namespace Nom
 
 			this->AddMethod(contains);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Contains_1", (void*)&LIB_NOM_ArrayList_Contains_1);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Contains_1", reinterpret_cast<void*>(&LIB_NOM_ArrayList_Contains_1));
 
 			NomMethodInternal* set = new NomMethodInternal(this, "Set", "LIB_NOM_ArrayList_Set_2", true);
 			set->SetDirectTypeParameters();
@@ -236,7 +224,7 @@ namespace Nom
 
 			this->AddMethod(set);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Set_2", (void*)&LIB_NOM_ArrayList_Set_2);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Set_2", reinterpret_cast<void*>(&LIB_NOM_ArrayList_Set_2));
 
 			NomMethodInternal* get = new NomMethodInternal(this, "Get", "LIB_NOM_ArrayList_Get_1", true);
 			get->SetDirectTypeParameters();
@@ -245,7 +233,7 @@ namespace Nom
 
 			this->AddMethod(get);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Get_1", (void*)&LIB_NOM_ArrayList_Get_1);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Get_1", reinterpret_cast<void*>(&LIB_NOM_ArrayList_Get_1));
 
 			NomMethodInternal* len = new NomMethodInternal(this, "Length", "LIB_NOM_ArrayList_Length_0", true);
 			len->SetDirectTypeParameters();
@@ -254,7 +242,7 @@ namespace Nom
 
 			this->AddMethod(len);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Length_0", (void*)&LIB_NOM_ArrayList_Length_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Length_0", reinterpret_cast<void*>(&LIB_NOM_ArrayList_Length_0));
 
 			NomConstructorInternal* constructor = new NomConstructorInternal("LIB_NOM_ArrayList_Constructor_0", this);
 			constructor->SetDirectTypeParameters();
@@ -262,11 +250,11 @@ namespace Nom
 
 			this->AddConstructor(constructor);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Constructor_0", (void*)&LIB_NOM_ArrayList_Constructor_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayList_Constructor_0", reinterpret_cast<void*>(&LIB_NOM_ArrayList_Constructor_0));
 		}
 
 		ArrayListClass* ArrayListClass::GetInstance() {
-			static ArrayListClass nsc;
+			[[clang::no_destroy]] static ArrayListClass nsc;
 			static bool once = true;
 			if (once)
 			{
@@ -274,7 +262,6 @@ namespace Nom
 				NomObjectClass::GetInstance();
 				NomIntClass::GetInstance();
 				NomVoidClass::GetInstance();
-				//nsc.PreprocessInheritance();
 			}
 			return &nsc;
 		}
@@ -290,9 +277,9 @@ namespace Nom
 			return fields;
 		}
 
-		ArrayListEnumeratorClass::ArrayListEnumeratorClass() : NomInterface("ArrayListEnumerator_1"), NomClassInternal(new NomString("ArrayListEnumerator_1"))
+		ArrayListEnumeratorClass::ArrayListEnumeratorClass() : NomInterface(), NomClassInternal(new NomString("ArrayListEnumerator_1"))
 		{
-			NomTypeParameterRef* ntparr = (NomTypeParameterRef*)nmalloc(sizeof(NomTypeParameterRef));
+			NomTypeParameterRef* ntparr = makenmalloc(NomTypeParameterRef,1);
 			ntparr[0] = new NomTypeParameterInternal(this, 0, NomType::AnythingRef, NomType::NothingRef);
 			SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef>(ntparr, 1));
 			this->SetSuperClass();
@@ -301,7 +288,6 @@ namespace Nom
 			NomTypeRef* ownargarr = new NomTypeRef[1]{ ownarg };
 
 			auto ienumeratorInst = new NomInstantiationRef<NomInterface>(IEnumeratorInterface::GetInstance(), TypeList(ownargarr,1));
-			//auto ienumeratorType = IEnumeratorInterface::GetInstance()->GetType({ ownarg });
 
 			this->SetSuperInterfaces(ArrayRef<NomInstantiationRef<NomInterface>>(ienumeratorInst, 1));
 
@@ -311,7 +297,7 @@ namespace Nom
 			movenext->SetReturnType(NomBoolClass::GetInstance()->GetType());
 
 			this->AddMethod(movenext);
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayListEnumerator_MoveNext_0", (void*)&LIB_NOM_ArrayListEnumerator_MoveNext_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayListEnumerator_MoveNext_0", reinterpret_cast<void*>(&LIB_NOM_ArrayListEnumerator_MoveNext_0));
 
 			NomMethodInternal* current = new NomMethodInternal(this, "Current", "LIB_NOM_ArrayListEnumerator_Current_0", true);
 			current->SetDirectTypeParameters();
@@ -319,7 +305,7 @@ namespace Nom
 			current->SetReturnType(ownarg);
 			this->AddMethod(current);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayListEnumerator_Current_0", (void*)&LIB_NOM_ArrayListEnumerator_Current_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayListEnumerator_Current_0", reinterpret_cast<void*>(&LIB_NOM_ArrayListEnumerator_Current_0));
 
 			NomTypeRef* arrlisttypelist = new NomTypeRef[1]{ArrayListClass::GetInstance()->GetType(TypeList(ownargarr,1))};
 
@@ -329,11 +315,11 @@ namespace Nom
 
 			this->AddConstructor(constructor);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayListEnumerator_Constructor_0", (void*)&LIB_NOM_ArrayListEnumerator_Constructor_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_ArrayListEnumerator_Constructor_0", reinterpret_cast<void*>(&LIB_NOM_ArrayListEnumerator_Constructor_0));
 		}
 		ArrayListEnumeratorClass* ArrayListEnumeratorClass::GetInstance()
 		{
-			static ArrayListEnumeratorClass nsc;
+			[[clang::no_destroy]] static ArrayListEnumeratorClass nsc;
 			static bool once = true;
 			if (once)
 			{
@@ -342,22 +328,12 @@ namespace Nom
 				NomObjectClass::GetInstance();
 				NomIntClass::GetInstance();
 				NomVoidClass::GetInstance();
-				//nsc.PreprocessInheritance();
 			}
 			return &nsc;
 		}
 		size_t ArrayListEnumeratorClass::GetFieldCount() const
 		{
-			return 6; // ArrayList, Version, Current, Underlying Array, Current Pos, Size
-			//auto size = sizeof(ReferenceList::iterator);
-			//size_t fields = 3;
-			//while (size > 0)
-			//{
-			//	fields++;
-			//	fields++;
-			//	size -= sizeof(intptr_t);
-			//}
-			//return fields;
+			return 6;
 		}
 		void ArrayListEnumeratorClass::GetInterfaceDependencies(llvm::SmallVector<const NomInterfaceInternal*, 4>& results) const
 		{

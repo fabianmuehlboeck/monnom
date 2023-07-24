@@ -15,24 +15,24 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomDynamicType::NomDynamicType(TypeKind kind) : kind(kind)
+		NomDynamicType::NomDynamicType(TypeKind _kind) : kind(_kind)
 		{
 		}
 		NomDynamicType& NomDynamicType::Instance()
 		{
-			static NomDynamicType ndt(TypeKind::TKDynamic); return ndt;
+			[[clang::no_destroy]] static NomDynamicType ndt(TypeKind::TKDynamic); return ndt;
 		}
 		NomDynamicType& NomDynamicType::LambdaInstance()
 		{
-			static NomDynamicType ndt(TypeKind::TKLambda); return ndt;
+			[[clang::no_destroy]] static NomDynamicType ndt(TypeKind::TKLambda); return ndt;
 		}
 		NomDynamicType& NomDynamicType::PartialAppInstance()
 		{
-			static NomDynamicType ndt(TypeKind::TKPartialApp); return ndt;
+			[[clang::no_destroy]] static NomDynamicType ndt(TypeKind::TKPartialApp); return ndt;
 		}
 		NomDynamicType& NomDynamicType::RecordInstance()
 		{
-			static NomDynamicType ndt(TypeKind::TKRecord); return ndt;
+			[[clang::no_destroy]] static NomDynamicType ndt(TypeKind::TKRecord); return ndt;
 		}
 		Constant* NomDynamicType::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
@@ -47,7 +47,7 @@ namespace Nom
 				builder->CreateRet(argiter);
 			}
 			auto gv = new GlobalVariable(mod, RTDynamicType::GetLLVMType(), true, linkage, RTDynamicType::CreateConstant(fun), "RT_NOM_DynamicType");
-			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTDynamicTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTDynamicTypeFields::Head)) }));
 		}
 		Constant* NomDynamicType::findLLVMElement(llvm::Module& mod) const
 		{
@@ -56,81 +56,81 @@ namespace Nom
 			{
 				return gv;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTDynamicTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTDynamicTypeFields::Head)) }));
 		}
 		bool NomDynamicType::ContainsVariables() const
 		{
 			return false;
 		}
-		llvm::Value* NomDynamicType::GenerateRTInstantiation(NomBuilder& builder, CompileEnv* env) const
+		llvm::Value* NomDynamicType::GenerateRTInstantiation([[maybe_unused]] NomBuilder& builder, CompileEnv* env) const
 		{
 			return GetLLVMElement(*env->Module);
 		}
 		size_t NomDynamicType::GetHashCode() const
 		{
-			return (size_t)(intptr_t)this;
+			return static_cast<size_t>(reinterpret_cast<intptr_t>(this));
 		}
-		bool NomDynamicType::IsSubtype(NomTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSubtype([[maybe_unused]] NomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSupertype(this, optimistic);
 		}
-		bool NomDynamicType::IsSubtype(NomBottomTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSubtype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return optimistic;
 		}
-		bool NomDynamicType::IsSubtype(NomClassTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSubtype([[maybe_unused]] NomClassTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return optimistic;
 		}
-		bool NomDynamicType::IsSubtype(NomTopTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSubtype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsSubtype(NomTypeVarRef other, bool optimistic) const
+		bool NomDynamicType::IsSubtype([[maybe_unused]] NomTypeVarRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return  other->IsSupertype(this, optimistic);
 		}
-		bool NomDynamicType::IsSupertype(NomTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSupertype([[maybe_unused]] NomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsSupertype(NomBottomTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSupertype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsSupertype(NomClassTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSupertype([[maybe_unused]] NomClassTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsSupertype(NomTopTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSupertype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsSupertype(NomTypeVarRef other, bool optimistic) const
+		bool NomDynamicType::IsSupertype([[maybe_unused]] NomTypeVarRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsDisjoint(NomTypeRef other) const
+		bool NomDynamicType::IsDisjoint([[maybe_unused]] NomTypeRef other) const
 		{
 			return false;
 		}
-		bool NomDynamicType::IsDisjoint(NomBottomTypeRef other) const
+		bool NomDynamicType::IsDisjoint([[maybe_unused]] NomBottomTypeRef other) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsDisjoint(NomClassTypeRef other) const
+		bool NomDynamicType::IsDisjoint([[maybe_unused]] NomClassTypeRef other) const
 		{
 			return false;
 		}
-		bool NomDynamicType::IsDisjoint(NomTopTypeRef other) const
+		bool NomDynamicType::IsDisjoint([[maybe_unused]] NomTopTypeRef other) const
 		{
 			return false;
 		}
-		bool NomDynamicType::IsDisjoint(NomTypeVarRef other) const
+		bool NomDynamicType::IsDisjoint([[maybe_unused]] NomTypeVarRef other) const
 		{
 			return false;
 		}
-		NomTypeRef NomDynamicType::SubstituteSubtyping(const NomSubstitutionContext* context) const
+		NomTypeRef NomDynamicType::SubstituteSubtyping([[maybe_unused]] const NomSubstitutionContext* context) const
 		{
 			return this;
 		}
@@ -146,19 +146,19 @@ namespace Nom
 		{
 			return kind;
 		}
-		intptr_t NomDynamicType::GetRTElement() const
+		uintptr_t NomDynamicType::GetRTElement() const
 		{
-			return intptr_t();
+			return uintptr_t();
 		}
-		NomClassTypeRef NomDynamicType::GetClassInstantiation(const NomNamed* named) const
+		NomClassTypeRef NomDynamicType::GetClassInstantiation([[maybe_unused]] const NomNamed* named) const
 		{
 			return nullptr;
 		}
-		bool NomDynamicType::IsSubtype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSubtype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsSupertype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSupertype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
@@ -170,15 +170,15 @@ namespace Nom
 		{
 			return false;
 		}
-		bool NomDynamicType::IsSubtype(NomMaybeTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSubtype([[maybe_unused]] NomMaybeTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return optimistic || other->PotentialType->IsSupertype(this, optimistic);
 		}
-		bool NomDynamicType::IsSupertype(NomMaybeTypeRef other, bool optimistic) const
+		bool NomDynamicType::IsSupertype([[maybe_unused]] NomMaybeTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomDynamicType::IsDisjoint(NomMaybeTypeRef other) const
+		bool NomDynamicType::IsDisjoint([[maybe_unused]] NomMaybeTypeRef other) const
 		{
 			return false;
 		}
@@ -186,7 +186,7 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
-		bool NomDynamicType::ContainsVariableIndex(int index) const
+		bool NomDynamicType::ContainsVariableIndex([[maybe_unused]] size_t index) const
 		{
 			return false;
 		}

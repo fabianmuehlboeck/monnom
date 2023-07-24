@@ -85,6 +85,9 @@
     <Filter Include="Wrappers\Globals">
       <UniqueIdentifier>{bc8c30c3-8713-4b1e-aea0-25aa82f56ac9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Values">
+      <UniqueIdentifier>{9fb4c0e9-475d-4561-ae1a-4a1c9dbcd992}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="instructions\CallCheckedStaticMethod.cpp">
@@ -625,6 +628,54 @@
       <Filter>Wrappers\Values</Filter>
     </ClCompile>
     <ClCompile Include="PWPtr.cpp">
+      <Filter>Wrappers\Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWDispatchPair.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWIMTFunction.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="PWStructDict.cpp">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="gcinclude_config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RTValue.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTRawInt.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTRawFloat.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTObject.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTRefValue.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTPackedValue.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTRecordValue.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTLambdaValue.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTPartialAppValue.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTRawBool.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTVMPtr.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="PWPacked.cpp">
       <Filter>Wrappers\Values</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1224,6 +1275,60 @@
       <Filter>Wrappers\Values</Filter>
     </ClInclude>
     <ClInclude Include="PWPtr.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="Diagnostics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PWDispatchPair.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWIMTFunction.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWStructDict.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWPhi.h">
+      <Filter>Wrappers\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="PWVMPtr.h">
+      <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTValue.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTRawInt.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTRawFloat.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTObject.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTRefValue.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTPackedValue.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTRecordValue.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTLambdaValue.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTPartialAppValue.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTRawBool.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTVMPtr.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="PWPacked.h">
       <Filter>Wrappers\Values</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,10 +1,12 @@
 #include "NomStaticMethod.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/raw_os_ostream.h"
+POPDIAGSUPPRESSION
 #include "TypeList.h"
 #include "NomConstants.h"
 #include "Context.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include <iostream>
 #include "NomType.h"
 #include "StringClass.h"
@@ -20,7 +22,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomStaticMethodLoaded::NomStaticMethodLoaded(const std::string& name, const NomClass* parent, const std::string& qname, const ConstantID returnType, const ConstantID typeArgs, const ConstantID arguments, const int regcount, bool declOnly) : NomCallableLoaded(name, parent, qname, regcount, typeArgs, arguments, declOnly, false), returnType(returnType), returnTypeBuf(nullptr), Class(parent)
+		NomStaticMethodLoaded::NomStaticMethodLoaded(const std::string& _name, const NomClass* _parent, const std::string& _qname, const ConstantID _returnType, const ConstantID _typeArgs, const ConstantID _arguments, const RegIndex _regcount, bool _declOnly) : NomCallableLoaded(_name, _parent, _qname, _regcount, _typeArgs, _arguments, _declOnly, false), returnType(_returnType), returnTypeBuf(nullptr), Class(_parent)
 		{
 
 		}
@@ -158,13 +160,13 @@ namespace Nom
 			return Container;
 		}
 
-		void NomStaticMethodInternal::SetReturnType(NomTypeRef returnType)
+		void NomStaticMethodInternal::SetReturnType(NomTypeRef _returnType)
 		{
-			if (returnType == nullptr || this->returnType != nullptr)
+			if (_returnType == nullptr || this->returnType != nullptr)
 			{
 				throw new std::exception();
 			}
-			this->returnType = returnType;
+			this->returnType = _returnType;
 		}
 
 		NomTypeRef NomStaticMethodInternal::GetReturnType(const NomSubstitutionContext* context) const

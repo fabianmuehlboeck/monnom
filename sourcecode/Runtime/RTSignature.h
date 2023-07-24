@@ -1,9 +1,11 @@
 #pragma once
 #include "AvailableExternally.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ADT/Twine.h"
+POPDIAGSUPPRESSION
 #include "NomBuilder.h"
 #include "NomInstantiationRef.h"
 

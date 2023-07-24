@@ -9,7 +9,8 @@ namespace Nom
 		{
 		public:
 			static llvm::Type* GetLLVMType();
-			PWMaybeType(llvm::Value* wrapped) : PWType(wrapped)
+			static llvm::Type* GetWrappedLLVMType();
+			PWMaybeType(llvm::Value* _wrapped) : PWType(_wrapped)
 			{
 
 			}

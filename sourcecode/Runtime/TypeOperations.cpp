@@ -12,6 +12,9 @@
 #include "CastStats.h"
 #include "NomBuilder.h"
 #include "Metadata.h"
+#include "CompileEnv.h"
+#include "PWRefValue.h"
+#include "PWObject.h"
 
 using namespace llvm;
 using namespace std;
@@ -53,7 +56,7 @@ namespace Nom
 			{
 				return NomValue(PackBool(builder, val), val.GetNomType());
 			}
-			if (val->getType()->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
+			if (val->getType()->isIntegerTy(static_cast<unsigned int>(INTTYPE->getPrimitiveSizeInBits())))
 			{
 				return NomValue(PackInt(builder, val), val.GetNomType());
 			}
@@ -74,7 +77,7 @@ namespace Nom
 			{
 				return PackBool(builder, val);
 			}
-			if (val->getType()->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
+			if (val->getType()->isIntegerTy(static_cast<unsigned int>(INTTYPE->getPrimitiveSizeInBits())))
 			{
 				return PackInt(builder, val);
 			}
@@ -110,7 +113,7 @@ namespace Nom
 			}
 			else if (type == NomIntClass::GetInstance()->GetType())
 			{
-				if (expected->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
+				if (expected->isIntegerTy(static_cast<unsigned int>(INTTYPE->getPrimitiveSizeInBits())))
 				{
 					return EnsureUnpackedInt(builder, env, val);
 				}
@@ -190,6 +193,7 @@ namespace Nom
 			}
 			return val;
 		}
+		// Note: this depends on POINTERTYPE and REFTYPE being different, to either just encode/decode raw values for IMTs or do actual packing/unpacking
 		llvm::Value* EnsurePackedUnpacked(NomBuilder& builder, llvm::Value* val, llvm::Type* type)
 		{
 			auto valType = val->getType();
@@ -324,7 +328,7 @@ namespace Nom
 			Value* primitiveIntVal = nullptr;
 			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &maskedIntBlock, &floatBlock, false, &primitiveIntBlock, &primitiveIntVal, nullptr, nullptr, nullptr, nullptr, 30, 100, 1, 1);
 
-			int phiCases = (refValueBlock != nullptr ? 1 : 0) + (maskedIntBlock != nullptr ? 1 : 0) + (primitiveIntBlock != nullptr ? 1 : 0);
+			unsigned int phiCases = (refValueBlock != nullptr ? 1 : 0) + (maskedIntBlock != nullptr ? 1 : 0) + (primitiveIntBlock != nullptr ? 1 : 0);
 
 			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "intUnpackMerge", fun);
 			builder->SetInsertPoint(mergeBlock);
@@ -349,7 +353,7 @@ namespace Nom
 				{
 					builder->CreateCall(GetIncIntUnboxesFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
 				}
-				auto boxField = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE, "unboxedInt");
+				auto boxField = builder->CreatePtrToInt(PWObject(value).ReadField(builder, MakeInt32(0), false), INTTYPE, "unboxedInt");
 				mergePHI->addIncoming(boxField, refValueBlock);
 				builder->CreateBr(mergeBlock);
 			}
@@ -424,9 +428,9 @@ namespace Nom
 			BasicBlock* boxFloatBlock = BasicBlock::Create(LLVMCONTEXT, "boxFloat", fun);
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "packFloatOut", fun);
 			auto floatAsInt = builder->CreateBitCast(floatval, INTTYPE);
-			auto posExpTag = 0x4000000000000000LL;
-			auto negExpTag = 0x2000000000000000LL;
-			auto exponentMask = 0x6000000000000000LL;
+			auto posExpTag = 0x4000000000000000ULL;
+			auto negExpTag = 0x2000000000000000ULL;
+			auto exponentMask = 0x6000000000000000ULL;
 			auto isPositiveGoodExponent = builder->CreateICmpEQ(builder->CreateAnd(floatAsInt, MakeIntLike(floatAsInt, exponentMask)), MakeIntLike(floatAsInt, posExpTag));
 			auto isNegativeGoodExponent = builder->CreateICmpEQ(builder->CreateAnd(floatAsInt, MakeIntLike(floatAsInt, exponentMask)), MakeIntLike(floatAsInt, negExpTag));
 			auto isGoodExponent = builder->CreateOr(isPositiveGoodExponent, isNegativeGoodExponent);
@@ -478,7 +482,7 @@ namespace Nom
 			BasicBlock* refValueBlock = nullptr, *maskedFloatBlock=nullptr, * intBlock = nullptr, * primitiveFloatBlock = nullptr;
 			Value* primitiveFloatVal = nullptr;
 
-			int phiCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &maskedFloatBlock, false, nullptr, nullptr, &primitiveFloatBlock, &primitiveFloatVal, nullptr, nullptr, 30, 1, 100, 1);
+			unsigned int phiCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &maskedFloatBlock, false, nullptr, nullptr, &primitiveFloatBlock, &primitiveFloatVal, nullptr, nullptr, 30, 1, 100, 1);
 
 			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "floatUnpackMerge", fun);
 			builder->SetInsertPoint(mergeBlock);
@@ -503,7 +507,7 @@ namespace Nom
 				{
 					builder->CreateCall(GetIncFloatUnboxesFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
 				}
-				auto boxField = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE), FLOATTYPE, "unboxedFloat");
+				auto boxField = builder->CreateBitCast(builder->CreatePtrToInt(PWObject(value).ReadField(builder, MakeInt32(0), false), INTTYPE), FLOATTYPE, "unboxedFloat");
 				mergePHI->addIncoming(boxField, refValueBlock);
 				builder->CreateBr(mergeBlock);
 			}
@@ -543,7 +547,7 @@ namespace Nom
 			return NomBoolObjects::PackBool(builder, b);
 		}
 
-		llvm::Value* UnpackBool(NomBuilder& builder, llvm::Value* b, bool verify)
+		llvm::Value* UnpackBool(NomBuilder& builder, llvm::Value* b, [[maybe_unused]] bool verify)
 		{
 			return NomBoolObjects::UnpackBool(builder, b);
 		}

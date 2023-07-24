@@ -12,7 +12,7 @@ namespace Nom
 	namespace Runtime
 	{
 
-		CallCheckedStaticMethod::CallCheckedStaticMethod(const ConstantID method, const ConstantID typeArgs, RegIndex reg) : NomValueInstruction(reg, OpCode::CallCheckedStatic), Method(method), TypeArgs(typeArgs)
+		CallCheckedStaticMethod::CallCheckedStaticMethod(const ConstantID _method, const ConstantID _typeArgs, RegIndex _reg) : NomValueInstruction(_reg, OpCode::CallCheckedStatic), Method(_method), TypeArgs(_typeArgs)
 		{
 		}
 
@@ -20,7 +20,7 @@ namespace Nom
 		CallCheckedStaticMethod::~CallCheckedStaticMethod()
 		{
 		}
-		void CallCheckedStaticMethod::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void CallCheckedStaticMethod::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			if (NomCastStats)
 			{
@@ -48,12 +48,12 @@ namespace Nom
 			auto argarr = makealloca(Value*, method.Elem->GetArgumentCount() + typeArgs.size());
 			llvm::Function* func = method.Elem->GetLLVMFunction(env->Module);
 			llvm::ArrayRef<llvm::Type*> funcparams = func->getFunctionType()->params();
-			for (int i = argcount - 1; i >= 0; i--)
+			for (size_t i = 0; i < argcount; i++)
 			{
 				NomValue arg = env->GetArgument(i);
 				argarr[i + targcount] = CastInstruction::MakeCast(builder, env, arg, signature.ArgumentTypes[i]);
 			}
-			for (int i = targcount - 1; i >= 0; i--)
+			for (size_t i = 0; i < targcount; i++)
 			{
 				auto targ = typeArgs[i];
 				if (targ->ContainsVariables())

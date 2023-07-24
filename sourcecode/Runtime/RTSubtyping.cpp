@@ -1,7 +1,11 @@
 #include "RTSubtyping.h"
 #include "Defs.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "RTTypeHead.h"
 #include "RTClassType.h"
 #include "RTTypeVar.h"
@@ -10,8 +14,6 @@
 #include "RTDisjointness.h"
 #include "NomInterface.h"
 #include <iostream>
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/IR/Verifier.h"
 #include "CompileHelpers.h"
 #include "RTConfig.h"
 #include "CastStats.h"
@@ -24,6 +26,13 @@
 #include "RTTypeEq.h"
 #include "RTMaybeType.h"
 #include "Metadata.h"
+#include "PWSubstStack.h"
+#include "PWTypeArr.h"
+#include "PWInt.h"
+#include "PWTypeVar.h"
+#include "PWInterface.h"
+#include "PWPhi.h"
+#include "PWSuperInstance.h"
 
 using namespace llvm;
 namespace Nom
@@ -33,7 +42,7 @@ namespace Nom
 
 		RTSubtyping& RTSubtyping::Instance()
 		{
-			static RTSubtyping rts; return rts;
+			[[clang::no_destroy]] static RTSubtyping rts; return rts;
 		}
 
 		RTSubtyping::RTSubtyping()
@@ -74,10 +83,9 @@ namespace Nom
 
 			builder->SetInsertPoint(leftUnfoldBlock);
 			PHINode* leftPHI = builder->CreatePHI(left->getType(), 2);
-			PHINode* leftSubstPHI = builder->CreatePHI(leftsubst->getType(), 2);
+			auto leftSubstPHI = PWPhi<PWSubstStack>::Create(builder, 2, "leftSubstPHI");
 			leftPHI->addIncoming(left, startBlock);
 			leftSubstPHI->addIncoming(leftsubst, startBlock);
-
 
 			BasicBlock* leftClassTypeBlock = nullptr, * leftTypeVarBlock = nullptr, * leftTopTypeBlock = nullptr, * leftInstanceTypeBlock = nullptr, * leftMaybeTypeBlock = nullptr, * leftDynamicTypeBlock = nullptr;
 			RTTypeHead::GenerateTypeKindSwitch(builder, leftPHI, &leftClassTypeBlock, &leftTopTypeBlock, &leftTypeVarBlock, &successBlock, &leftInstanceTypeBlock, nullptr, nullptr, &leftDynamicTypeBlock, &leftMaybeTypeBlock);
@@ -85,9 +93,9 @@ namespace Nom
 			if (leftTypeVarBlock != nullptr)
 			{
 				builder->SetInsertPoint(leftTypeVarBlock);
-				auto leftTypeArr = MakeLoad(builder, leftSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Types));
-				auto newLeft = MakeLoad(builder, builder->CreateGEP(leftTypeArr, builder->CreateSub(MakeInt32(-1), RTTypeVar::GenerateLoadIndex(builder, leftPHI))));
-				auto newsubst = MakeLoad(builder, leftSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Next));
+				auto leftVar = PWTypeVar(leftPHI);
+				PWSubstStack newsubst = nullptr;
+				auto newLeft = leftSubstPHI.Pop(builder, leftVar, &newsubst);
 				leftPHI->addIncoming(newLeft, builder->GetInsertBlock());
 				leftSubstPHI->addIncoming(newsubst, builder->GetInsertBlock());
 				builder->CreateBr(leftUnfoldBlock);
@@ -98,7 +106,7 @@ namespace Nom
 				BasicBlock* rightTypeVarBlock = nullptr;
 				builder->SetInsertPoint(leftTopTypeBlock);
 				auto rightPHI = builder->CreatePHI(right->getType(), 2);
-				auto rightSubstPHI = builder->CreatePHI(rightsubst->getType(), 2);
+				auto rightSubstPHI = PWPhi<PWSubstStack>::Create(builder, 2, "rightSubstPHI");
 				rightPHI->addIncoming(right, leftUnfoldBlock);
 				rightSubstPHI->addIncoming(rightsubst, leftUnfoldBlock);
 				RTTypeHead::GenerateTypeKindSwitch(builder, rightPHI, nullptr, &successBlock, &rightTypeVarBlock, nullptr, nullptr, nullptr, nullptr, &successBlock, nullptr, failBlock);
@@ -106,9 +114,9 @@ namespace Nom
 				if (rightTypeVarBlock != nullptr)
 				{
 					builder->SetInsertPoint(rightTypeVarBlock);
-					auto rightTypeArr = MakeLoad(builder, rightSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Types));
-					auto newRight = MakeLoad(builder, builder->CreateGEP(rightTypeArr, builder->CreateSub(MakeInt32(-1), RTTypeVar::GenerateLoadIndex(builder, rightPHI))));
-					auto newsubst = MakeLoad(builder, rightSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Next));
+					PWTypeVar rightVar = rightPHI;
+					PWSubstStack newsubst = nullptr;
+					auto newRight = rightSubstPHI.Pop(builder, rightVar, &newsubst);
 					rightPHI->addIncoming(newRight, builder->GetInsertBlock());
 					rightSubstPHI->addIncoming(newsubst, builder->GetInsertBlock());
 					builder->CreateBr(leftTopTypeBlock);
@@ -138,7 +146,7 @@ namespace Nom
 				builder->SetInsertPoint(leftDynamicTypeBlock);
 				BasicBlock* rightTypeVarBlock = nullptr;
 				auto rightPHI = builder->CreatePHI(right->getType(), 2);
-				auto rightSubstPHI = builder->CreatePHI(rightsubst->getType(), 2);
+				auto rightSubstPHI = PWPhi<PWSubstStack>::Create(builder, 2, "rightSubstPHI");
 				rightPHI->addIncoming(right, leftUnfoldBlock);
 				rightSubstPHI->addIncoming(rightsubst, leftUnfoldBlock);
 				RTTypeHead::GenerateTypeKindSwitch(builder, rightPHI, &optimisticBlock, &successBlock, &rightTypeVarBlock, &optimisticBlock, &optimisticBlock, nullptr, nullptr, &successBlock, &optimisticBlock, failBlock);
@@ -146,9 +154,9 @@ namespace Nom
 				if (rightTypeVarBlock != nullptr)
 				{
 					builder->SetInsertPoint(rightTypeVarBlock);
-					auto rightTypeArr = MakeLoad(builder, rightSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Types));
-					auto newRight = MakeLoad(builder, builder->CreateGEP(rightTypeArr, builder->CreateSub(MakeInt32(-1), RTTypeVar::GenerateLoadIndex(builder, rightPHI))));
-					auto newsubst = MakeLoad(builder, rightSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Next));
+					PWTypeVar rightVar = rightPHI;
+					PWSubstStack newsubst = nullptr;
+					auto newRight = rightSubstPHI.Pop(builder, rightVar, &newsubst);
 					rightPHI->addIncoming(newRight, builder->GetInsertBlock());
 					rightSubstPHI->addIncoming(newsubst, builder->GetInsertBlock());
 					builder->CreateBr(leftDynamicTypeBlock);
@@ -159,8 +167,8 @@ namespace Nom
 			{
 				BasicBlock* leftClsMergeBlock = BasicBlock::Create(LLVMCONTEXT, "leftClassInfoMerge", fun);
 				builder->SetInsertPoint(leftClsMergeBlock);
-				auto leftTypeArgsPHI = builder->CreatePHI(TYPETYPE->getPointerTo(), 2, "leftTypeArgs");
-				auto leftIfacePHI = builder->CreatePHI(RTInterface::GetLLVMType()->getPointerTo(), 2, "leftInterfacePtr");
+				auto leftTypeArgsPHI = PWPhi<PWTypeArr>::Create(builder, 2, "leftTypeArgs");
+				auto leftIfacePHI = PWPhi<PWInterface>::CreatePtr(builder, 2, "leftInterfacePtr");
 
 				if (leftClassTypeBlock != nullptr)
 				{
@@ -177,6 +185,7 @@ namespace Nom
 					leftIfacePHI->addIncoming(RTInstanceType::GenerateReadClassDescriptorLink(builder, leftPHI), builder->GetInsertBlock());
 					builder->CreateBr(leftClsMergeBlock);
 				}
+				PWInterface leftIface = leftIfacePHI;
 
 				builder->SetInsertPoint(leftClsMergeBlock);
 				BasicBlock* rightMerge = BasicBlock::Create(LLVMCONTEXT, "rightVarUnfold", fun);
@@ -184,7 +193,7 @@ namespace Nom
 
 				builder->SetInsertPoint(rightMerge);
 				auto rightPHI = builder->CreatePHI(right->getType(), 2);
-				auto rightSubstPHI = builder->CreatePHI(rightsubst->getType(), 2);
+				auto rightSubstPHI = PWPhi<PWSubstStack>::Create(builder, 2, "rightSubstPHI");
 				rightPHI->addIncoming(right, leftClsMergeBlock);
 				rightSubstPHI->addIncoming(rightsubst, leftClsMergeBlock);
 
@@ -194,9 +203,9 @@ namespace Nom
 				if (rightTypeVarBlock != nullptr)
 				{
 					builder->SetInsertPoint(rightTypeVarBlock);
-					auto rightTypeArr = MakeLoad(builder, rightSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Types));
-					auto newRight = MakeLoad(builder, builder->CreateGEP(rightTypeArr, builder->CreateSub(MakeInt32(-1), RTTypeVar::GenerateLoadIndex(builder, rightPHI))));
-					auto newsubst = MakeLoad(builder, rightSubstPHI, MakeInt<TypeArgumentListStackFields>(TypeArgumentListStackFields::Next));
+					PWTypeVar rightVar = rightPHI;
+					PWSubstStack newsubst = nullptr;
+					auto newRight = rightSubstPHI.Pop(builder, rightVar, &newsubst);
 					rightPHI->addIncoming(newRight, builder->GetInsertBlock());
 					rightSubstPHI->addIncoming(newsubst, builder->GetInsertBlock());
 					builder->CreateBr(rightMerge);
@@ -222,8 +231,8 @@ namespace Nom
 
 				BasicBlock* rightClsMergeBlock = BasicBlock::Create(LLVMCONTEXT, "rightClassInfoMerge", fun);
 				builder->SetInsertPoint(rightClsMergeBlock);
-				auto rightTypeArgsPHI = builder->CreatePHI(TYPETYPE->getPointerTo(), 2, "rightTypeArgs");
-				auto rightIfacePHI = builder->CreatePHI(RTInterface::GetLLVMType()->getPointerTo(), 2, "rightInterfacePtr");
+				auto rightTypeArgsPHI = PWPhi<PWTypeArr>::Create(builder, 2, "rightTypeArgs");
+				auto rightIfacePHI = PWPhi<PWInterface>::CreatePtr(builder, 2, "rightInterfacePtr");
 
 				if (rightClassTypeBlock != nullptr)
 				{
@@ -246,10 +255,8 @@ namespace Nom
 				BasicBlock* foundNamedImmediateTypeMatch = BasicBlock::Create(LLVMCONTEXT, "foundNamedImmediateTypeMatch", fun);
 				//BasicBlock* foundNamedImmediateTypeMatchLoadSubsts = BasicBlock::Create(LLVMCONTEXT, "foundNamedImmediateTypeMatch$loadSubsts", fun);
 				BasicBlock* foundNamedTypeMatch = BasicBlock::Create(LLVMCONTEXT, "foundNamedTypeMatch", fun);
-				BasicBlock* foundNamedTypeMatchLoad = BasicBlock::Create(LLVMCONTEXT, "foundNamedTypeMatch$Load", fun);
 				BasicBlock* superTypeLoopHead = BasicBlock::Create(LLVMCONTEXT, "superTypeLoop$Head", fun);
 				BasicBlock* superTypeLoopBody = BasicBlock::Create(LLVMCONTEXT, "superTypeLoop$Body", fun);
-				BasicBlock* superTypeLoopBodyEnd = BasicBlock::Create(LLVMCONTEXT, "superTypeLoop$Body$End", fun);
 				auto namedTypeMatch = builder->CreateICmpEQ(builder->CreatePtrToInt(leftIfacePHI, numtype(intptr_t)), builder->CreatePtrToInt(rightIfacePHI, numtype(intptr_t)));
 				builder->CreateCondBr(namedTypeMatch, foundNamedImmediateTypeMatch, superTypeLoopHead);
 
@@ -260,8 +267,8 @@ namespace Nom
 				BasicBlock* argCheckLoopHead = BasicBlock::Create(LLVMCONTEXT, "argCheckLoop$Head", fun);
 				BasicBlock* argCheckLoopBody = BasicBlock::Create(LLVMCONTEXT, "argCheckLoop$Body", fun);
 
-				PHINode* foundMatchTypeArgsPHI = builder->CreatePHI(leftTypeArgsPHI->getType(), 2);
-				PHINode* foundSubstitutionsPHI = builder->CreatePHI(leftSubstPHI->getType(), 2);
+				auto foundMatchTypeArgsPHI = PWPhi<PWTypeArr>::Create(builder, 2, "foundMatchTypeArgsPHI");
+				auto foundSubstitutionsPHI = PWPhi<PWSubstStack>::Create(builder, 2, "foundMatchSubstPHI");
 				foundMatchTypeArgsPHI->addIncoming(leftTypeArgsPHI, foundNamedImmediateTypeMatch);
 				foundSubstitutionsPHI->addIncoming(leftSubstPHI, foundNamedImmediateTypeMatch);
 				auto ifaceArgCount = builder->CreateZExtOrTrunc(RTInterface::GenerateReadTypeArgCount(builder, leftIfacePHI), numtype(int32_t));
@@ -272,12 +279,12 @@ namespace Nom
 				builder->SetInsertPoint(argCheckLoopHead);
 				PHINode* ifaceArgPosPHI = builder->CreatePHI(ifaceArgPos->getType(), 2);
 				ifaceArgPosPHI->addIncoming(ifaceArgPos, foundNamedTypeMatch);
-				auto currentLeftArg = MakeLoad(builder, builder->CreateGEP(foundMatchTypeArgsPHI, builder->CreateSub(MakeInt32(-1), ifaceArgPosPHI)));
-				auto currentRightArg = MakeLoad(builder, builder->CreateGEP(rightTypeArgsPHI, builder->CreateSub(MakeInt32(-1), ifaceArgPosPHI)));
-				auto argsEqual = builder->CreateCall(RTTypeEq::Instance(false).GetLLVMElement(mod), { currentLeftArg, leftSubstPHI, currentRightArg, rightSubstPHI });
-				argsEqual->setCallingConv(NOMCC);
-				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { argsEqual, MakeUInt(1,1) });
-				builder->CreateCondBr(argsEqual, argCheckLoopBody, failBlock, GetLikelyFirstBranchMetadata());
+				auto currentLeftArg = foundMatchTypeArgsPHI.ElemAt(builder, ifaceArgPosPHI, "currentLeftArg");
+				auto currentRightArg = rightTypeArgsPHI.ElemAt(builder, ifaceArgPosPHI, "currentRightArg");
+				auto _argsEqual = builder->CreateCall(RTTypeEq::Instance(false).GetLLVMElement(mod), { currentLeftArg, leftSubstPHI, currentRightArg, rightSubstPHI });
+				_argsEqual->setCallingConv(NOMCC);
+				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { _argsEqual, MakeUInt(1,1) });
+				builder->CreateCondBr(_argsEqual, argCheckLoopBody, failBlock, GetLikelyFirstBranchMetadata());
 
 				{
 					builder->SetInsertPoint(argCheckLoopBody);
@@ -287,37 +294,26 @@ namespace Nom
 					builder->CreateCondBr(ifaceArgsLeft, argCheckLoopHead, successBlock);
 				}
 				builder->SetInsertPoint(superTypeLoopHead);
-				auto superInstances = RTInterface::GenerateReadSuperInstances(builder, leftIfacePHI);
-				auto superInstanceCount = RTInterface::GenerateReadSuperInstanceCount(builder, leftIfacePHI);
-				auto currentIndex = MakeIntLike(superInstanceCount, 0);
-				auto areInstancesLeft = builder->CreateICmpULT(currentIndex, superInstanceCount);
-				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { areInstancesLeft, MakeUInt(1,1) });
-				builder->CreateCondBr(areInstancesLeft, superTypeLoopBody, failBlock, GetLikelyFirstBranchMetadata());
+				auto superInstanceCount = leftIfacePHI.ReadSuperInstanceCount(builder).Resize<32>(builder);
+				auto superInstances = leftIfacePHI.ReadSuperInstances(builder).WithSize(superInstanceCount);
 
-				builder->SetInsertPoint(superTypeLoopBody);
-				auto indexPHI = builder->CreatePHI(currentIndex->getType(), 2, "superInstanceIndex");
-				indexPHI->addIncoming(currentIndex, superTypeLoopHead);
-				auto currentSuperIface = MakeLoad(builder, builder->CreateGEP(superInstances, { indexPHI, MakeInt32(SuperInstanceEntryFields::Class) }));
-				namedTypeMatch = builder->CreateICmpEQ(builder->CreatePtrToInt(rightIfacePHI, numtype(intptr_t)), builder->CreatePtrToInt(currentSuperIface, numtype(intptr_t)));
-				builder->CreateCondBr(namedTypeMatch, foundNamedTypeMatchLoad, superTypeLoopBodyEnd);
-
-				builder->SetInsertPoint(foundNamedTypeMatchLoad);
-				auto superInstanceTypeArgs = MakeLoad(builder, builder->CreateGEP(superInstances, { indexPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs) }));
-				auto newLeftSubstNode = builder->CreateAlloca(RTSubtyping::TypeArgumentListStackType(), MakeInt32(1));
-				MakeStore(builder, leftSubstPHI, newLeftSubstNode, MakeInt32(TypeArgumentListStackFields::Next));
-				MakeStore(builder, leftTypeArgsPHI, newLeftSubstNode, MakeInt32(TypeArgumentListStackFields::Types));
-				foundMatchTypeArgsPHI->addIncoming(superInstanceTypeArgs, builder->GetInsertBlock());
-				foundSubstitutionsPHI->addIncoming(newLeftSubstNode, builder->GetInsertBlock());
-				builder->CreateBr(foundNamedTypeMatch);
-
-				{
-					builder->SetInsertPoint(superTypeLoopBodyEnd);
-					auto newIndex = builder->CreateAdd(indexPHI, MakeIntLike(indexPHI, 1), "newIndex");
-					indexPHI->addIncoming(newIndex, superTypeLoopBodyEnd);
-					areInstancesLeft = builder->CreateICmpULT(newIndex, superInstanceCount);
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { areInstancesLeft, MakeUInt(1,1) });
-					builder->CreateCondBr(areInstancesLeft, superTypeLoopBody, failBlock, GetLikelyFirstBranchMetadata());
-				}
+				superInstances.IterateFromStart(builder, failBlock, [fun, rightIfacePHI, foundNamedTypeMatch, leftSubstPHI, leftTypeArgsPHI, foundMatchTypeArgsPHI, foundSubstitutionsPHI](NomBuilder &b, PWSuperInstance currentEntry, [[maybe_unused]] PWInt32 currentIndex) {
+					BasicBlock* superTypeLoopBodyEnd = BasicBlock::Create(LLVMCONTEXT, "superTypeLoop$Body$End", fun);
+					BasicBlock* foundNamedTypeMatchLoad = BasicBlock::Create(LLVMCONTEXT, "foundNamedTypeMatch$Load", fun);
+					auto currentSuperIface = currentEntry.GetInterface(b);
+					auto _namedTypeMatch = b->CreateICmpEQ(b->CreatePtrToInt(rightIfacePHI, numtype(intptr_t)), b->CreatePtrToInt(currentSuperIface, numtype(intptr_t)));
+					b->CreateCondBr(_namedTypeMatch, foundNamedTypeMatchLoad, superTypeLoopBodyEnd);
+					
+					b->SetInsertPoint(foundNamedTypeMatchLoad);
+					auto superInstanceTypeArgs = currentEntry.GetTypeArgs(b);
+					auto newLeftSubstNode = PWSubstStack::Alloca(b, leftSubstPHI, leftTypeArgsPHI);
+					
+					foundMatchTypeArgsPHI->addIncoming(superInstanceTypeArgs, b->GetInsertBlock());
+					foundSubstitutionsPHI->addIncoming(newLeftSubstNode, b->GetInsertBlock());
+					b->CreateBr(foundNamedTypeMatch);
+					
+					b->SetInsertPoint(superTypeLoopBodyEnd);
+					}, false, "superTypeLoop$Body");
 			}
 
 			builder->SetInsertPoint(successBlock);
@@ -367,7 +363,7 @@ namespace Nom
 			if (once)
 			{
 				once = false;
-				talst->setBody((llvm::PointerType*)NLLVMPointer(talst), (llvm::PointerType*)NLLVMPointer(TYPETYPE));
+				talst->setBody(NLLVMPointer(talst).AsLLVMType(), NLLVMPointer(TYPETYPE).AsLLVMType());
 			}
 			return talst;
 		}
@@ -388,23 +384,22 @@ namespace Nom
 			BasicBlock* nextOptCheck = nullptr;
 			for (auto* targ : clsType->Arguments)
 			{
-				argIndex++; //needs to be at least -1 anyway
 				BasicBlock* curOptCheck = nextOptCheck;
 				nextCheck = BasicBlock::Create(LLVMCONTEXT, "typeArg" + std::to_string(argIndex), fun);
 				if (optimisticBlock != nullptr && optimisticBlock != pessimisticBlock)
 				{
 					nextOptCheck = BasicBlock::Create(LLVMCONTEXT, "typeArgOpt" + std::to_string(argIndex), fun);
 				}
-				auto argLeft = MakeInvariantLoad(builder, builder->CreateGEP(foundMatchTypeArgs, MakeInt32(-(argIndex))));
+				auto argLeft = PWTypeArr(foundMatchTypeArgs).InvariantLoadElemAt(builder, MakePWInt32(argIndex));
 				RTTypeEq::CreateInlineTypeEqCheck(builder, argLeft, targ, leftSubstStack, rightSubstStack, nextCheck, optimisticBlock == pessimisticBlock ? nextCheck : nextOptCheck, failBlock);
 
 				if (curOptCheck != nullptr)
 				{
 					builder->SetInsertPoint(curOptCheck);
-					auto argLeft = MakeInvariantLoad(builder, builder->CreateGEP(foundMatchTypeArgs, MakeInt32(-(argIndex))));
-					RTTypeEq::CreateInlineTypeEqCheck(builder, argLeft, targ, leftSubstStack, rightSubstStack, nextOptCheck, nextOptCheck, failBlock);
+					auto _argLeft = PWTypeArr(foundMatchTypeArgs).InvariantLoadElemAt(builder, MakePWInt32(argIndex));
+					RTTypeEq::CreateInlineTypeEqCheck(builder, _argLeft, targ, leftSubstStack, rightSubstStack, nextOptCheck, nextOptCheck, failBlock);
 				}
-
+				argIndex++;
 				builder->SetInsertPoint(nextCheck);
 			}
 			builder->CreateBr(pessimisticBlock);
@@ -416,18 +411,20 @@ namespace Nom
 			}
 		}
 
-		void RTSubtyping::CreateInlineSubtypingCheck(NomBuilder& builder, llvm::Value* leftType, llvm::Value* leftSubst, NomTypeRef rightType, llvm::Value* rightSubstitutions, BasicBlock* pessimisticBlock, BasicBlock* optimisticBlock, BasicBlock* failBlock)
+		void RTSubtyping::CreateInlineSubtypingCheck(NomBuilder& builder, llvm::Value* leftType, llvm::Value* leftSubstitutions, NomTypeRef rightType, llvm::Value* rightSubstitutions, BasicBlock* pessimisticBlock, BasicBlock* optimisticBlock, BasicBlock* failBlock)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
-			if (leftSubst == nullptr)
+			if (leftSubstitutions == nullptr)
 			{
-				leftSubst = ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo());
+				leftSubstitutions = ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo());
 			}
 			if (rightSubstitutions == nullptr)
 			{
 				rightSubstitutions = ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo());
 			}
+			auto leftSubst = PWSubstStack(leftSubstitutions);
+			auto rightSubst = PWSubstStack(rightSubstitutions);
 
 			switch (rightType->GetKind())
 			{
@@ -437,9 +434,8 @@ namespace Nom
 				break;
 			case TypeKind::TKVariable:
 			{
-				auto rightTypeSubstList = MakeInvariantLoad(builder, rightSubstitutions, MakeInt32(TypeArgumentListStackFields::Types), "", AtomicOrdering::NotAtomic);
-				auto rightTypeSubst = MakeInvariantLoad(builder, builder->CreateGEP(rightTypeSubstList, MakeInt32(-(((NomTypeVarRef)rightType)->GetIndex() + 1))), "", AtomicOrdering::NotAtomic);
-				auto newSubsts = MakeInvariantLoad(builder, rightSubstitutions, MakeInt32(TypeArgumentListStackFields::Next));
+				PWSubstStack newSubsts = nullptr;
+				auto rightTypeSubst = rightSubst.Pop(builder, static_cast<NomTypeVarRef>(rightType)->GetIndex(), &newSubsts);
 				Function* subtypingFun = RTSubtyping::Instance().GetLLVMElement(*fun->getParent());
 				auto subtypingResult = builder->CreateCall(subtypingFun, { leftType, rightTypeSubst, leftSubst, newSubsts });
 				subtypingResult->setCallingConv(NOMCC);
@@ -457,7 +453,7 @@ namespace Nom
 				}
 				else
 				{
-					auto successSwitch = builder->CreateSwitch(subtypingResult, failBlock, 2, GetBranchWeights({0,100,50}));
+					auto successSwitch = builder->CreateSwitch(subtypingResult, failBlock, 2, GetBranchWeights({ 0,100,50 }));
 					successSwitch->addCase(MakeUInt(2, 3), pessimisticBlock);
 					successSwitch->addCase(MakeUInt(2, 1), optimisticBlock);
 				}
@@ -465,7 +461,7 @@ namespace Nom
 			break;
 			case TypeKind::TKClass:
 			{
-				auto clsType = (NomClassTypeRef)rightType;
+				auto clsType = static_cast<NomClassTypeRef>(rightType);
 				BasicBlock* classTypeBlock = nullptr, * instanceTypeBlock = nullptr;
 				Value* leftTypePHI = nullptr, * leftSubstPHI = nullptr;
 
@@ -474,7 +470,7 @@ namespace Nom
 				BasicBlock* clsMergeBlock = BasicBlock::Create(LLVMCONTEXT, "classInfoMerge", fun);
 				builder->SetInsertPoint(clsMergeBlock);
 				auto typeArgsPHI = builder->CreatePHI(TYPETYPE->getPointerTo(), 2, "typeArgs");
-				auto ifacePHI = builder->CreatePHI(RTInterface::GetLLVMType()->getPointerTo(), 2, "interfacePtr");
+				auto ifacePHI = PWPhi<PWInterface>::CreatePtr(builder, 2, "interfacePtr");
 
 				if (classTypeBlock != nullptr)
 				{
@@ -507,22 +503,23 @@ namespace Nom
 
 
 				builder->SetInsertPoint(superTypeLoopHead);
-				auto superInstances = RTInterface::GenerateReadSuperInstances(builder, ifacePHI);
-				auto superInstanceCount = RTInterface::GenerateReadSuperInstanceCount(builder, ifacePHI);
+				auto superInstanceCount = ifacePHI.ReadSuperInstanceCount(builder);
+				auto superInstances = ifacePHI.ReadSuperInstances(builder).WithSize(superInstanceCount.Resize<32>(builder));
 				auto currentIndex = MakeIntLike(superInstanceCount, 0);
 				auto areInstancesLeft = builder->CreateICmpULT(currentIndex, superInstanceCount);
 				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { areInstancesLeft, MakeUInt(1,1) });
 				builder->CreateCondBr(areInstancesLeft, superTypeLoopBody, failBlock, GetLikelyFirstBranchMetadata());
 
 				builder->SetInsertPoint(superTypeLoopBody);
-				auto indexPHI = builder->CreatePHI(currentIndex->getType(), 2, "superInstanceIndex");
+				PWPhi<PWInt64> indexPHI = PWPhi<PWInt64>::Create(builder, 2, "superInstanceIndex");
 				indexPHI->addIncoming(currentIndex, superTypeLoopHead);
-				auto currentSuperIface = MakeInvariantLoad(builder, builder->CreateGEP(superInstances, { indexPHI, MakeInt32(SuperInstanceEntryFields::Class) }));
+				auto currentEntry = superInstances.ElemAt(builder, indexPHI.Resize<32>(builder));
+				auto currentSuperIface = currentEntry.GetInterface(builder);
 				namedTypeMatch = builder->CreateICmpEQ(ConstantExpr::getPtrToInt(clsType->Named->GetInterfaceDescriptor(*fun->getParent()), numtype(intptr_t)), builder->CreatePtrToInt(currentSuperIface, numtype(intptr_t)));
 				builder->CreateCondBr(namedTypeMatch, foundNamedTypeMatchLoad, superTypeLoopBodyEnd);
 
 				builder->SetInsertPoint(foundNamedTypeMatchLoad);
-				auto superInstanceTypeArgs = MakeInvariantLoad(builder, builder->CreateGEP(superInstances, { indexPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs) }));
+				auto superInstanceTypeArgs = currentEntry.GetTypeArgs(builder);
 				RTSubstStackValue newLeftSubst = RTSubstStackValue(builder, typeArgsPHI, leftSubstPHI);
 				BasicBlock* releasePessimisticBlock = nullptr, * releaseFailBlock = nullptr, * releaseOptimisticBlock = nullptr;
 				newLeftSubst.MakeReleaseBlocks(builder, pessimisticBlock, &releasePessimisticBlock, failBlock, &releaseFailBlock, optimisticBlock, &releaseOptimisticBlock);
@@ -557,15 +554,17 @@ namespace Nom
 					builder->CreateCondBr(isNullType, pessimisticBlock, notNullBlock, GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(notNullBlock);
-					RTTypeEq::CreateInlineTypeEqCheck(builder, leftPHI, ((NomMaybeTypeRef)rightType)->PotentialType, leftSubstPHI, rightSubstitutions, pessimisticBlock, optimisticBlock, failBlock);
+					RTTypeEq::CreateInlineTypeEqCheck(builder, leftPHI, (static_cast<NomMaybeTypeRef>(rightType))->PotentialType, leftSubstPHI, rightSubstitutions, pessimisticBlock, optimisticBlock, failBlock);
 				}
 			}
 			break;
-			default:
+			case TypeKind::TKBottom:
+			case TypeKind::TKRecord:
+			case TypeKind::TKInstance:
+			case TypeKind::TKPartialApp:
+			case TypeKind::TKLambda:
 				throw new std::exception(); //the other type kinds should not show up here
 			}
 		}
-
-
 	}
 }

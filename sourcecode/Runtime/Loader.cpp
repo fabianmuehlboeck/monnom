@@ -85,13 +85,13 @@ namespace Nom
 				}
 				if (ok)
 				{
-					LibraryVersion* lib = program.AddLibraryVersion(version);
+					LibraryVersion* _lib = program.AddLibraryVersion(version);
 					for (const LibraryDependency& dep : version.Dependencies)
 					{
 						GetLibrary(&dep.Name);
 					}
-					libraries[name] = lib;
-					return lib;
+					libraries[name] = _lib;
+					return _lib;
 				}
 			}
 			throw name;

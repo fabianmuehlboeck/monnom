@@ -1,7 +1,9 @@
 #pragma once
 #include "AvailableExternally.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {
@@ -13,7 +15,7 @@ namespace Nom
 			RTDisjointness();
 		public:
 			static RTDisjointness& Instance();
-			virtual ~RTDisjointness();
+			virtual ~RTDisjointness() override;
 			static llvm::FunctionType* GetDisjointnessFunctionType();
 			// Inherited via AvailableExternally
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;

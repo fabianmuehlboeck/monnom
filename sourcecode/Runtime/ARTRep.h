@@ -1,6 +1,8 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DataLayout.h"
+POPDIAGSUPPRESSION
 #include "NomJITLight.h"
 #include "Context.h"
 #include "Defs.h"
@@ -14,9 +16,8 @@ namespace Nom
 		{
 		private:
 			const char * entry;
-			static const intptr_t offset = 0;
+			static const uintptr_t offset = 0;
 		public:
-			//enum class Fields : unsigned char;
 
 			using Ptr = ARTRep<C, Flds>;
 
@@ -26,56 +27,19 @@ namespace Nom
 			static llvm::ArrayType *GetLLVMArrayType(size_t count);
 			void * Entry(uint64_t fieldoffset = 0) const;
 			void * Entry(const Flds &field) const;
-			ARTRep(const char * const entry/*, intptr_t offset = 0*/);
-			ARTRep(const void * const entry/*, intptr_t offset = 0*/);
-			~ARTRep() {}
+			ARTRep(const char * const entry);
+			ARTRep(const void * const entry);
 
 			static size_t SizeOf()
 			{
-				static const size_t size = (size_t)GetLLVMLayout()->getSizeInBytes(); return size;
+				static const size_t size = static_cast<size_t>(GetLLVMLayout()->getSizeInBytes()); return size;
 			}
-			//C& operator++()
-			//{
-			//	offset++;
-			//	return *((C*)this);
-			//}
-			//C operator++(int)
-			//{
-			//	C tmp(*((C*)this)); // copy
-			//	operator++(); // pre-increment
-			//	return tmp;   // return old value
-			//}
-			//C& operator--()
-			//{
-			//	offset--;
-			//	return *((C*)this);
-			//}
-			//C operator--(int)
-			//{
-			//	C tmp(*((C*)this)); // copy
-			//	operator--(); // pre-increment
-			//	return tmp;   // return old value
-			//}
-			//void MoveEntry(void * entry, intptr_t offset = 0)
-			//{
-			//	this->entry = entry;
-			//	//this->offset = offset;
-			//}
 
 			C& operator=(const C &arg)
 			{
 				this->entry = arg.entry;
-				//this->offset = arg.offset;
 				return (C&)(*this);
 			}
-			//C &AsC()
-			//{
-			//	return (C&)(*this);
-			//}
-			//const C &AsC() const
-			//{
-			//	return (const C&)(*this);
-			//}
 		};
 
 		template<class C, typename Flds>
@@ -104,8 +68,8 @@ namespace Nom
 			{
 				return nullptr;
 			}
-			if (offset == 0) { return (void*)(entry + fieldoffset); }
-			else { return (void*)((entry + GetNomJITDataLayout().getIndexedOffsetInType(GetLLVMArrayType(), llvm::ArrayRef<llvm::Value*>({ llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, bitsin(intptr_t)), offset, true) }))) + fieldoffset); }
+			if (offset == 0) { return reinterpret_cast<void*>(const_cast<char*>(entry) + fieldoffset); }
+			else { return reinterpret_cast<void*>((const_cast<char*>(entry) + GetNomJITDataLayout().getIndexedOffsetInType(GetLLVMArrayType(), llvm::ArrayRef<llvm::Value*>({ llvm::ConstantInt::get(llvm::IntegerType::get(LLVMCONTEXT, bitsin(intptr_t)), offset, true) }))) + fieldoffset); }
 		}
 		template<class C, typename Flds>
 		void* ARTRep<C, Flds>::Entry(const Flds & field) const
@@ -114,14 +78,14 @@ namespace Nom
 			{
 				return nullptr;
 			}
-			return (void*)(entry + GetLLVMLayout()->getElementOffset((unsigned char)field));
+			return reinterpret_cast<void*>(const_cast<char*>(entry) + GetLLVMLayout()->getElementOffset(reinterpret_cast<unsigned char>(field)));
 		}
 		template<class C, typename Flds>
-		ARTRep<C, Flds>::ARTRep(const char* const entry/*, intptr_t offset*/) : entry(entry)/*, offset(offset)*/
+		ARTRep<C, Flds>::ARTRep(const char* const _entry) : entry(_entry)
 		{
 		}
 		template<class C, typename Flds>
-		ARTRep<C, Flds>::ARTRep(const void* const entry/*, intptr_t offset*/) : entry((const char* const)entry)/*, offset(offset)*/
+		ARTRep<C, Flds>::ARTRep(const void* const _entry) : entry(reinterpret_cast<const char* const>(_entry))
 		{
 		}
 	}

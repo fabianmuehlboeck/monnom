@@ -1,6 +1,8 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Function.h"
 #include "llvm/IR/DerivedTypes.h"
+POPDIAGSUPPRESSION
 #include "AvailableExternally.h"
 
 namespace Nom
@@ -17,7 +19,7 @@ namespace Nom
 			const NomCallable* const Callable;
 			llvm::FunctionType* const FunType;
 			NomCallableVersion(const NomCallable* callable, llvm::FunctionType* functionType);
-			~NomCallableVersion() = default;
+			~NomCallableVersion() override = default;
 
 			// Inherited via AvailableExternally
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;

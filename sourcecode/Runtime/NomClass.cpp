@@ -1,23 +1,27 @@
+#include <vector>
+#include <map>
+#include <iostream>
+#include <algorithm>
 #include "NomClass.h"
 #include "NomConstants.h"
 #include "NomInstantiationRef.h"
-#include <vector>
-#include <map>
 #include "Context.h"
 #include "NomType.h"
 #include "NomClassType.h"
 #include "NomTypeVar.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "NomJIT.h"
 #include "GlobalNameAddressLookupList.h"
 #include "NomNameRepository.h"
 #include "RTSubtyping.h"
 #include "RTOutput.h"
 #include "CompileHelpers.h"
-#include <iostream>
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/IR/Verifier.h"
 #include "RTDescriptor.h"
 #include "NomPartialApplication.h"
 #include "RTVTable.h"
@@ -39,10 +43,8 @@
 #include "RTCompileConfig.h"
 #include "NomInterfaceCallTag.h"
 #include "EnsureDynamicMethodInstruction.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "NomLambdaCallTag.h"
 #include "Metadata.h"
-#include <algorithm>
 #include "PWObject.h"
 
 namespace Nom
@@ -51,39 +53,39 @@ namespace Nom
 	{
 		using namespace std;
 		using namespace llvm;
-		NomClassLoaded::NomClassLoaded(const ConstantID name, ConstantID typeArgs, ConstantID superClass, const ConstantID superInterfaces, const NomMemberContext* parent) : NomInterface(NomConstants::GetString(name)->GetText()->ToStdString()), NomInterfaceLoaded(name, typeArgs, superInterfaces, parent), /*NomMemberContextLoaded(parent, typeArgs), NomNamedLoaded(name, typeArgs, parent),*/ superClass(superClass)
+		NomClassLoaded::NomClassLoaded(const ConstantID _name, ConstantID _typeArgs, ConstantID _superClass, const ConstantID _superInterfaces, const NomMemberContext* _parent) : NomInterface(), NomInterfaceLoaded(_name, _typeArgs, _superInterfaces, _parent), superClass(_superClass)
 		{
 			RegisterClass(NomConstants::GetString(name)->GetText(), this);
 		}
 
-		NomStaticMethodLoaded* NomClassLoaded::AddStaticMethod(const std::string& name, const std::string& qname, const ConstantID typeArgs, const ConstantID returnType, const ConstantID arguments, const RegIndex regcount)
+		NomStaticMethodLoaded* NomClassLoaded::AddStaticMethod(const std::string& _name, const std::string& _qname, const ConstantID _typeArgs, const ConstantID _returnType, const ConstantID _arguments, const RegIndex _regcount)
 		{
-			NomStaticMethodLoaded* meth = new NomStaticMethodLoaded(name, this, qname, returnType, typeArgs, arguments, regcount);
+			NomStaticMethodLoaded* meth = new NomStaticMethodLoaded(_name, this, _qname, _returnType, _typeArgs, _arguments, _regcount);
 			NomClass::AddStaticMethod(meth);
 			return meth;
 		}
 
-		NomConstructorLoaded* NomClassLoaded::AddConstructor(const ConstantID arguments, const RegIndex regcount) {
-			auto name = "_Constructor_" + this->GetName()->ToStdString() + "_" + std::to_string(Constructors.size());
-			NomConstructorLoaded* constr = new NomConstructorLoaded(this, name, name, arguments, regcount, 0, false);
+		NomConstructorLoaded* NomClassLoaded::AddConstructor(const ConstantID _arguments, const RegIndex _regcount) {
+			auto _name = "_Constructor_" + this->GetName()->ToStdString() + "_" + std::to_string(Constructors.size());
+			NomConstructorLoaded* constr = new NomConstructorLoaded(this, _name, _name, _arguments, _regcount, 0, false);
 			NomClass::AddConstructor(constr);
 			return constr;
 		}
 
-		NomTypedField* NomClassLoaded::AddField(const ConstantID name, const ConstantID type, Visibility visibility, bool isReadOnly, bool isVolatile) {
-			NomTypedField* field = new NomTypedField(this, name, type, visibility, isReadOnly, isVolatile);
+		NomTypedField* NomClassLoaded::AddField(const ConstantID _name, const ConstantID _type, Visibility _visibility, bool _isReadOnly, bool _isVolatile) {
+			NomTypedField* field = new NomTypedField(this, _name, _type, _visibility, _isReadOnly, _isVolatile);
 			NomClass::AddField(field);
 			return field;
 		}
 
-		NomLambda* NomClassLoaded::AddLambda(const ConstantID lambdaID, int regcount, ConstantID closureTypeParams, ConstantID closureArguments, ConstantID typeParams, ConstantID argTypes, ConstantID returnType) {
-			NomLambda* lambda = new NomLambda(lambdaID, nullptr, regcount, closureTypeParams, closureArguments, typeParams, argTypes, returnType);
+		NomLambda* NomClassLoaded::AddLambda(const ConstantID _lambdaID, RegIndex _regcount, ConstantID _closureTypeParams, ConstantID _closureArguments, ConstantID _typeParams, ConstantID _argTypes, ConstantID _returnType) {
+			NomLambda* lambda = new NomLambda(_lambdaID, nullptr, _regcount, _closureTypeParams, _closureArguments, _typeParams, _argTypes, _returnType);
 			NomClass::AddLambda(lambda);
 			return lambda;
 		}
 
-		NomRecord* NomClassLoaded::AddStruct(const ConstantID structID, ConstantID closureTypeParams, RegIndex regcount, RegIndex endargregcount, ConstantID initializerArgTypes) {
-			NomRecord* structure = new NomRecord(structID, nullptr, closureTypeParams, regcount, endargregcount, initializerArgTypes);
+		NomRecord* NomClassLoaded::AddStruct(const ConstantID _structID, ConstantID _closureTypeParams, RegIndex _regcount, RegIndex _endargregcount, ConstantID _initializerArgTypes) {
+			NomRecord* structure = new NomRecord(_structID, nullptr, _closureTypeParams, _regcount, _endargregcount, _initializerArgTypes);
 			NomClass::AddStruct(structure);
 			return structure;
 		}
@@ -123,8 +125,8 @@ namespace Nom
 		NomValue NomClass::GenerateConstructorCall(NomBuilder& builder, CompileEnv* env, const TypeList typeArgs, llvm::Value* objpointer, llvm::ArrayRef<NomValue> args) const
 		{
 			auto argssize = args.size();
-			NomTypeRef* argTypesBuf = (NomTypeRef*)(nmalloc(sizeof(NomTypeRef) * argssize));
-			llvm::Value** argValuesBuf = (llvm::Value**)(nmalloc(sizeof(llvm::Value*) * (argssize + 1 + typeArgs.size())));
+			NomTypeRef* argTypesBuf = makenmalloc(NomTypeRef, argssize);
+			llvm::Value** argValuesBuf = makenmalloc(llvm::Value*, (argssize + 1 + typeArgs.size()));
 			size_t argspos = 0;
 			argValuesBuf[argspos] = builder->CreatePointerCast(objpointer, REFTYPE);
 			argspos++;
@@ -154,7 +156,7 @@ namespace Nom
 						{
 							argValuesBuf[argspos + i] = CastInstruction::MakeCast(builder, env, args[i], constructorSignature.ArgumentTypes[i]);
 						}
-						auto paramtype = funtype->getParamType(argspos + i);
+						auto paramtype = funtype->getParamType(static_cast<unsigned int>(argspos + i));
 						if (paramtype->isIntegerTy() && !argValuesBuf[argspos + i]->getType()->isIntegerTy())
 						{
 							argValuesBuf[argspos + i] = UnpackInt(builder, argValuesBuf[argspos + i]);
@@ -205,7 +207,7 @@ namespace Nom
 			throw new std::exception();
 		}
 
-		llvm::Constant* NomClass::GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const
+		llvm::Constant* NomClass::GetSuperInstances(llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const
 		{
 			auto instantiations = GetInstantiations();
 			auto instaCount = instantiations.size();
@@ -214,7 +216,7 @@ namespace Nom
 			auto typeArr = makealloca(Type*, instaCount + 1);
 			auto orderedInstas = makealloca(const NomInterface*, instaCount);
 			typeArr[0] = arrtype(SuperInstanceEntryType(), instaCount);
-			int pos = GetSuperClassCount();
+			size_t pos = GetSuperClassCount();
 			auto curSuper = GetSuperClass();
 			while (curSuper.HasElem())
 			{
@@ -271,7 +273,7 @@ namespace Nom
 		}
 
 
-		int NomClass::GetSuperClassCount() const
+		size_t NomClass::GetSuperClassCount() const
 		{
 			size_t superClassCount = 0;
 			auto currentSuper = this->GetSuperClass();
@@ -288,7 +290,6 @@ namespace Nom
 			llvm::SmallVector<char, 64> buf;
 			llvm::StringRef nameref = t.concat(this->GetName()->ToStdString()).toStringRef(buf);
 			return RTClass::FindConstant(mod, nameref);
-			//return mod.getGlobalVariable(nameref, false);
 		}
 		llvm::Constant* NomClass::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
@@ -544,7 +545,7 @@ namespace Nom
 				BasicBlock* notfound = BasicBlock::Create(LLVMCONTEXT, "notFound", fun);
 
 				builder->SetInsertPoint(start);
-				auto nameSwitch = builder->CreateSwitch(namearg, notfound, this->AllFields.size());
+				auto nameSwitch = builder->CreateSwitch(namearg, notfound, static_cast<unsigned int>(this->AllFields.size()));
 
 				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType() }), thisType);
 				scce[0] = thisarg;
@@ -601,7 +602,7 @@ namespace Nom
 				BasicBlock* errorBlock = BasicBlock::Create(LLVMCONTEXT, "invalidWriteValue", fun);
 
 				builder->SetInsertPoint(start);
-				auto nameSwitch = builder->CreateSwitch(namearg, notfound, this->AllFields.size());
+				auto nameSwitch = builder->CreateSwitch(namearg, notfound, static_cast<unsigned int>(this->AllFields.size()));
 
 				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType(), &NomDynamicType::Instance() }), thisType);
 				scce[0] = thisarg;
@@ -676,7 +677,7 @@ namespace Nom
 			return RTClass::GetInterfaceReference(GetLLVMElement(mod));
 		}
 
-		llvm::Constant* NomClass::GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Constant* NomClass::GetCastFunction([[maybe_unused]] llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			return ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 		}
@@ -723,7 +724,7 @@ namespace Nom
 				auto entrycount = methods.size() + fields.size() + 1;
 				auto entries = makealloca(Constant*, entrycount);
 
-				int entryID = 0;
+				size_t entryID = 0;
 				for (auto& meth : methods)
 				{
 					auto fun = Function::Create(GetIMTFunctionType(), linkage, "NOMMON_RT_DD_" + *meth->GetSymbolName(), mod);
@@ -743,9 +744,9 @@ namespace Nom
 					auto callTag = argiter;
 					argiter++;
 					auto varargs = makealloca(Value*, RTConfig_NumberOfVarargsArguments + 1);
-					for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i <= RTConfig_NumberOfVarargsArguments; i++)
+					for (decltype(RTConfig_NumberOfVarargsArguments) j = 0; j <= RTConfig_NumberOfVarargsArguments; j++)
 					{
-						varargs[i] = argiter;
+						varargs[j] = argiter;
 						argiter++;
 					}
 
@@ -806,7 +807,7 @@ namespace Nom
 				}
 				for (auto& field : fields)
 				{
-					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), MakeInt<size_t>(1), ConstantExpr::getIntToPtr(MakeInt<size_t>(((size_t)(field->Index + (GetHasRawInvoke() ? 1 : 0))) << 32), GetIMTFunctionType()->getPointerTo()));
+					entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(field->GetName()->ToStdString())), MakeInt<size_t>(1), ConstantExpr::getIntToPtr(MakeInt<size_t>((static_cast<size_t>(field->Index + (GetHasRawInvoke() ? 1 : 0))) << 32), GetIMTFunctionType()->getPointerTo()));
 					entryID++;
 				}
 				entries[entryID] = GetDynamicDispatchListEntryConstant(MakeInt<size_t>(0), MakeInt<size_t>(0), ConstantPointerNull::get(GetIMTFunctionType()->getPointerTo()));
@@ -875,9 +876,9 @@ namespace Nom
 				auto callTag = argiter;
 				argiter++;
 				auto varargs = makealloca(Value*, RTConfig_NumberOfVarargsArguments + 1);
-				for (decltype(RTConfig_NumberOfVarargsArguments) i = 0; i <= RTConfig_NumberOfVarargsArguments; i++)
+				for (decltype(RTConfig_NumberOfVarargsArguments) j = 0; j <= RTConfig_NumberOfVarargsArguments; j++)
 				{
-					varargs[i] = argiter;
+					varargs[j] = argiter;
 					argiter++;
 				}
 
@@ -977,9 +978,9 @@ namespace Nom
 			return superClassRef;
 		}
 
-		const llvm::SmallVector<NomClassTypeRef, 16> NomClass::GetSuperNameds(llvm::ArrayRef<NomTypeRef> args) const
+		const llvm::SmallVector<NomClassTypeRef, 16> NomClass::GetSuperNameds() const
 		{
-			auto ret = NomInterface::GetSuperNameds(args);
+			auto ret = NomInterface::GetSuperNameds();
 			auto sc = GetSuperClass();
 			if (sc.HasElem())
 			{
@@ -1035,7 +1036,7 @@ namespace Nom
 				AllMethods.push_back(meth);
 			}
 			auto superinsts = GetSuperInterfaces();
-			for (int sii = 0; sii < superinsts.size(); sii++)
+			for (size_t sii = 0; sii < superinsts.size(); sii++)
 			{
 				const NomInstantiationRef<NomInterface>& super = superinsts[sii];
 				super.Elem->PreprocessInheritance();
@@ -1069,11 +1070,9 @@ namespace Nom
 			AddInstantiation(NomInstantiationRef<NomInterface>(superClassRef.Elem, superClassRef.TypeArgs));
 			const NomClass* sclass = superClassRef.Elem;
 			sclass->PreprocessInheritance();
-			int offset = -sclass->MethodTable.size() - 1;
-			bool found = false;
 			auto mthis = const_cast<NomClass*>(this);
 
-			int fieldIndex = sclass->GetFieldCount();
+			size_t fieldIndex = (sclass->GetFieldCount());
 			for (auto field : Fields)
 			{
 				field->SetIndex(fieldIndex++);
@@ -1191,18 +1190,18 @@ namespace Nom
 			}
 		}
 
-		NomClassInternal::NomClassInternal(NomStringRef name, const NomMemberContext* parent) : NomInterface(name->ToStdString()), NomInterfaceInternal(name, parent), symname(name->ToStdString())
+		NomClassInternal::NomClassInternal(NomStringRef name, const NomMemberContext* parent) : NomInterface(), NomInterfaceInternal(name, parent), symname(name->ToStdString())
 		{
 			RegisterClass(name, this);
 		}
 
-		void NomClassInternal::SetSuperClass(NomInstantiationRef<NomClass> superClass)
+		void NomClassInternal::SetSuperClass(NomInstantiationRef<NomClass> _superClass)
 		{
-			if (superClass.Elem == nullptr || this->superClass.Elem != nullptr)
+			if (_superClass.Elem == nullptr || this->superClass.Elem != nullptr)
 			{
 				throw new std::exception();
 			}
-			this->superClass = superClass;
+			this->superClass = _superClass;
 		}
 
 		void NomClassInternal::SetSuperClass()
@@ -1217,7 +1216,7 @@ namespace Nom
 				return superClass;
 			}
 			size_t tcount = superClass.TypeArgs.size();
-			NomTypeRef* tarr = (NomTypeRef*)gcalloc(sizeof(NomTypeRef) * tcount);
+			NomTypeRef* tarr = makegcalloc(NomTypeRef, tcount);
 			for (size_t i = 0; i < tcount; i++)
 			{
 				tarr[i] = superClass.TypeArgs[i]->SubstituteSubtyping(context);

@@ -15,7 +15,7 @@ namespace Nom
 			NomTopType();
 		public:
 			virtual ~NomTopType() override;
-			static NomTopTypeRef Instance() { static NomTopType type; return &type; }
+			static NomTopTypeRef Instance() { [[clang::no_destroy]] static NomTopType type; return &type; }
 
 			bool IsSubtype(NomTypeRef other, bool optimistic = false) const override;
 			bool IsSubtype(NomBottomTypeRef other, bool optimistic = false) const override;
@@ -49,7 +49,7 @@ namespace Nom
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
 
 			// Inherited via NomType
-			virtual intptr_t GetRTElement() const override;
+			virtual uintptr_t GetRTElement() const override;
 
 			// Inherited via NomType
 			virtual NomClassTypeRef GetClassInstantiation(const NomNamed* named) const override;
@@ -80,7 +80,7 @@ namespace Nom
 			virtual TypeReferenceType GetTypeReferenceType() const override;
 
 			// Inherited via NomType
-			virtual bool ContainsVariableIndex(int index) const override;
+			virtual bool ContainsVariableIndex(size_t index) const override;
 		};
 
 	}

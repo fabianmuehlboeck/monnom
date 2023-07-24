@@ -1,7 +1,9 @@
 #pragma once
 #include "RTClass.h"
 #include "NomClass.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Constant.h"
+POPDIAGSUPPRESSION
 #include "AvailableExternally.h"
 
 namespace Nom
@@ -25,7 +27,7 @@ namespace Nom
 			NomVoidObject() {}
 		public:
 			static NomVoidObject* GetInstance();
-			~NomVoidObject() {}
+			~NomVoidObject() override {}
 			// Inherited via AvailableExternally
 			virtual llvm::Constant * createLLVMElement(llvm::Module & mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant * findLLVMElement(llvm::Module & mod) const override;

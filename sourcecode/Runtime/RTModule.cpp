@@ -7,8 +7,11 @@
 #include "NomClassType.h"
 #include "ObjectHeader.h"
 #include <iostream>
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "GlobalNameAddressLookupList.h"
 #include "RTConfig.h"
 #include "boehmgcinterface.h"
@@ -19,7 +22,6 @@
 #include "RTClassType.h"
 #include <fstream>
 #include <iostream>
-#include "llvm/IR/Verifier.h"
 
 namespace Nom
 {
@@ -29,15 +31,15 @@ namespace Nom
 		static size_t lambdaClearAreaSize;
 		std::forward_list<void*>& RTModule::structRecords()
 		{
-			static std::forward_list<void*> lst; return lst;
+			[[clang::no_destroy]] static std::forward_list<void*> lst; return lst;
 		}
 		std::forward_list<void*>& RTModule::lambdaRecords()
 		{
-			static std::forward_list<void*> lst; return lst;
+			[[clang::no_destroy]] static std::forward_list<void*> lst; return lst;
 		}
 		std::forward_list<RuntimeInstantiationDictionary*>& RTModule::instantiationDictionaries()
 		{
-			static std::forward_list<RuntimeInstantiationDictionary*> lst; return lst;
+			[[clang::no_destroy]] static std::forward_list<RuntimeInstantiationDictionary*> lst; return lst;
 		}
 
 		void RTModule::ClearCaches()
@@ -98,7 +100,7 @@ namespace Nom
 				out.flush();
 				for (auto& f : *theModule.get())
 				{
-					if (f.getBasicBlockList().size() > 0)
+					if (f.begin()!=f.end())
 					{
 						if (f.getName().empty())
 						{
@@ -112,9 +114,9 @@ namespace Nom
 
 			std::vector<std::string> structDescriptorNames;
 			std::vector<std::string> lambdaDescriptorNames;
-			static const std::string structdescprefix = "RT_NOM_STRUCTDESC_";
-			static const std::string lambdadescprefix = "RT_NOM_LAMBDADESC_";
-			for (auto& gv : theModule.get()->getGlobalList())
+			[[clang::no_destroy]] static const std::string structdescprefix = "RT_NOM_STRUCTDESC_";
+			[[clang::no_destroy]] static const std::string lambdadescprefix = "RT_NOM_LAMBDADESC_";
+			for (auto& gv : theModule.get()->globals())
 			{
 				if (gv.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage)
 				{
@@ -172,8 +174,8 @@ namespace Nom
 				}
 				if (NomVerbose)
 				{
-					std::cout << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getAddress()) << std::dec;
-					pobof << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getAddress()) << std::dec;
+					std::cout << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getValue()) << std::dec;
+					pobof << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getValue()) << std::dec;
 				}
 			}
 			if (NomVerbose)
@@ -182,13 +184,13 @@ namespace Nom
 				for (std::string& gname : GetGlobalsForAddressLookup())
 				{
 					std::cout << "\n" << gname << ": ";
-					auto symAddress = NomJIT::Instance().lookup(gname)->getAddress();
+					auto symAddress = NomJIT::Instance().lookup(gname)->getValue();
 					std::cout << std::hex << std::move(symAddress);
 				}
 				for (auto fname : compiledFunctionNames)
 				{
 					std::cout << "\nFUN " << fname << ": ";
-					auto symAddress = NomJIT::Instance().lookup(fname)->getAddress();
+					auto symAddress = NomJIT::Instance().lookup(fname)->getValue();
 					std::cout << std::hex << std::move(symAddress);
 				}
 				std::cout << "\n";

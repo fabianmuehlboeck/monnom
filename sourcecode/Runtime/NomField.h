@@ -1,7 +1,9 @@
 #pragma once
 #include "Defs.h"
 #include "NomString.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/IRBuilder.h"
+POPDIAGSUPPRESSION
 #include "CompileEnv.h"
 #include "NomValue.h"
 #include <set>
@@ -18,6 +20,8 @@ namespace Nom
 		public:
 			NomField();
 			virtual ~NomField();
+			NomField(const NomField&) = default;
+			NomField(NomField&&) = default;
 			virtual NomTypeRef GetType() const = 0;
 			virtual NomStringRef GetName() const = 0;
 			virtual NomValue GenerateRead(NomBuilder &builder, CompileEnv* env, NomValue receiver) const = 0;
@@ -26,7 +30,7 @@ namespace Nom
 			virtual bool IsVolatile() const = 0;
 			virtual Visibility GetVisibility() const = 0;
 
-			virtual void PushDependencies(std::set<ConstantID>& set) const = 0;
+			virtual void PushDependencies([[maybe_unused]] std::set<ConstantID>& set) const = 0;
 		};
 
 		class NomTypedField : public NomField
@@ -36,7 +40,8 @@ namespace Nom
 			const ConstantID Type;
 			
 			NomClass *const Class;
-			mutable int Index=-1;
+			mutable size_t Index=0;
+			mutable bool IndexSet = false;
 		private:
 			const Visibility visibility;
 			const bool readonly;
@@ -44,6 +49,8 @@ namespace Nom
 		public:
 			NomTypedField(NomClass* cls, const ConstantID name, const ConstantID type, Visibility visibility, bool readonly, bool isvolatile);
 			virtual ~NomTypedField() override;
+			NomTypedField(const NomTypedField& ) = default;
+			NomTypedField(NomTypedField&&) = default;
 
 			virtual NomTypeRef GetType() const override;
 			virtual NomStringRef GetName() const override;
@@ -53,8 +60,8 @@ namespace Nom
 			virtual bool IsVolatile() const override { return isvolatile; }
 			virtual Visibility GetVisibility() const override { return visibility; }
 
-			void SetIndex(int index) const;
-			virtual void PushDependencies(std::set<ConstantID>& set) const override
+			void SetIndex(size_t index) const;
+			virtual void PushDependencies([[maybe_unused]] std::set<ConstantID>& set) const override
 			{
 				set.insert(Name);
 				set.insert(Type);
@@ -69,6 +76,8 @@ namespace Nom
 		public:
 			static NomDictField *GetInstance(NomStringRef name);
 			virtual ~NomDictField() override;
+			NomDictField(const NomDictField&) = default;
+			NomDictField(NomDictField&&) = default;
 
 			virtual NomTypeRef GetType() const override;
 			virtual NomStringRef GetName() const override;
@@ -79,7 +88,7 @@ namespace Nom
 			virtual bool IsVolatile() const override { return false; }
 			virtual Visibility GetVisibility() const override { return Visibility::Public; }
 
-			virtual void PushDependencies(std::set<ConstantID>& set) const override
+			virtual void PushDependencies([[maybe_unused]] std::set<ConstantID>& set) const override
 			{
 			}
 		};
@@ -87,13 +96,15 @@ namespace Nom
 		class NomClosureField : public NomField
 		{
 		public:
-			NomClosureField(NomLambda* lambda, const ConstantID name, const ConstantID type, const int index);
+			NomClosureField(NomLambda* lambda, const ConstantID name, const ConstantID type, const size_t index);
 			virtual ~NomClosureField() override;
+			NomClosureField(const NomClosureField&) = default;
+			NomClosureField(NomClosureField&&) = default;
 
 			const ConstantID Name;
 			const ConstantID Type;
 			NomLambda * const Lambda;
-			const int Index;
+			const size_t Index;
 
 			// Inherited via NomField
 			virtual bool IsReadOnly() const override { return true; }
@@ -103,7 +114,7 @@ namespace Nom
 			virtual NomStringRef GetName() const override;
 			virtual NomValue GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const override;
 			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const override;
-			virtual void PushDependencies(std::set<ConstantID>& set) const override
+			virtual void PushDependencies([[maybe_unused]] std::set<ConstantID>& set) const override
 			{
 				set.insert(Name);
 				set.insert(Type);
@@ -115,13 +126,15 @@ namespace Nom
 		private:
 			const bool readonly;
 		public:
-			NomRecordField(NomRecord* structure, const ConstantID name, const ConstantID type, bool isReadOnly, const int index, RegIndex valueRegister);
+			NomRecordField(NomRecord* structure, const ConstantID name, const ConstantID type, bool isReadOnly, const size_t index, RegIndex valueRegister);
 			virtual ~NomRecordField() override;
+			NomRecordField(const NomRecordField&) = default;
+			NomRecordField(NomRecordField&&) = default;
 
 			const ConstantID Name;
 			const ConstantID Type;
 			NomRecord* const Structure;
-			const int Index;
+			const size_t Index;
 			const RegIndex ValueRegister;
 
 			// Inherited via NomField
@@ -132,7 +145,7 @@ namespace Nom
 			virtual NomStringRef GetName() const override;
 			virtual NomValue GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const override;
 			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const override;
-			virtual void PushDependencies(std::set<ConstantID>& set) const override
+			virtual void PushDependencies([[maybe_unused]] std::set<ConstantID>& set) const override
 			{
 				set.insert(Name);
 				set.insert(Type);

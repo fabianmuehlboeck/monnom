@@ -1,8 +1,10 @@
 #pragma once
+PUSHDIAGSUPPRESSION
+#include "llvm/ADT/TinyPtrVector.h"
+POPDIAGSUPPRESSION
 
 #include <vector>
 #include "NomType.h"
-#include "llvm/ADT/TinyPtrVector.h"
 
 namespace Nom
 {
@@ -32,7 +34,7 @@ namespace Nom
 			ClassTypeList()
 			{
 			}
-			ClassTypeList(int defaultFields)
+			ClassTypeList([[maybe_unused]]  int defaultFields)
 			{
 
 			}

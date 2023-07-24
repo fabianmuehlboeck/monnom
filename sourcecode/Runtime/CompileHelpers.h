@@ -1,16 +1,20 @@
 #pragma once
-#include "Defs.h"
-#include "TypeOperations.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
+#include "Defs.h"
+#include "TypeOperations.h"
 #include "NomBuilder.h"
+#include "PWInt.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
+		class CompileEnv;
 		llvm::Type* GetGEPTargetType(llvm::Type* origType, llvm::ArrayRef<llvm::Value*> arr);
 		llvm::Type* GetGEPTargetType(llvm::Type* origType, llvm::ArrayRef<llvm::Constant*> arr);
 
@@ -20,26 +24,25 @@ namespace Nom
 		llvm::Value* GenerateIsNull(NomBuilder& builder, llvm::Value* val);
 		void CreateDummyReturn(NomBuilder& builder, llvm::Function* fun);
 
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
-		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWInt32 index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWCInt32 index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 
-
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Module& mod, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
-		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, llvm::Value* index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWInt32 index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::StoreInst* MakeInvariantStore(NomBuilder& builder, llvm::Value* val, llvm::Type* targetType, llvm::Value* ptr, PWCInt32 index, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Module& mod, llvm::Type * elementType, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
-		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Value* index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWInt32 index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWCInt32 index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Module& mod, llvm::Type* elementType, llvm::Value* ptr, llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::ArrayRef<llvm::Value*> indices, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
-		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, llvm::Value* index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWInt32 index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
+		llvm::LoadInst* MakeInvariantLoad(NomBuilder& builder, llvm::Type* elementType, llvm::Value* ptr, PWCInt32 index, llvm::Twine name = "", llvm::AtomicOrdering ordering = llvm::AtomicOrdering::Unordered);
 
 		typedef void* (*ReadFieldFunction)(void*, int32_t);
 		typedef void (*WriteFieldFunction)(void*, int32_t, void*);
@@ -50,6 +53,8 @@ namespace Nom
 		ReadFieldFunction GetReadFieldFunction();
 		WriteFieldFunction GetWriteFieldFunction();
 		FieldAddrFunction GetFieldAddrFunction();
+		ReadFieldFunction GetReadFieldFunction_ForInvoke();
+		WriteFieldFunction GetWriteFieldFunction_ForInvoke();
 		ReadTypeArgFunction GetReadTypeArgFunction();
 		WriteTypeArgFunction GetWriteTypeArgFunction();
 		WriteVTableFunction GetWriteVTableFunction();
@@ -77,15 +82,15 @@ namespace Nom
 		llvm::ConstantInt* MakeUInt(size_t size, uint64_t val);
 		llvm::ConstantInt* MakeSInt(size_t size, int64_t val);
 		llvm::ConstantInt* MakeInt(size_t size, int64_t val);
-		llvm::ConstantInt* MakeInt32(int32_t val);
-		llvm::ConstantInt* MakeInt32(uint32_t val);
-		llvm::ConstantInt* MakeInt32(uint64_t val);
-		llvm::ConstantInt* MakeInt32(int64_t val);
+		PWCInt32 MakeInt32(int32_t val);
+		PWCInt32 MakeInt32(uint32_t val);
+		PWCInt32 MakeInt32(uint64_t val);
+		PWCInt32 MakeInt32(int64_t val);
 		template<typename T>
-		inline llvm::ConstantInt* MakeInt32(T val)
+		PWCInt32 MakeInt32(T val)
 		{
-			static_assert(sizeof(T) == sizeof(unsigned char), "This is definitely not a correct enum");
-			return MakeInt32((uint32_t)((unsigned char)val));
+			static_assert(sizeof(std::underlying_type_t<T>) == sizeof(unsigned char), "This is definitely not a correct enum");
+			return MakeInt32(static_cast<uint32_t>(static_cast<std::underlying_type_t<T>>(val)));
 		}
 		llvm::ConstantInt* MakeInt(size_t size, uint64_t val);
 		llvm::ConstantInt* MakeIntLike(llvm::Value* value, uint64_t val);
@@ -96,5 +101,20 @@ namespace Nom
 
 		llvm::Value* CreatePointerEq(NomBuilder& builder, llvm::Value* left, llvm::Value* right, const llvm::Twine& name = "");
 		void CreateExpect(NomBuilder& builder, llvm::Value* value, llvm::Value* expected);
+
+		template<typename T>
+		PWCInt8 MakeInt8(T v)
+		{
+			if (std::is_unsigned_v< std::underlying_type_t<T> > ==true)
+			{
+				PWCInt32 pwuint = MakePWUInt32(static_cast<std::underlying_type_t<T> >(v));
+				return pwuint.Resize<8>();
+			}
+			else
+			{
+				PWCInt32 pwint = MakePWInt32(static_cast<std::underlying_type_t<T> >(v));
+				return pwint.Resize<8>();
+			}
+		}
 	}
 }

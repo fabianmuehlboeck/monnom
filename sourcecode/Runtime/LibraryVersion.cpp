@@ -11,11 +11,6 @@ namespace Nom
 		{
 		}
 
-
-		LibraryVersion::~LibraryVersion()
-		{
-		}
-
 		const NomClass * LibraryVersion::GetClass(NomStringRef name) const
 		{
 			NomModule mod(this->CSource->Program);

@@ -18,17 +18,17 @@ namespace Nom
 		{
 		}
 
-		void LoadIntConstantInstruction::Compile(NomBuilder &builder, CompileEnv* env, int lineno)
+		void LoadIntConstantInstruction::Compile(NomBuilder &builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			RegisterValue(env, NomValue(builder->getInt64(Value), NomIntClass::GetInstance()->GetType()));
 		}
-		void LoadIntConstantInstruction::Print(bool resolve)
+		void LoadIntConstantInstruction::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "IntConstant " << std::dec << Value;
 			cout << " -> #" << std::dec << WriteRegister;
 			cout << "\n";
 		}
-		void LoadIntConstantInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void LoadIntConstantInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 	}

@@ -7,12 +7,6 @@ namespace Nom
 		LibraryDependency::LibraryDependency(const std::string &name, const VersionNumber &requiredVersion) : Name(name), RequiredVersion(requiredVersion)
 		{
 		}
-
-
-		LibraryDependency::~LibraryDependency()
-		{
-		}
-
 	}
 }
 

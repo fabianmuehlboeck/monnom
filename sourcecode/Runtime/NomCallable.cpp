@@ -8,13 +8,9 @@ namespace Nom
 	{
 		using namespace llvm;
 
-		NomCallableLoaded::NomCallableLoaded(const std::string &name, const NomMemberContext *parent, const std::string &qname, const RegIndex regcount, const ConstantID typeArgs, const ConstantID argTypes, bool declOnly, bool cppWrapper) : NomMemberContextLoaded(parent, typeArgs), declOnly(declOnly), cppWrapper(cppWrapper), name(name), qname(qname), regcount(regcount), argTypesID(argTypes)
+		NomCallableLoaded::NomCallableLoaded(const std::string& _name, const NomMemberContext* _parent, const std::string& _qname, const RegIndex _regcount, const ConstantID _typeArgs, const ConstantID _argTypes, bool _declOnly, bool _cppWrapper) : NomMemberContextLoaded(_parent, _typeArgs), declOnly(_declOnly), cppWrapper(_cppWrapper), name(_name), qname(_qname), regcount(_regcount), argTypesID(_argTypes)
 		{
 		}
-		//NomCallableLoaded::NomCallableLoaded(const std::string& name, const NomMemberContext* parent, const std::string& qname, const RegIndex regcount, const llvm::ArrayRef<NomTypeVarRef> typeParameters, bool declOnly, bool cppWrapper) : NomMemberContextLoaded(parent, typeParameters), declOnly(declOnly), cppWrapper(cppWrapper), name(name), qname(qname), regcount(regcount)
-		//{
-		//}
-
 
 		NomCallableLoaded::~NomCallableLoaded()
 		{
@@ -41,7 +37,7 @@ namespace Nom
 			}
 		}
 
-		int NomCallableLoaded::GetArgumentCount() const
+		size_t NomCallableLoaded::GetArgumentCount() const
 		{
 			if (argTypes.data() != nullptr)
 			{
@@ -75,17 +71,6 @@ namespace Nom
 			}
 			return NomType::PointwiseSubtype(argTypes, GetArgumentTypes(&substC));
 		}
-
-		//llvm::Function * NomCallable::GetLLVMFunction(llvm::Module * mod) const
-		//{
-		//	Function *ret = mod->getFunction(GetSymbolName());
-		//	if (ret == nullptr)
-		//	{
-		//		//std::cout << "\nCreating function Proto for static method " + name + "\n";
-		//		ret = Function::Create(GetLLVMFunctionType(), Function::ExternalLinkage, GetSymbolName(), mod);;
-		//	}
-		//	return ret;
-		//}
 
 		const std::string *NomCallable::GetSymbolName() const
 		{
@@ -156,17 +141,17 @@ namespace Nom
 			return mod.getFunction(*GetSymbolName());
 		}
 
-		void NomCallableInternal::SetArgumentTypes(TypeList argTypes)
+		void NomCallableInternal::SetArgumentTypes(TypeList _argTypes)
 		{
-			if (this->argTypes.data() != nullptr || argTypes.data() == nullptr)
+			if (this->argTypes.data() != nullptr || (_argTypes.data() == nullptr && _argTypes.size()>0))
 			{
 				throw new std::exception();
 			}
-			this->argTypes = argTypes;
+			this->argTypes = _argTypes;
 		}
 		void NomCallableInternal::SetArgumentTypes()
 		{
-			SetArgumentTypes(TypeList((NomTypeRef*)(this), (size_t)0));
+			SetArgumentTypes(TypeList(static_cast<NomTypeRef*>(nullptr), static_cast<size_t>(0)));
 		}
 		TypeList NomCallableInternal::GetArgumentTypes(const NomSubstitutionContext* context) const
 		{
@@ -187,16 +172,16 @@ namespace Nom
 			{
 				return argTypes;
 			}
-			NomTypeRef* tarr = (NomTypeRef*)(gcalloc(sizeof(NomTypeRef) * argTypes.size()));
+			NomTypeRef* tarr = makegcalloc(NomTypeRef, argTypes.size());
 			for (size_t i = 0; i < argTypes.size(); i++)
 			{
 				tarr[i] = argTypes[i]->SubstituteSubtyping(context);
 			}
 			return TypeList(tarr, argTypes.size());
 		}
-		int NomCallableInternal::GetArgumentCount() const
+		size_t NomCallableInternal::GetArgumentCount() const
 		{
 			return argTypes.size();
 		}
-}
+	}
 }

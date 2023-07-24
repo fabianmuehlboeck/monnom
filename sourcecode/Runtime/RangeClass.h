@@ -33,3 +33,13 @@ namespace Nom
 		};
 	}
 }
+
+extern "C" DLLEXPORT void* LIB_NOM_Range_GetEnumerator_0(void* range);
+
+extern "C" DLLEXPORT void* LIB_NOM_RangeEnumerator_MoveNext_0(void* iter) noexcept(false);
+
+extern "C" DLLEXPORT void* LIB_NOM_RangeEnumerator_Current_0(void* iter) noexcept(false);
+
+extern "C" DLLEXPORT void* LIB_NOM_Range_Constructor_3(void* rng, intptr_t start, intptr_t end, intptr_t step);
+
+extern "C" DLLEXPORT void* LIB_NOM_RangeEnumerator_Constructor_3(void* RangeEnumerator, intptr_t start, intptr_t end, intptr_t step);

@@ -2,7 +2,9 @@
 #include "RTTypeHead.h"
 #include "RTClass.h"
 #include "RTConcreteType.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
+POPDIAGSUPPRESSION
 #include "AvailableExternally.h"
 
 namespace Nom
@@ -18,7 +20,7 @@ namespace Nom
 		private:
 			RTClassType() {}
 		public:
-			static RTClassType& Instance() { static RTClassType rtct; return rtct; }
+			static RTClassType& Instance() { [[clang::no_destroy]] static RTClassType rtct; return rtct; }
 			static llvm::StructType *GetLLVMType();
 			static llvm::StructType * GetLLVMType(size_t size);
 			static llvm::Constant *GetConstant(llvm::Module &mod, const NomClassType *cls, llvm::Constant* subt);

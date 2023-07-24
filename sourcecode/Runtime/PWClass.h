@@ -11,13 +11,13 @@ namespace Nom
 		class PWClass : public PWVTable
 		{
 		public:
-			PWClass(llvm::Value* wrapped) : PWVTable(wrapped)
-			{
-
-			}
+			static llvm::Type* GetLLVMType();
+			static llvm::Type* GetWrappedLLVMType();
+			PWClass(llvm::Value* _wrapped);
 			static PWClass FromVTable(PWVTable vt);
 
 			PWInterface GetInterface(NomBuilder& builder) const;
+			PWInt64 ReadFieldCount(NomBuilder& builder) const;
 		};
 	}
 }

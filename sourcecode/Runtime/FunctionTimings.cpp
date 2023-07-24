@@ -1,15 +1,17 @@
 #include "FunctionTimings.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Function.h"
+POPDIAGSUPPRESSION
 #include "CastStats.h"
 #include "NomNameRepository.h"
 #include "NomAlloc.h"
 #include <vector>
 #include <iostream>
 
-size_t timingBufferPos = 0;
-const std::string** ftdebugFunNames;
+static size_t timingBufferPos = 0;
+static const std::string** ftdebugFunNames;
 #ifdef _WIN32
-LONGLONG* functionTimingsArray;
+static LONGLONG* functionTimingsArray;
 #endif
 
 struct FunctionTiming
@@ -21,21 +23,19 @@ public:
 	TIMERTYPE AccTime;
 };
 
-FunctionTiming* ftbuffer;
+static FunctionTiming* ftbuffer;
 
-FunctionTiming* timingAlloc()
+static FunctionTiming* timingAlloc()
 {
 	return ftbuffer++;
 }
-void freeTimingAlloc()
+static void freeTimingAlloc()
 {
 	ftbuffer--;
 }
 
-
-
-FunctionTiming baseFunction;
-FunctionTiming* currentFunction = &baseFunction;
+[[clang::no_destroy]] static FunctionTiming baseFunction;
+static FunctionTiming* currentFunction = &baseFunction;
 
 DLLEXPORT void NOM_RT_FT_EnterFunction(size_t funid)
 {
@@ -76,7 +76,7 @@ static double find_timer_frequency()
 		{
 			throw new std::exception();
 		}
-		timer_frequency = (double)(ttf.QuadPart);
+		timer_frequency = static_cast<double>(ttf.QuadPart);
 #else
 		timer_frequency = 0;
 #endif
@@ -111,9 +111,9 @@ namespace Nom
 		void InitFunctionTimings()
 		{
 			auto maxid = NomNameRepository::ProfilingInstance().GetMaxID();
-			ftdebugFunNames = (const std::string**) nmalloc(sizeof(std::string*) * (maxid + 1));
+			ftdebugFunNames = makenmalloc(const std::string*, (maxid + 1));
 #ifdef _WIN32
-			functionTimingsArray = (LONGLONG*)nmalloc(sizeof(size_t) * (maxid + 1));
+			functionTimingsArray = makenmalloc(LONGLONG, (maxid + 1));
 #endif
 			for (decltype(maxid) i = 1; i <= maxid; i++)
 			{
@@ -122,7 +122,7 @@ namespace Nom
 				functionTimingsArray[i] = 0;
 #endif
 			}
-			ftbuffer = (FunctionTiming*)malloc(sizeof(FunctionTiming) * 1000000);
+			ftbuffer = makenmalloc(FunctionTiming, 1000000);
 		}
 
 		void PrintFunctionTimings()
@@ -139,7 +139,7 @@ namespace Nom
 #ifdef _WIN32
 				if (functionTimingsArray[i] > 0)
 				{
-					std::cout << (*ftdebugFunNames[i]) << ": " << std::fixed << (((double)functionTimingsArray[i]) / frequency) << " seconds\n";
+					std::cout << (*ftdebugFunNames[i]) << ": " << std::fixed << ((static_cast<double>(functionTimingsArray[i])) / frequency) << " seconds\n";
 				}
 #endif
 			}

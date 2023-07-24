@@ -13,7 +13,7 @@ namespace Nom
 		public:
 			static llvm::StructType* GetLLVMType();
 
-			static llvm::Value* GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* thisObj, int32_t argindex, const NomLambda* lambda);
+			static llvm::Value* GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* thisObj, size_t argindex, const NomLambda* lambda);
 			static llvm::Value* GeneratePointerToTypeArguments(NomBuilder& builder, llvm::Value* thisObj, const NomLambda* lambda);
 
 			static void GenerateConstructorCode(NomBuilder& builder, llvm::ArrayRef<llvm::Value*> typeArguments, llvm::ArrayRef<llvm::Value*> arguments, llvm::Constant* descriptorRef, const NomLambda* lambda);

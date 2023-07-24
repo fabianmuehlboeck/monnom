@@ -18,13 +18,9 @@ namespace Nom
 		{
 		}
 
-		void DebugInstruction::Compile(NomBuilder &builder, CompileEnv* env, int lineno)
+		void DebugInstruction::Compile(NomBuilder &builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			GenerateLLVMDebugPrint(builder, env->Module, NomConstants::GetString(messageConstant)->GetText()->ToStdString());
-			/*env->basicBlockTerminated = false;
-			std::string * textptr = new std::string();
-			std::array<llvm::Value *, 1> args = { { llvm::ConstantInt::get(Type::getIntNTy(LLVMCONTEXT, bitsin(uint64_t)), reinterpret_cast<uint64_t>(textptr), false) } };
-			llvm::Function * fun = GetPrint(env->Module);*/
 		}
 		void DebugInstruction::Print(bool resolve)
 		{

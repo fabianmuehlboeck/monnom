@@ -1,5 +1,8 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/Twine.h"
+POPDIAGSUPPRESSION
+
 namespace Nom
 {
 	namespace Runtime

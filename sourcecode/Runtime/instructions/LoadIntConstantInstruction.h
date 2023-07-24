@@ -10,8 +10,8 @@ namespace Nom
 		public:
 			const uint64_t Value;
 			LoadIntConstantInstruction(const uint64_t value, const RegIndex reg);
-			virtual ~LoadIntConstantInstruction();
-			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
+			virtual ~LoadIntConstantInstruction() override;
+			virtual void Compile(NomBuilder &builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

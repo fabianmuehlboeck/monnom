@@ -1,4 +1,9 @@
  #include "CallConstructor.h"
+#include <iostream>
+PUSHDIAGSUPPRESSION
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "../NomAlloc.h"
 #include "../NomConstructor.h"
 #include "../NomInstantiationRef.h"
@@ -6,10 +11,7 @@
 #include "../NomVMInterface.h"
 #include "../NomClassType.h"
 #include "../CompileHelpers.h"
-#include <iostream>
-#include "llvm/Support/raw_os_ostream.h"
 #include "../CallingConvConf.h"
-#include "llvm/IR/Verifier.h"
 #include "../RTCompileConfig.h"
 #include "../RefValueHeader.h"
 
@@ -37,15 +39,15 @@ namespace Nom
 			FunctionType* ft = cnstrctr->GetLLVMFunctionType();
 			auto targcount = cnstrctr->GetTypeParametersCount();
 			auto argcount = cnstrctr->GetArgumentCount();
-			int i;
+			size_t i;
 			llvm::Type** argtarr = makealloca(llvm::Type*, targcount + argcount);
 			for (i = 1; i <= targcount; i++)
 			{
-				argtarr[i-1] = ft->getParamType(i);
+				argtarr[i-1] = ft->getParamType(static_cast<unsigned int>(i));
 			}
 			for (; i <= targcount+argcount; i++)
 			{
-				argtarr[i-1] = ft->getParamType(i);
+				argtarr[i-1] = ft->getParamType(static_cast<unsigned int>(i));
 			}
 			FunctionType* nft = FunctionType::get(ft->getReturnType(), ArrayRef<llvm::Type*>(argtarr, targcount + argcount), false);
 
@@ -96,7 +98,7 @@ namespace Nom
 			return cfun;
 		}
 
-		void CallConstructor::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void CallConstructor::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			NomSubstitutionContextMemberContext nscmc(env->Context);
 			NomInstantiationRef<NomClass> cls = NomConstants::GetSuperClass(ClassSuperClass)->GetClassType(&nscmc);
@@ -112,8 +114,8 @@ namespace Nom
 				RefValueHeader::GenerateWriteRawInvoke(builder, newmem, cls.Elem->GetRawInvokeFunction(*(env->Module)));
 			}
 
-			NomValue * argbuf = (NomValue *)(nmalloc(sizeof(NomValue) * env->GetArgCount()));
-			for (int i = 0; i < env->GetArgCount(); i++)
+			NomValue * argbuf = makenmalloc(NomValue, env->GetArgCount());
+			for (size_t i = 0; i < env->GetArgCount(); i++)
 			{
 				argbuf[i] = env->GetArgument(i);
 			}

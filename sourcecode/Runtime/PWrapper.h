@@ -1,27 +1,31 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {
 	namespace Runtime
 	{
-		class PWrapper
+		template<typename T=llvm::Value*>
+		class PWrapperT
 		{
 		public:
-			llvm::Value* wrapped;
+			T wrapped;
 
-			PWrapper(llvm::Value* wrapped) : wrapped(wrapped)
+			PWrapperT(T _wrapped) : wrapped(_wrapped)
 			{
 
 			}
-			inline llvm::Value* operator->() const
+			inline T operator->() const
 			{
 				return wrapped;
 			}
-			inline operator llvm::Value* () const
+			inline operator T () const
 			{
 				return wrapped;
 			}
 		};
+		using PWrapper = PWrapperT<llvm::Value*>;
 	}
 }

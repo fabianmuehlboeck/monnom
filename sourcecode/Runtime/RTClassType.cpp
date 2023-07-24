@@ -8,6 +8,8 @@
 #include "CompileHelpers.h"
 #include "RTInterface.h"
 #include "RTTypeHead.h"
+#include "PWClassType.h"
+#include "PWInterface.h"
 
 using namespace llvm;
 namespace Nom
@@ -52,11 +54,11 @@ namespace Nom
 
 		llvm::Value* RTClassType::GenerateReadClassDescriptorLink(NomBuilder& builder, llvm::Value* type)
 		{
-			return MakeInvariantLoad(builder, type, GetLLVMType()->getPointerTo(), MakeInt32(RTClassTypeFields::Class), "class");
+			return PWClassType(type).ReadClassDescriptorLink(builder);
 		}
 		llvm::Value* RTClassType::GetTypeArgumentsPtr(NomBuilder& builder, llvm::Value* type)
 		{
-			return builder->CreateGEP(builder->CreatePointerCast(type, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs),MakeInt32(0) }, "typeArgs");
+			return PWClassType(type).TypeArgumentsPointer(builder);
 		}
 		llvm::FunctionType* RTClassType::GetInstantiateClassTypeFunctionType()
 		{
@@ -88,12 +90,12 @@ namespace Nom
 				Value* nomtype = args;
 
 				RTTypeHead::CreateInitialization(builder, mod, ctype, TypeKind::TKClass, hash, nomtype, RTInterface::GenerateReadCastFunction(builder, vtableptr));
-				MakeStore(builder, vtableptr, ctype, MakeInt32(RTClassTypeFields::Class));
+				MakeStore(builder, vtableptr, GetLLVMType(), ctype, MakeInt32(RTClassTypeFields::Class));
 
-				auto targetTypeArgStart = builder->CreateGEP(ctype, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs), builder->CreateNeg(targcount) });
-				auto sourceTypeArgStart = builder->CreateGEP(typeargs, builder->CreateNeg(targcount));
+				auto targetTypeArgStart = builder->CreateGEP(GetLLVMType(), ctype, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs), builder->CreateNeg(targcount) });
+				auto sourceTypeArgStart = builder->CreateGEP(TYPETYPE, typeargs, builder->CreateNeg(targcount));
 				builder->CreateMemCpy(targetTypeArgStart, MaybeAlign(8), sourceTypeArgStart, MaybeAlign(8), builder->CreateMul(targcount, MakeInt32(sizeof(intptr_t))));
-				builder->CreateRet(builder->CreateGEP(ctype, { MakeInt32(0), MakeInt32(RTClassTypeFields::Head) }));
+				builder->CreateRet(builder->CreateGEP(GetLLVMType(), ctype, { MakeInt32(0), MakeInt32(RTClassTypeFields::Head) }));
 			}
 			return fun;
 		}

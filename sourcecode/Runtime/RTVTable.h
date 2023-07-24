@@ -1,6 +1,8 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 #include "NomBuilder.h"
 #include "RTDescriptor.h"
 

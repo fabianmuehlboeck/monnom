@@ -25,17 +25,17 @@ namespace Nom
 			virtual llvm::ArrayRef<NomTypeRef> GetTypeParameters() const = 0;
 			virtual size_t GetTypeArgumentCount() const = 0;
 
-			virtual NomTypeRef GetTypeVariable(int index) const = 0;
+			virtual NomTypeRef GetTypeVariable(size_t index) const = 0;
 		};
 
 		class NomSubstitutionContextCombination : public NomSubstitutionContext
 		{
 		protected:
-			mutable llvm::ArrayRef<NomTypeRef> arr = llvm::ArrayRef<NomTypeRef>((const NomTypeRef *)nullptr, (size_t) 0);
+			mutable llvm::ArrayRef<NomTypeRef> arr = llvm::ArrayRef<NomTypeRef>(static_cast<const NomTypeRef *>(nullptr), static_cast<size_t>(0));
 			const NomSubstitutionContext* const left;
 			const NomSubstitutionContext* const right;
 		public:
-			NomSubstitutionContextCombination(const NomSubstitutionContext* left, const NomSubstitutionContext* right) : left(left), right(right)
+			NomSubstitutionContextCombination(const NomSubstitutionContext* leftContext, const NomSubstitutionContext* rightContext) : left(leftContext), right(rightContext)
 			{
 
 			}
@@ -53,7 +53,7 @@ namespace Nom
 				{
 					auto leftcount = left->GetTypeArgumentCount();
 					auto rightcount = right->GetTypeArgumentCount();
-					NomTypeRef* tarr = (NomTypeRef*)nmalloc(sizeof(NomTypeRef) * (leftcount + rightcount));
+					NomTypeRef* tarr = static_cast<NomTypeRef*>(nmalloc(sizeof(NomTypeRef) * (leftcount + rightcount)));
 					for (decltype(leftcount) i = 0; i < leftcount + rightcount; i++)
 					{
 						if (i < leftcount)
@@ -74,7 +74,7 @@ namespace Nom
 				return left->GetTypeArgumentCount()+right->GetTypeArgumentCount();
 			}
 
-			virtual NomTypeRef GetTypeVariable(int index) const override
+			virtual NomTypeRef GetTypeVariable(size_t index) const override
 			{
 				if (index < left->GetTypeArgumentCount())
 				{
@@ -110,9 +110,9 @@ namespace Nom
 				return TypeParameters.size();
 			}
 
-			virtual NomTypeRef GetTypeVariable(int index) const override
+			virtual NomTypeRef GetTypeVariable(size_t index) const override
 			{
-				return TypeParameters[index];
+				return TypeParameters[static_cast<size_t>(index)];
 			}
 		};
 
@@ -127,7 +127,7 @@ namespace Nom
 			virtual llvm::ArrayRef<NomTypeRef> GetTypeParameters() const override;
 			virtual size_t GetTypeArgumentCount() const override;
 
-			virtual NomTypeRef GetTypeVariable(int index) const override;
+			virtual NomTypeRef GetTypeVariable(size_t index) const override;
 		};
 
 		using NomSubstitutionContextRef = const NomSubstitutionContext*;
@@ -146,7 +146,7 @@ namespace Nom
 
 			virtual size_t GetTypeArgumentCount() const override;
 
-			virtual NomTypeRef GetTypeVariable(int index) const override;
+			virtual NomTypeRef GetTypeVariable(size_t index) const override;
 
 		};
 	}

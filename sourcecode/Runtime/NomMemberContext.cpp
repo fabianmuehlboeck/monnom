@@ -9,7 +9,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomMemberContextLoaded::NomMemberContextLoaded(const NomMemberContext *parent, ConstantID typeParametersID) : parent(parent), typeParametersID(typeParametersID)
+		NomMemberContextLoaded::NomMemberContextLoaded(const NomMemberContext *_parent, ConstantID _typeParametersID) : parent(_parent), typeParametersID(_typeParametersID)
 		{
 		}
 
@@ -29,7 +29,7 @@ namespace Nom
 				return ntlc->GetSize(); 
 			}
 		}
-		NomTypeParameterRef NomMemberContextLoaded::GetLocalTypeParameter(int index) const
+		NomTypeParameterRef NomMemberContextLoaded::GetLocalTypeParameter(size_t index) const
 		{
 			return GetDirectTypeParameters()[index];
 		}
@@ -40,7 +40,7 @@ namespace Nom
 				NomTypeParametersConstant* ntlc = NomConstants::GetTypeParameters(typeParametersID);
 				llvm::ArrayRef<NomTypeParameterConstant*> tparams = ntlc->GetParameters();
 				size_t varcount = tparams.size();
-				NomTypeParameterLoaded* vars = (NomTypeParameterLoaded *) nmalloc(sizeof(NomTypeParameterLoaded) * varcount);
+				NomTypeParameterLoaded* vars = makenmalloc(NomTypeParameterLoaded, varcount);
 				NomTypeParameterRef* varptrs = new NomTypeParameterRef [varcount];
 				for (size_t i = 0; i < varcount; i++)
 				{
@@ -73,12 +73,12 @@ namespace Nom
 		}
 
 
-		NomTypeParameterRef NomMemberContext::GetTypeParameter(int index) const
+		NomTypeParameterRef NomMemberContext::GetTypeParameter(size_t index) const
 		{
-			int modifiedIndex = index - GetTypeParametersStart();
-			if (modifiedIndex >= 0)
+			auto tpstart = GetTypeParametersStart();
+			if (index >= tpstart)
 			{
-				return GetLocalTypeParameter(modifiedIndex);
+				return GetLocalTypeParameter(index - tpstart);
 			}
 			return GetParent()->GetTypeParameter(index);
 		}
@@ -88,7 +88,7 @@ namespace Nom
 			if (directVariables.data() == nullptr)
 			{
 				auto directParams = GetDirectTypeParameters();
-				NomTypeRef* tarr = (NomTypeRef*)(nmalloc(sizeof(NomTypeRef) * directParams.size()));
+				NomTypeRef* tarr = makenmalloc(NomTypeRef, directParams.size());
 				for (size_t i = 0; i < directParams.size(); i++)
 				{
 					tarr[i] = new NomTypeVar(directParams[i]);
@@ -98,25 +98,12 @@ namespace Nom
 			return directVariables;
 		}
 
-		//SimpleNomMemberContext::SimpleNomMemberContext(const NomMemberContext* parent, ConstantID typeParametersID, const std::string& symbolName) : NomMemberContext(parent, typeParametersID), symbolName(symbolName)
-		//{
-		//}
-
-		//SimpleNomMemberContext::SimpleNomMemberContext(const NomMemberContext* parent, llvm::ArrayRef<NomTypeVarRef> typeParameters, const std::string& symbolName) : NomMemberContext(parent, typeParameters), symbolName(symbolName)
-		//{
-		//}
-
-		//const std::string* SimpleNomMemberContext::GetSymbolName() const
-		//{
-		//	return &symbolName;
-		//}
-
 		const llvm::ArrayRef<NomTypeRef> NomMemberContext::GetAllTypeVariables() const
 		{
 			if (allVariables.data() == nullptr)
 			{
 				size_t pos = GetTypeParametersCount();
-				NomTypeRef* tarr = (NomTypeRef*)(nmalloc(sizeof(NomTypeRef) * pos));
+				NomTypeRef* tarr = makenmalloc(NomTypeRef, pos);
 				const NomMemberContext* nmc = this;
 				while (pos > 0)
 				{
@@ -150,7 +137,7 @@ namespace Nom
 					return allParameters;
 				}
 				size_t count = GetTypeParametersCount();
-				NomTypeParameterRef* parr = (NomTypeParameterRef*)(nmalloc(sizeof(NomTypeParameterRef) * count));
+				NomTypeParameterRef* parr = makenmalloc(NomTypeParameterRef, count);
 				for (size_t i = 0; i < count; i++)
 				{
 					parr[i] = GetTypeParameter(i);

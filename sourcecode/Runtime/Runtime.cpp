@@ -28,7 +28,7 @@
 #include "VoidClass.h"
 #include "FunInterface.h"
 #include "TimerClass.h"
-#include "llvm/ADT/Triple.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -36,7 +36,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-//#include "llvm/CodeGen/CommandFlags.inc"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DataLayout.h"
@@ -59,15 +58,13 @@
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
+POPDIAGSUPPRESSION
 #include "CastStats.h"
 #include "RTConfig.h"
 #include "IComparableInterface.h"
@@ -82,7 +79,7 @@
 
 // This is an example of an exported variable
 int nRuntime = 0;
-static int _isInWarmup = 0;
+static int isInWarmup_ = 0;
 
 using namespace Nom::Runtime;
 using namespace std::literals;
@@ -135,7 +132,7 @@ int test()
 	auto MainSymbol = NomJIT::Instance().lookup(*meth->GetSymbolName());
 	assert(MainSymbol && "Function not found");
 	std::cout << "\nMain method symbol found\n";
-	void* (*mainmeth)() = (void* (*)())(intptr_t)MainSymbol->getAddress();
+	void* (*mainmeth)() = reinterpret_cast<void* (*)()>(MainSymbol->getValue());
 	std::cout << "\nGot main method pointer\n";
 	mainmeth();
 	std::cout << "\nMain method executed\n";
@@ -144,23 +141,23 @@ int test()
 	return 0;
 }
 
-int run(const std::vector<std::string> args)
+int run([[maybe_unused]] const std::vector<std::string> args)
 {
 	const Loader* loader = Loader::GetInstance();
 	const LibraryVersion* const lib = loader->GetLibrary(&NomMainClassName);
 	const NomClass* mainCls = lib->GetClass(lib->GetMainClassName());
 	const NomStaticMethod* mainMethod = mainCls->GetStaticMethod(lib->GetMainMethodName(), TypeList(), TypeList()).Elem;
 	auto MainSymbol = NomJIT::Instance().lookup(*mainMethod->GetSymbolName());
-	void* (*mainmeth)() = (void* (*)())(intptr_t)MainSymbol->getAddress();
+	void* (*mainmeth)() = reinterpret_cast<void* (*)()>(MainSymbol->getValue());
 
-	_isInWarmup = 1;
-	for (int i = 0; i < NomWarmupRuns; i++)
+	isInWarmup_ = 1;
+	for (decltype(NomWarmupRuns) i = 0; i < NomWarmupRuns; i++)
 	{
 		GC_gcollect();
 		mainmeth();
 		RTModule::ClearCaches();
 	}
-	_isInWarmup = 0;
+	isInWarmup_ = 0;
 	GC_gcollect();
 	mainmeth();
 	if (NomTimings)
@@ -202,7 +199,7 @@ void initLibrary()
 int main(int argc, char** args)
 {
 	parseArguments(argc, args);
-	GC_INIT();
+	gc_init();
 
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
@@ -210,16 +207,12 @@ int main(int argc, char** args)
 
 	PassRegistry& Registry = *PassRegistry::getPassRegistry();
 	initializeCore(Registry);
-	initializeCoroutines(Registry);
 	initializeScalarOpts(Registry);
-	initializeObjCARCOpts(Registry);
 	initializeVectorization(Registry);
 	initializeIPO(Registry);
 	initializeAnalysis(Registry);
 	initializeTransformUtils(Registry);
 	initializeInstCombine(Registry);
-	initializeAggressiveInstCombine(Registry);
-	initializeInstrumentation(Registry);
 	initializeTarget(Registry);
 	// For codegen passes, only passes that do IR to IR transformation are
 	// supported.
@@ -236,8 +229,6 @@ int main(int argc, char** args)
 	initializeGlobalMergePass(Registry);
 	initializeIndirectBrExpandPassPass(Registry);
 	initializeInterleavedAccessPass(Registry);
-	initializeEntryExitInstrumenterPass(Registry);
-	initializePostInlineEntryExitInstrumenterPass(Registry);
 	initializeTailCallElimPass(Registry);
 	initializeUnreachableBlockElimLegacyPassPass(Registry);
 	initializeExpandReductionsPass(Registry);
@@ -262,6 +253,6 @@ int main(int argc, char** args)
 
 int isInWarmup()
 {
-	return _isInWarmup;
+	return isInWarmup_;
 }
 

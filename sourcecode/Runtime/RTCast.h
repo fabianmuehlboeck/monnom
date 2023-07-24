@@ -29,8 +29,8 @@ namespace Nom
 		private:
 			FailingAdjustFun() {}
 		public:
-			static FailingAdjustFun* GetInstance() { static FailingAdjustFun instance; return &instance; }
-			~FailingAdjustFun() {};
+			static FailingAdjustFun* GetInstance() { [[clang::no_destroy]] static FailingAdjustFun instance; return &instance; }
+			~FailingAdjustFun() override {}
 			// Inherited via AvailableExternally
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Function* findLLVMElement(llvm::Module& mod) const override;

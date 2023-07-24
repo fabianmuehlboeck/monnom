@@ -18,11 +18,15 @@ namespace Nom
 		{
 			return RTInstanceType::GetLLVMType();
 		}
+		llvm::Type* PWInstanceType::GetWrappedLLVMType()
+		{
+			return NLLVMPointer(GetLLVMType());
+		}
 		void PWInstanceType::InitializeInstanceType(NomBuilder& builder, llvm::Value* hash, PWNomType nomtypeptr, PWInterface rtclassdesc, PWTypeArr ptrToTypeArgs)
 		{
 			InitializeType(builder, TypeKind::TKInstance, hash, nomtypeptr, ConstantPointerNull::get(GetCastFunctionType()->getPointerTo()));
-			MakeInvariantStore(builder, rtclassdesc, GetLLVMType(), wrapped, MakeInt32((unsigned char)RTInstanceTypeFields::Class));
-			MakeInvariantStore(builder, ptrToTypeArgs, GetLLVMType(), wrapped, MakeInt32((unsigned char)RTInstanceTypeFields::TypeArgs));
+			MakeInvariantStore(builder, rtclassdesc, GetLLVMType(), wrapped, MakeInt32(RTInstanceTypeFields::Class));
+			MakeInvariantStore(builder, ptrToTypeArgs, GetLLVMType(), wrapped, MakeInt32(RTInstanceTypeFields::TypeArgs));
 		}
 		PWInterface PWInstanceType::ReadClassDescriptorLink(NomBuilder& builder)
 		{

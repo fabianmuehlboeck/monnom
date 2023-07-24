@@ -8,9 +8,9 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		IPairInterface::IPairInterface() : NomInterface("IPair_2"), NomInterfaceInternal(new NomString("IPair_2"))
+		IPairInterface::IPairInterface() : NomInterface(), NomInterfaceInternal(new NomString("IPair_2"))
 		{
-			NomTypeParameterRef* ntparr = (NomTypeParameterRef*)nmalloc(sizeof(NomTypeParameterRef)*2);
+			NomTypeParameterRef* ntparr = makenmalloc(NomTypeParameterRef, 2);
 			ntparr[0] = new NomTypeParameterInternal(this, 0, NomType::AnythingRef, NomType::NothingRef);
 			ntparr[1] = new NomTypeParameterInternal(this, 1, NomType::AnythingRef, NomType::NothingRef);
 			SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef>(ntparr, 2));
@@ -23,7 +23,7 @@ namespace Nom
 
 		IPairInterface* IPairInterface::GetInstance()
 		{
-			static IPairInterface ici;
+			[[clang::no_destroy]] static IPairInterface ici;
 			static bool once = true;
 			if (once)
 			{
@@ -32,9 +32,9 @@ namespace Nom
 				fst->SetDirectTypeParameters();
 				fst->SetReturnType(ici.GetTypeParameter(0)->GetVariable());
 
-				NomTypeRef* argarr = (NomTypeRef*)&ici;
+				NomTypeRef* argarr = static_cast<NomTypeRef*>(nullptr);
 
-				fst->SetArgumentTypes(llvm::ArrayRef<NomTypeRef>(argarr, (size_t)0));
+				fst->SetArgumentTypes(llvm::ArrayRef<NomTypeRef>(argarr, static_cast<size_t>(0)));
 
 				ici.AddMethod(fst);
 
@@ -43,11 +43,9 @@ namespace Nom
 				snd->SetDirectTypeParameters();
 				snd->SetReturnType(ici.GetTypeParameter(1)->GetVariable());
 
-				snd->SetArgumentTypes(llvm::ArrayRef<NomTypeRef>(argarr, (size_t)0));
+				snd->SetArgumentTypes(llvm::ArrayRef<NomTypeRef>(argarr, static_cast<size_t>(0)));
 
 				ici.AddMethod(snd);
-
-				//ici.PreprocessInheritance();
 			}
 			return &ici;
 		}

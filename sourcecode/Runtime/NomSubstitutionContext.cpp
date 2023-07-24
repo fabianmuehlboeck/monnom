@@ -6,7 +6,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomSubstitutionContextMemberContext::NomSubstitutionContextMemberContext(const NomMemberContext* context) : context(context)
+		NomSubstitutionContextMemberContext::NomSubstitutionContextMemberContext(const NomMemberContext* _context) : context(_context)
 		{
 
 		}
@@ -18,17 +18,16 @@ namespace Nom
 		{
 			return context->GetTypeParametersCount();
 		}
-		NomTypeRef NomSubstitutionContextMemberContext::GetTypeVariable(int index) const
+		NomTypeRef NomSubstitutionContextMemberContext::GetTypeVariable(size_t index) const
 		{
 			return context->GetAllTypeVariables()[index];
 		}
 		const NomSubstitutionContextList& NomSubstitutionContextList::EmptyContext()
 		{
-			static NomTypeRef arr = nullptr;
-			static NomSubstitutionContextList nscl(TypeList(&arr, (size_t)0));
+			[[clang::no_destroy]] static NomSubstitutionContextList nscl(TypeList(static_cast<NomType**>(nullptr), static_cast<size_t>(0)));
 			return nscl;
 		}
-		NomSingleSubstitutionContext::NomSingleSubstitutionContext(NomTypeVarRef typeVar, NomTypeRef replacement): typeVar(typeVar), replacement(replacement)
+		NomSingleSubstitutionContext::NomSingleSubstitutionContext(NomTypeVarRef _typeVar, NomTypeRef _replacement): typeVar(_typeVar), replacement(_replacement)
 		{
 		}
 		llvm::ArrayRef<NomTypeRef> NomSingleSubstitutionContext::GetTypeParameters() const
@@ -39,7 +38,7 @@ namespace Nom
 		{
 			return typeVar->GetIndex() + 1;
 		}
-		NomTypeRef NomSingleSubstitutionContext::GetTypeVariable(int index) const
+		NomTypeRef NomSingleSubstitutionContext::GetTypeVariable(size_t index) const
 		{
 			if (index == typeVar->GetIndex())
 			{

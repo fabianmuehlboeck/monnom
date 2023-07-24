@@ -7,8 +7,10 @@
 #include "CallingConvConf.h"
 #include "NomPartialApplication.h"
 #include "NomRecord.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_os_ostream.h"
+POPDIAGSUPPRESSION
 #include <iostream>
 #include "RTCast.h"
 #include "RTOutput.h"
@@ -31,15 +33,15 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomInterfaceCallTag::NomInterfaceCallTag(std::string&& key, const NomMethod* method, DICTKEYTYPE&& name, llvm::SmallVector<TypeReferenceType, 8>&& argTRTs) :
-			method(method), name(name)
+		NomInterfaceCallTag::NomInterfaceCallTag(std::string&& _key, const NomMethod* _method, DICTKEYTYPE&& _name, llvm::SmallVector<TypeReferenceType, 8>&& _argTRTs) :
+			method(_method), name(_name)
 		{
-			this->key = key;
-			this->argTRTs = argTRTs;
+			this->key = _key;
+			this->argTRTs = _argTRTs;
 		}
 		NomInterfaceCallTag* NomInterfaceCallTag::GetMethodKey(const NomMethod* method)
 		{
-			static unordered_map<string, NomInterfaceCallTag*> methodKeys;
+			[[clang::no_destroy]] static unordered_map<string, NomInterfaceCallTag*> methodKeys;
 
 			std::string key = *method->GetSymbolName();
 			key.append("/");
@@ -149,7 +151,7 @@ namespace Nom
 				auto actualReturnType = method->GetReturnType();
 				if (actualReturnType->GetKind() == TypeKind::TKClass)
 				{
-					auto classReturnType = (NomClassTypeRef)actualReturnType;
+					auto classReturnType = static_cast<NomClassTypeRef>(actualReturnType);
 					if (!classReturnType->Named->IsInterface()&&!classReturnType->ContainsVariables())
 					{
 						simpleReturnType = true;
@@ -210,9 +212,9 @@ namespace Nom
 							builder->CreateCall(GetIncCallTagTypeMismatchesFunction(*fun->getParent()), {});
 						}
 						auto typeArgRefStore = builder->CreateAlloca(NLLVMPointer(TYPETYPE), MakeUInt(64, 1));
-						builder->CreateIntrinsic(Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						builder->CreateIntrinsic(Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<size_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 						MakeInvariantStore(builder, builder->CreateGEP(RTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), typeArgRefStore, AtomicOrdering::NotAtomic);
-						auto invariantID = builder->CreateIntrinsic(Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						auto invariantID = builder->CreateIntrinsic(Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<size_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 						argbuf--;
 						argbuf[0] = builder->CreatePointerCast(fun, POINTERTYPE);
 						argbuf[1] = typeArgRefStore;
@@ -220,8 +222,8 @@ namespace Nom
 						auto rvcf = RTInterface::GenerateReadReturnValueCheckFunction(builder, iface);
 						builder->CreateCall(GetCheckReturnValueFunctionType(), rvcf, llvm::ArrayRef<Value*>(argbuf, 3 + RTConfig_NumberOfVarargsArguments))->setCallingConv(NOMCC);
 
-						builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
-						builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { MakeInt<int64_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<size_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
+						builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { MakeInt<size_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 						outPHI->addIncoming(actualResult, builder->GetInsertBlock());
 						builder->CreateBr(outBlock);
 					}

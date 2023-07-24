@@ -8,9 +8,9 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		IEnumeratorInterface::IEnumeratorInterface() : NomInterface("IEnumerator_1"), NomInterfaceInternal(new NomString("IEnumerator_1"))
+		IEnumeratorInterface::IEnumeratorInterface() : NomInterface(), NomInterfaceInternal(new NomString("IEnumerator_1"))
 		{
-			NomTypeParameterRef* ntparr = (NomTypeParameterRef*)nmalloc(sizeof(NomTypeParameterRef));
+			NomTypeParameterRef* ntparr = makenmalloc(NomTypeParameterRef, 1);
 			ntparr[0] = new NomTypeParameterInternal(this, 0, NomType::AnythingRef, NomType::NothingRef);
 			SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef>(ntparr, 1));
 			SetSuperInterfaces();
@@ -22,7 +22,7 @@ namespace Nom
 
 		IEnumeratorInterface* IEnumeratorInterface::GetInstance()
 		{
-			static IEnumeratorInterface iei;
+			[[clang::no_destroy]] static IEnumeratorInterface iei;
 			static bool once = true;
 			if (once)
 			{
@@ -30,9 +30,6 @@ namespace Nom
 				NomMethodDeclInternal* meth = new NomMethodDeclInternal(&iei, "MoveNext", "IEnumerator$$MoveNext");
 				meth->SetDirectTypeParameters();
 				meth->SetReturnType(NomBoolClass::GetInstance()->GetType());
-
-				//NomTypeRef* argarr = (NomTypeRef*)nmalloc(sizeof(NomTypeRef));
-				//argarr[0] = iei.GetTypeParameter(0)->GetVariable();
 
 				meth->SetArgumentTypes();
 
@@ -48,8 +45,6 @@ namespace Nom
 				meth->SetReturnType(tvar);
 
 				iei.AddMethod(meth);
-
-				//iei.PreprocessInheritance();
 			}
 			return &iei;
 		}

@@ -1,6 +1,8 @@
 #pragma once
 #include "PWType.h"
 #include "NomBuilder.h"
+#include "PWInt.h"
+
 namespace Nom
 {
 	namespace Runtime
@@ -9,11 +11,12 @@ namespace Nom
 		{
 		public:
 			static llvm::Type* GetLLVMType();
-			PWTypeVar(llvm::Value* wrapped) : PWType(wrapped)
+			static llvm::Type* GetWrappedLLVMType();
+			PWTypeVar(llvm::Value* _wrapped) : PWType(_wrapped)
 			{
 
 			}
-			llvm::Value* ReadIndex(NomBuilder& builder);
+			PWInt32 ReadIndex(NomBuilder& builder);
 		};
 	}
 }

@@ -11,6 +11,8 @@
 #include "Metadata.h"
 #include "StructuralValueHeader.h"
 #include "RTDictionary.h"
+#include "PWRecord.h"
+#include "PWStructDict.h"
 
 using namespace llvm;
 using namespace std;
@@ -18,9 +20,23 @@ namespace Nom
 {
 	namespace Runtime
 	{
+		llvm::StructType* RecordHeader::GetFieldGroupType()
+		{
+			[[clang::no_destroy]] static llvm::StructType* fgst = StructType::create(LLVMCONTEXT, "RT_NOM_StructFieldGroup");
+			static bool once = true;
+			if (once)
+			{
+				once = false;
+				fgst->setBody(
+					arrtype(inttype(8),8),
+					arrtype(REFTYPE,8)
+				);
+			}
+			return fgst;
+		}
 		llvm::StructType* RecordHeader::GetLLVMType()
 		{
-			static llvm::StructType* shst = StructType::create(LLVMCONTEXT, "RT_NOM_StructHeader");
+			[[clang::no_destroy]] static llvm::StructType* shst = StructType::create(LLVMCONTEXT, "RT_NOM_StructHeader");
 			static bool once = true;
 			if (once)
 			{
@@ -28,9 +44,8 @@ namespace Nom
 				shst->setBody(
 					StructuralValueHeader::GetLLVMType(),													//common structural value stuff
 					//arrtype(llvm::Type::getInt8Ty(LLVMCONTEXT), GetConcurrentDictionarySize()),			//instance dictionary
-					POINTERTYPE,																			//instance dictionary
-					arrtype(numtype(char), 0),																//Field written tags
-					arrtype(REFTYPE, 0)																		//Fields
+					POINTERTYPE.AsLLVMType(),																//instance dictionary
+					arrtype(GetFieldGroupType(), 0)															//Field groups
 				);
 			}
 			return shst;
@@ -42,38 +57,35 @@ namespace Nom
 
 		llvm::Value* RecordHeader::GenerateReadStructDictionary(NomBuilder& builder, llvm::Value* objPointer)
 		{
-			return builder->CreateGEP(builder->CreatePointerCast(objPointer, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(StructHeaderFields::InstanceDictionary), MakeInt32(0) });
+			return PWRecord(objPointer).ReadStructDict(builder);
 		}
 
-		llvm::Value* RecordHeader::GenerateWriteField(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldindex, llvm::Value* value, size_t fieldCount)
+		llvm::Value* RecordHeader::GenerateWriteField(NomBuilder& builder, llvm::Value* thisObj, PWCInt32 fieldindex, llvm::Value* value, [[maybe_unused]] size_t fieldCount)
 		{
-			return MakeStore(builder, value, builder->CreatePointerCast(thisObj, GetLLVMType(fieldCount)->getPointerTo()), { MakeInt32(StructHeaderFields::Fields), MakeInt32(fieldindex) });
+			PWRecord(thisObj).WriteField(builder, fieldindex, value);
+			return nullptr;
 		}
-		llvm::Value* RecordHeader::GenerateWriteWrittenTag(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldindex, size_t fieldCount)
+		llvm::Value* RecordHeader::GenerateWriteWrittenTag(NomBuilder& builder, llvm::Value* thisObj, PWCInt32 fieldindex, [[maybe_unused]] size_t fieldCount)
 		{
-			return MakeStore(builder, MakeUInt(8, 1), builder->CreatePointerCast(thisObj, GetLLVMType(fieldCount)->getPointerTo()), { MakeInt32(StructHeaderFields::WrittenTags), MakeInt32(fieldindex) });
-		}
-
-		llvm::Value* RecordHeader::GenerateReadField(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldindex, size_t fieldCount)
-		{
-			return MakeLoad(builder, builder->CreatePointerCast(thisObj, GetLLVMType(fieldCount)->getPointerTo()), { MakeInt32(StructHeaderFields::Fields), MakeInt32(fieldindex) });
+			PWRecord(thisObj).WriteWrittenTag(builder, fieldindex);
+			return nullptr;
 		}
 
-		llvm::Value* RecordHeader::GenerateReadField(NomBuilder& builder, llvm::Value* thisObj, llvm::Value* fieldindex)
+		llvm::Value* RecordHeader::GenerateReadField(NomBuilder& builder, llvm::Value* thisObj, PWCInt32 fieldindex, [[maybe_unused]] size_t fieldCount)
 		{
-			return MakeLoad(builder, builder->CreatePointerCast(thisObj, GetLLVMType()->getPointerTo()), { MakeInt32(StructHeaderFields::Fields), fieldindex });
+			return PWRecord(thisObj).ReadField(builder, fieldindex);
 		}
-		llvm::Value* RecordHeader::GenerateReadWrittenTag(NomBuilder& builder, llvm::Value* thisObj, llvm::Value* fieldIndex)
+		llvm::Value* RecordHeader::GenerateReadWrittenTag(NomBuilder& builder, llvm::Value* thisObj, PWCInt32 fieldIndex)
 		{
-			return builder->CreateTrunc(MakeLoad(builder, builder->CreatePointerCast(thisObj, GetLLVMType()->getPointerTo()), { MakeInt32(StructHeaderFields::WrittenTags), fieldIndex }), inttype(1));
+			return PWRecord(thisObj).ReadWrittenTag(builder, fieldIndex);
 		}
-		llvm::Value* RecordHeader::GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* thisObj, int32_t argindex, bool hasRawInvoke)
+		llvm::Value* RecordHeader::GenerateReadTypeArgument(NomBuilder& builder, llvm::Value* thisObj, PWCInt32 argindex, [[maybe_unused]] bool hasRawInvoke)
 		{
-			return StructuralValueHeader::GenerateReadTypeArgument(builder, thisObj, MakeInt32(argindex));
+			return PWRecord(thisObj).ReadTypeArgument(builder, argindex);
 		}
-		llvm::Value* RecordHeader::GeneratePointerToTypeArguments(NomBuilder& builder, llvm::Value* thisObj, bool hasRawInvoke)
+		llvm::Value* RecordHeader::GeneratePointerToTypeArguments(NomBuilder& builder, llvm::Value* thisObj, [[maybe_unused]] bool hasRawInvoke)
 		{
-			return StructuralValueHeader::GenerateReadTypeArgsPtr(builder, thisObj);
+			return PWRecord(thisObj).PointerToTypeArguments(builder);
 		}
 
 
@@ -98,12 +110,15 @@ namespace Nom
 
 			auto vTablePtr = ConstantExpr::getPointerCast(descriptorRef, RTVTable::GetLLVMType()->getPointerTo());
 
-			MakeInvariantStore(builder, ConstantPointerNull::get(POINTERTYPE), newmem, MakeInt32(StructHeaderFields::InstanceDictionary), AtomicOrdering::NotAtomic);
+			MakeInvariantStore(builder, ConstantPointerNull::get(POINTERTYPE), GetLLVMType(), newmem, MakeInt32(StructHeaderFields::InstanceDictionary), AtomicOrdering::Unordered);
 
-			builder->CreateMemSet(builder->CreateGEP(newmem, { MakeInt32(0), MakeInt32(StructHeaderFields::WrittenTags) }), MakeUInt(8, 0), env->Record->Fields.size(), Align(8));
+			for (size_t i = 0; i < (env->Record->Fields.size() + 7) / 8; i++)
+			{
+				builder->CreateMemSet(builder->CreateGEP(GetLLVMType(), newmem, { MakeInt32(0), MakeInt32(StructHeaderFields::Fields), MakeInt32(i), MakeInt32(0) }), MakeUInt(8, 0), 8, Align(8));
+			}
 			StructuralValueHeader::GenerateInitializationCode(builder, newmem, typeArguments, vTablePtr, rawInvokePtr);
 
-			auto refValHeader = builder->CreateGEP(newmem, { MakeInt32(0), MakeInt32(StructHeaderFields::StructValueHeader), MakeInt32(StructuralValueHeaderFields::RefValueHeader) }, "RefValHeader");
+			auto refValHeader = builder->CreateGEP(GetLLVMType(), newmem, { MakeInt32(0), MakeInt32(StructHeaderFields::StructValueHeader), MakeInt32(StructuralValueHeaderFields::RefValueHeader) }, "RefValHeader");
 
 			builder->CreateRet(refValHeader);
 		}

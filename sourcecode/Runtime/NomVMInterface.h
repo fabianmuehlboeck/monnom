@@ -1,13 +1,15 @@
 #pragma once
 
+#include <string>
+PUSHDIAGSUPPRESSION
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/IRBuilder.h"
+POPDIAGSUPPRESSION
 #include "Defs.h"
 #include "RTTypeHead.h"
 #include "RTClass.h"
 #include "ObjectHeader.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/IRBuilder.h"
-#include <string>
 #include "DLLExport.h"
 
 extern llvm::Function * GetPrint(llvm::Module *mod);
@@ -18,6 +20,8 @@ extern llvm::Function* GetNewAlloc(llvm::Module* mod);
 extern llvm::Function* GetClosureAlloc(llvm::Module* mod);
 
 extern llvm::Function* GetRecordAlloc(llvm::Module* mod);
+
+extern llvm::Function* GetClassTypeAlloc(llvm::Module* mod);
 
 extern void GenerateLLVMDebugPrint(llvm::IRBuilder<> &builder, llvm::Module *mod, const std::string &str);
 

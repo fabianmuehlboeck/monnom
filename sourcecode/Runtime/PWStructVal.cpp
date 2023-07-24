@@ -3,7 +3,9 @@
 #include "CompileHelpers.h"
 #include "PWTypeArr.h"
 #include "PWCastData.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/AtomicOrdering.h"
+POPDIAGSUPPRESSION
 
 using namespace llvm;
 using namespace std;
@@ -11,7 +13,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		llvm::Value* PWStructVal::ReadTypeArgument(NomBuilder& builder, int32_t index)
+		llvm::Value* PWStructVal::ReadTypeArgument(NomBuilder& builder, size_t index)
 		{
 			return ReadTypeArgument(builder, MakeInt32(index));
 		}
@@ -22,7 +24,7 @@ namespace Nom
 			return loadInst;
 		}
 
-		PWTypeArr PWStructVal::PointerToTypeArgs(NomBuilder& builder)
+		PWTypeArr PWStructVal::PointerToTypeArguments(NomBuilder& builder)
 		{
 			return PWTypeArr(builder->CreateGEP(StructuralValueHeader::GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::TypeArgs) }));
 		}
@@ -38,8 +40,5 @@ namespace Nom
 			auto argPtr = builder->CreateGEP(StructuralValueHeader::GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(StructuralValueHeaderFields::CastData) });
 			return builder->CreateAtomicCmpXchg(argPtr, olddata, newdata, llvm::MaybeAlign(8), AtomicOrdering::AcquireRelease, AtomicOrdering::Acquire);
 		}
-
-
-		
 	}
 }

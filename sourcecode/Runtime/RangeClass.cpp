@@ -11,7 +11,9 @@
 #include "NomJIT.h"
 #include "NomMethodTableEntry.h"
 #include "RTConfig.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/DynamicLibrary.h"
+POPDIAGSUPPRESSION
 #include "IntClass.h"
 #include "CastStats.h"
 #include "NomClassType.h"
@@ -27,11 +29,11 @@ typedef void* (*EnumeratorConstructorType)(intptr_t start, intptr_t end, intptr_
 
 extern "C" DLLEXPORT void* LIB_NOM_Range_GetEnumerator_0(void* range)
 {
-	static EnumeratorConstructorType enumeratorConstructor = (EnumeratorConstructorType)GetGeneralLLVMFunction("RT_NOM_CCC_RangeEnumerator_0$$$CONSTRUCT$$$0$$CInt_0$$$$.$CInt_0$$$$.$CInt_0$$$");
+	static EnumeratorConstructorType enumeratorConstructor = reinterpret_cast<EnumeratorConstructorType>(GetGeneralLLVMFunction("RT_NOM_CCC_RangeEnumerator_0$$$CONSTRUCT$$$0$$CInt_0$$$$.$CInt_0$$$$.$CInt_0$$$"));
 	static auto readField = GetReadFieldFunction();
-	intptr_t start = (intptr_t)readField(range, 0);
-	intptr_t end = (intptr_t)readField(range, 1);
-	intptr_t step = (intptr_t)readField(range, 2);
+	intptr_t start = reinterpret_cast<intptr_t>(readField(range, 0));
+	intptr_t end = reinterpret_cast<intptr_t>(readField(range, 1));
+	intptr_t step = reinterpret_cast<intptr_t>(readField(range, 2));
 	return enumeratorConstructor(start, end, step);
 }
 
@@ -39,62 +41,62 @@ extern "C" DLLEXPORT void* LIB_NOM_RangeEnumerator_MoveNext_0(void* iter) noexce
 {
 	static auto writeField = GetWriteFieldFunction();
 	static auto readField = GetReadFieldFunction();
-	intptr_t state = (intptr_t)readField(iter, 3);
+	intptr_t state = reinterpret_cast<intptr_t>(readField(iter, 3));
 	if (state == 2)
 	{
 		return GetBooleanFalse();
 	}
-	intptr_t start = (intptr_t)readField(iter, 0);
-	intptr_t end = (intptr_t)readField(iter, 1);
-	intptr_t step = (intptr_t)readField(iter, 2);
+	intptr_t start = reinterpret_cast<intptr_t>(readField(iter, 0));
+	intptr_t end = reinterpret_cast<intptr_t>(readField(iter, 1));
+	intptr_t step = reinterpret_cast<intptr_t>(readField(iter, 2));
 	if (state == 0)
 	{
 		if ((step > 0 && start >= end) || (step < 0 && start <= end) || step == 0)
 		{
-			writeField(iter, 3, (void*)2);
+			writeField(iter, 3, reinterpret_cast<void*>(2));
 			return GetBooleanFalse();
 		}
-		writeField(iter, 3, (void*)1);
+		writeField(iter, 3, reinterpret_cast<void*>(1));
 		return GetBooleanTrue();
 	}
 	start += step;
 	if ((step > 0 && start >= end) || (step < 0 && start <= end))
 	{
-		writeField(iter, 3, (void*)2);
+		writeField(iter, 3, reinterpret_cast<void*>(2));
 		return GetBooleanFalse();
 	}
-	writeField(iter, 0, (void*)start);
+	writeField(iter, 0, reinterpret_cast<void*>(start));
 	return GetBooleanTrue();
 }
 
 extern "C" DLLEXPORT void* LIB_NOM_RangeEnumerator_Current_0(void* iter) noexcept(false)
 {
 	static auto readField = GetReadFieldFunction();
-	intptr_t start = (intptr_t)readField(iter, 0);
-	intptr_t state = (intptr_t)readField(iter, 3);
+	intptr_t start = reinterpret_cast<intptr_t>(readField(iter, 0));
+	intptr_t state = reinterpret_cast<intptr_t>(readField(iter, 3));
 	if(state!=1)
 	{
 		throw new std::exception();
 	}
-	return (void*)start;
+	return reinterpret_cast<void*>(start);
 }
 
 extern "C" DLLEXPORT void* LIB_NOM_Range_Constructor_3(void* rng, intptr_t start, intptr_t end, intptr_t step)
 {
 	static auto writeField = GetWriteFieldFunction();
-	writeField(rng, 0, (void*)start);
-	writeField(rng, 1, (void*)end);
-	writeField(rng, 2, (void*)step);
+	writeField(rng, 0, reinterpret_cast<void*>(start));
+	writeField(rng, 1, reinterpret_cast<void*>(end));
+	writeField(rng, 2, reinterpret_cast<void*>(step));
 	return rng;
 }
 
 extern "C" DLLEXPORT void* LIB_NOM_RangeEnumerator_Constructor_3(void* RangeEnumerator, intptr_t start, intptr_t end, intptr_t step)
 {
 	static auto writeField = GetWriteFieldFunction();
-	writeField(RangeEnumerator, 0, (void*)start);
-	writeField(RangeEnumerator, 1, (void*)end);
-	writeField(RangeEnumerator, 2, (void*)step);
-	writeField(RangeEnumerator, 3, (void*)0);
+	writeField(RangeEnumerator, 0, reinterpret_cast<void*>(start));
+	writeField(RangeEnumerator, 1, reinterpret_cast<void*>(end));
+	writeField(RangeEnumerator, 2, reinterpret_cast<void*>(step));
+	writeField(RangeEnumerator, 3, reinterpret_cast<void*>(0));
 	return RangeEnumerator;
 }
 
@@ -102,15 +104,15 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		RangeClass::RangeClass() : NomInterface("Range_0"), NomClassInternal(new NomString("Range_0"))
+		RangeClass::RangeClass() : NomInterface(), NomClassInternal(new NomString("Range_0"))
 		{
 			SetDirectTypeParameters();
 			this->SetSuperClass();
 
 			NomTypeRef* intargarr = new NomTypeRef[1]{ NomIntClass::GetInstance()->GetType() };
 
-			auto ienumerableInst = new NomInstantiationRef<NomInterface>(IEnumerableInterface::GetInstance(), TypeList(intargarr, (size_t)1));
-			auto ienumeratorType = IEnumeratorInterface::GetInstance()->GetType(TypeList(intargarr, (size_t)1));
+			auto ienumerableInst = new NomInstantiationRef<NomInterface>(IEnumerableInterface::GetInstance(), TypeList(intargarr, static_cast<size_t>(1)));
+			auto ienumeratorType = IEnumeratorInterface::GetInstance()->GetType(TypeList(intargarr, static_cast<size_t>(1)));
 
 			this->SetSuperInterfaces(ArrayRef<NomInstantiationRef<NomInterface>>(ienumerableInst, 1));
 
@@ -121,7 +123,7 @@ namespace Nom
 
 			this->AddMethod(getenum);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Range_GetEnumerator_0", (void*)&LIB_NOM_Range_GetEnumerator_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Range_GetEnumerator_0", reinterpret_cast<void*>(&LIB_NOM_Range_GetEnumerator_0));
 
 			NomConstructorInternal* constructor = new NomConstructorInternal("LIB_NOM_Range_Constructor_3", this);
 			constructor->SetDirectTypeParameters();
@@ -132,11 +134,11 @@ namespace Nom
 
 			this->AddConstructor(constructor);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Range_Constructor_3", (void*)&LIB_NOM_Range_Constructor_3);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Range_Constructor_3", reinterpret_cast<void*>(&LIB_NOM_Range_Constructor_3));
 		}
 
 		RangeClass* RangeClass::GetInstance() {
-			static RangeClass nsc;
+			[[clang::no_destroy]] static RangeClass nsc;
 			static bool once = true;
 			if (once)
 			{
@@ -144,7 +146,6 @@ namespace Nom
 				NomObjectClass::GetInstance();
 				NomIntClass::GetInstance();
 				NomVoidClass::GetInstance();
-				//nsc.PreprocessInheritance();
 			}
 			return &nsc;
 		}
@@ -153,7 +154,7 @@ namespace Nom
 			return 3;
 		}
 
-		RangeEnumeratorClass::RangeEnumeratorClass() : NomInterface("RangeEnumerator_0"), NomClassInternal(new NomString("RangeEnumerator_0"))
+		RangeEnumeratorClass::RangeEnumeratorClass() : NomInterface(), NomClassInternal(new NomString("RangeEnumerator_0"))
 		{
 			SetDirectTypeParameters();
 			this->SetSuperClass();
@@ -162,7 +163,6 @@ namespace Nom
 			NomTypeRef* intargarr = new NomTypeRef[1]{ NomIntClass::GetInstance()->GetType() };
 
 			auto ienumeratorInst = new NomInstantiationRef<NomInterface>(IEnumeratorInterface::GetInstance(), TypeList(intargarr, 1));
-			//auto ienumeratorType = IEnumeratorInterface::GetInstance()->GetType({ ownarg });
 
 			this->SetSuperInterfaces(ArrayRef<NomInstantiationRef<NomInterface>>(ienumeratorInst, 1));
 
@@ -172,7 +172,7 @@ namespace Nom
 			movenext->SetReturnType(NomBoolClass::GetInstance()->GetType());
 
 			this->AddMethod(movenext);
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_RangeEnumerator_MoveNext_0", (void*)&LIB_NOM_RangeEnumerator_MoveNext_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_RangeEnumerator_MoveNext_0", reinterpret_cast<void*>(&LIB_NOM_RangeEnumerator_MoveNext_0));
 
 			NomMethodInternal* current = new NomMethodInternal(this, "Current", "LIB_NOM_RangeEnumerator_Current_0", true);
 			current->SetDirectTypeParameters();
@@ -180,7 +180,7 @@ namespace Nom
 			current->SetReturnType(NomIntClass::GetInstance()->GetType());
 			this->AddMethod(current);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_RangeEnumerator_Current_0", (void*)&LIB_NOM_RangeEnumerator_Current_0);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_RangeEnumerator_Current_0", reinterpret_cast<void*>(&LIB_NOM_RangeEnumerator_Current_0));
 
 			NomConstructorInternal* constructor = new NomConstructorInternal("LIB_NOM_RangeEnumerator_Constructor_3", this);
 			constructor->SetDirectTypeParameters();
@@ -191,11 +191,11 @@ namespace Nom
 
 			this->AddConstructor(constructor);
 
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_RangeEnumerator_Constructor_3", (void*)&LIB_NOM_RangeEnumerator_Constructor_3);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_RangeEnumerator_Constructor_3", reinterpret_cast<void*>(&LIB_NOM_RangeEnumerator_Constructor_3));
 		}
 		RangeEnumeratorClass* RangeEnumeratorClass::GetInstance()
 		{
-			static RangeEnumeratorClass nsc;
+			[[clang::no_destroy]] static RangeEnumeratorClass nsc;
 			static bool once = true;
 			if (once)
 			{
@@ -204,7 +204,6 @@ namespace Nom
 				NomObjectClass::GetInstance();
 				NomIntClass::GetInstance();
 				NomVoidClass::GetInstance();
-				//nsc.PreprocessInheritance();
 			}
 			return &nsc;
 		}

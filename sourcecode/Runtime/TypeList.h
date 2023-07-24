@@ -1,8 +1,9 @@
 #pragma once
-
 #include <vector>
-#include "NomType.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/TinyPtrVector.h"
+POPDIAGSUPPRESSION
+#include "NomType.h"
 
 namespace Nom
 {

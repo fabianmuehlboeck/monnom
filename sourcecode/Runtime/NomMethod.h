@@ -20,7 +20,7 @@ namespace Nom
 		class NomMethod : public virtual NomCallable
 		{
 		private:
-			int offset = -1;
+			size_t offset = 0;
 			bool offsetSet = false;
 		protected:
 			NomMethod() {}
@@ -31,11 +31,11 @@ namespace Nom
 		public:
 			virtual ~NomMethod() override = default;
 
-			int GetIMTIndex() const;
+			size_t GetIMTIndex() const;
 
 			bool IsOffsetSet();
-			bool SetOffset(int offset);
-			int GetOffset() const;
+			bool SetOffset(size_t offset);
+			size_t GetOffset() const;
 			bool Overrides(const NomMethod* other) const;
 			virtual bool IsFinal() const = 0;
 

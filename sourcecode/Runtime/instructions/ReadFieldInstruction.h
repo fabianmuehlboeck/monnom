@@ -14,10 +14,10 @@ namespace Nom
 			const ConstantID FieldName;
 			const ConstantID ReceiverType; //class
 			ReadFieldInstruction(const RegIndex reg, const RegIndex receiver, const ConstantID fieldName, const ConstantID type);
-			~ReadFieldInstruction();
+			~ReadFieldInstruction() override;
 
 			// Inherited via NomValueInstruction
-			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

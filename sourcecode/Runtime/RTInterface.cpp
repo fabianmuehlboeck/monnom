@@ -31,12 +31,12 @@ namespace Nom
 					numtype(size_t),									//super instances count
 					numtype(size_t),									//superclass count
 					numtype(size_t),									//superinterface count
-					SuperInstanceEntryType()->getPointerTo(),			//superclasses
-					SuperInstanceEntryType()->getPointerTo(),			//superinterfaces
-					GetCheckReturnValueFunctionType()->getPointerTo(),  //method ensure function, untyped version
+					NLLVMPointer(SuperInstanceEntryType()),				//superclasses
+					NLLVMPointer(SuperInstanceEntryType()),				//superinterfaces
+					NLLVMPointer(GetCheckReturnValueFunctionType()),	//method ensure function, untyped version
 					POINTERTYPE,										//pointer to type instantiations dictionary
-					RTSignature::GetLLVMType()->getPointerTo(),			//signature of lambda method if present, otherwise null
-					GetCastFunctionType()->getPointerTo()				//cast function for run-time class-type instantiations
+					NLLVMPointer(RTSignature::GetLLVMType()),			//signature of lambda method if present, otherwise null
+					NLLVMPointer(GetCastFunctionType())					//cast function for run-time class-type instantiations
 					});
 			}
 			return rtit;

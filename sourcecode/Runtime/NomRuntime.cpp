@@ -1,6 +1,8 @@
 #include "NomRuntime.h"
 #include "NomJIT.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Module.h"
+POPDIAGSUPPRESSION
 #include "Context.h"
 
 using namespace llvm;

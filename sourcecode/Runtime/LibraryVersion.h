@@ -31,7 +31,6 @@ namespace Nom
 			//LibraryVersion(LibraryVersion&&) = delete;
 
 			LibraryVersion(const std::string * name, const std::string &mainclassname, const VersionNumber &version, const VersionNumber &compatibleFrom, const VersionNumber &compatibleTo, bool isDeprecated, bool isSecurityRisk, const std::vector<LibraryDependency> &&dependencies, ComponentSource * componentSource);
-			~LibraryVersion();
 
 			bool CompatibleWith(const LibraryDependency &dependency) const {
 				return dependency.RequiredVersion.compare(CompatibleFrom) >= 0 && dependency.RequiredVersion.compare(CompatibleTo) <= 0;
@@ -57,7 +56,7 @@ namespace Nom
 				return &MainClassName;
 			}
 			NomStringRef GetMainMethodName() const {
-				static NomString mainmethodname = "Main";
+				[[clang::no_destroy]] static NomString mainmethodname = "Main";
 				return &mainmethodname;
 			}
 		};

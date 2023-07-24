@@ -4,7 +4,15 @@
 #include <fstream>
 #include "RTConfig_LambdaOpt.h"
 
-std::string NomRuntimePath = "";
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wglobal-constructors"
+#elif defined(__GNU__)
+#pragma GCC diagnostic ignored "-Wglobal-constructors"
+#elif defined(_MSC_VER)
+
+#endif
+
+[[clang::no_destroy]] std::string NomRuntimePath = "";
 int NomBlameLevel = 0;
 int NomOptLevel = 2;
 int NomDebugPrintLevel = -1;
@@ -14,18 +22,18 @@ int NomStatsLevel = 0;
 bool NomTimings = false;
 int NomFunctionTimingLevel = 0;
 int NomLambdaOptimizationLevel = 1;
-int IMTsize = 13;
+size_t IMTsize = 13;
 bool PreferTypeArgumentsInVTables = false;
-int NomWarmupRuns = 0;
-std::string NomMainClassName = "";
-std::string NomPath = ".";
-std::vector<std::string> NomDebugFunctions = std::vector<std::string>();
-std::vector<std::string> NomApplicationArgs = std::vector<std::string>();
+unsigned int NomWarmupRuns = 0;
+[[clang::no_destroy]] std::string NomMainClassName = "";
+[[clang::no_destroy]] std::string NomPath = ".";
+[[clang::no_destroy]] std::vector<std::string> NomDebugFunctions = std::vector<std::string>();
+[[clang::no_destroy]] std::vector<std::string> NomApplicationArgs = std::vector<std::string>();
 bool NomRuntimeStopAtEnd = false;
 std::ostream * RT_debugout = &std::cout;
 
 bool RTConfig_CheckLambdaSignaturesAtCast = false;
-int RTConfig_NumberOfVarargsArguments = 2;
+size_t RTConfig_NumberOfVarargsArguments = 2;
 bool RTConfig_IgnoreEnsureMethod = false;
 bool RTConfig_AlwaysEnsureMethod = false;
 bool RTConfig_RunUnncessesaryCallTagChecks = false;
@@ -242,7 +250,7 @@ namespace Nom
 						if (strlen(args[argpos]) > 2)
 						{
 							char* curarg = args[argpos] + 2;
-							NomWarmupRuns=atoi(curarg);
+							NomWarmupRuns=static_cast<unsigned int>(atoi(curarg));
 						}
 						break;
 					case '-':
@@ -255,7 +263,7 @@ namespace Nom
 							argpos++;
 							if (argpos < argc)
 							{
-								int imtsize = atoi(args[argpos]);
+								size_t imtsize = strtoul(args[argpos], nullptr, 10);
 								if (imtsize > 0 && imtsize < 128)
 								{
 									IMTsize = imtsize;
@@ -316,7 +324,7 @@ namespace Nom
 							argpos++;
 							if (argpos < argc)
 							{
-								RTConfig_NumberOfVarargsArguments = atoi(args[argpos]);
+								RTConfig_NumberOfVarargsArguments = strtoul(args[argpos], nullptr, 10);
 								if (RTConfig_NumberOfVarargsArguments <= 0)
 								{
 									RTConfig_NumberOfVarargsArguments = 1;

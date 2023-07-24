@@ -1,10 +1,12 @@
 #pragma once
 #include "Defs.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Function.h"
+#include "llvm/ADT/StringRef.h"
+POPDIAGSUPPRESSION
 #include "TypeList.h"
 #include "NomTypeDecls.h"
 #include "NomConstants.h"
-#include "llvm/ADT/StringRef.h"
 #include "NomMemberContext.h"
 #include "AvailableExternally.h"
 #include "instructions/PhiNode.h"
@@ -45,12 +47,13 @@ namespace Nom
 				}
 			}
 
+
 		public:
 			virtual ~NomCallable() override {}
 
 			virtual NomTypeRef GetReturnType(const NomSubstitutionContext* context = nullptr) const = 0;
 			virtual TypeList GetArgumentTypes(const NomSubstitutionContext *context) const = 0;
-			virtual int GetArgumentCount() const = 0;
+			virtual size_t GetArgumentCount() const = 0;
 			virtual llvm::FunctionType* GetLLVMFunctionType(const NomSubstitutionContext* context = nullptr) const = 0;
 			virtual const std::string& GetName() const = 0;
 			virtual const std::string& GetQName() const = 0;
@@ -73,7 +76,6 @@ namespace Nom
 			llvm::Function* GetLLVMFunction(llvm::Module* mod) const {
 				return this->GetLLVMElement(*mod);
 			}
-			// Inherited via AvailableExternally
 			virtual llvm::Function* findLLVMElement(llvm::Module& mod) const override;
 			NomCallableVersion* GetVersion(llvm::FunctionType* ft) const;
 		};
@@ -81,15 +83,13 @@ namespace Nom
 		class NomCallableLoaded : public virtual NomCallable, public NomMemberContextLoaded
 		{
 		private:
-			mutable TypeList argTypes = TypeList((NomTypeRef*)nullptr, (size_t)0);
+			mutable TypeList argTypes = TypeList(static_cast<NomTypeRef*>(nullptr), static_cast<size_t>(0));
 		protected:
-			//const NomMemberContext *parent;
 			const bool declOnly;
 			const bool cppWrapper;
 			const std::string name;
 			const std::string qname;
 			const RegIndex regcount;
-			//const ConstantID typeArgs;
 			const ConstantID argTypesID;
 
 			const std::vector<NomInstruction *> * GetInstructions() const {
@@ -98,13 +98,10 @@ namespace Nom
 
 		private:
 			std::vector<NomInstruction *> instructions;
-			//bool typeVariablesInitialized = false;
-			//llvm::ArrayRef<NomTypeVar *> typeParameters;
 		
 		public:
 
 			NomCallableLoaded(const std::string& name, const NomMemberContext* parent, const std::string& qname, const RegIndex regcount, const ConstantID typeArgs, const ConstantID argTypes, bool declOnly = false, bool cppWrapper = false);
-			//NomCallableLoaded(const std::string& name, const NomMemberContext* parent, const std::string& qname, const RegIndex regcount, const llvm::ArrayRef<NomTypeVarRef> typeParameters, bool declOnly = false, bool cppWrapper = false);
 			virtual ~NomCallableLoaded() override;
 
 			const std::string &GetName() const override
@@ -122,13 +119,13 @@ namespace Nom
 				instructions.push_back(instruction);
 				if (instruction->GetOpCode() == OpCode::PhiNode)
 				{
-					phiNodes.push_back((PhiNode*)instruction);
+					phiNodes.push_back(static_cast<PhiNode*>(instruction));
 				}
 			}
 
 
 			virtual TypeList GetArgumentTypes(const NomSubstitutionContext* context) const override;
-			virtual int GetArgumentCount() const override;
+			virtual size_t GetArgumentCount() const override;
 
 			virtual void PushDependencies(std::set<ConstantID> &set) const
 			{
@@ -150,18 +147,18 @@ namespace Nom
 		class NomCallableInternal : public virtual NomCallable, public NomMemberContextInternal
 		{
 		private:
-			TypeList argTypes = TypeList((NomTypeRef*)nullptr, (size_t)0);
+			TypeList argTypes = TypeList(static_cast<NomTypeRef*>(nullptr), static_cast<size_t>(0));
 			const std::string name;
 			const std::string qname;
 		protected:
-			NomCallableInternal(const std::string &name, const std::string &qname, const NomMemberContext *parent = nullptr) : NomMemberContextInternal(parent), name(name), qname(qname) {}
+			NomCallableInternal(const std::string &_name, const std::string &_qname, const NomMemberContext *_parent = nullptr) : NomMemberContextInternal(_parent), name(_name), qname(_qname) {}
 		public:
 			virtual ~NomCallableInternal() override {}
 
 			void SetArgumentTypes(TypeList argTypes);
 			void SetArgumentTypes();
 			virtual TypeList GetArgumentTypes(const NomSubstitutionContext* context) const override;
-			virtual int GetArgumentCount() const override;
+			virtual size_t GetArgumentCount() const override;
 
 			const std::string& GetName() const override
 			{
@@ -172,39 +169,5 @@ namespace Nom
 				return qname;
 			}
 		};
-
-		//template<class T>
-		//class NomLoadedReturnType
-		//{
-		//protected:
-		//	const ConstantID returnType;
-		//public:
-		//	NomLoadedReturnType(const ConstantID returnType) : returnType(returnType) {}
-		//	~NomLoadedReturnType() {}
-
-		//	NomTypeRef GetReturnType() const override {
-		//		return NomConstants::GetType((T*)this, returnType);
-		//	}
-		//};
-
-		//template<class T>
-		//class NomLoadedArgumentTypes
-		//{
-		//
-		//public:
-		//	NomLoadedArgumentTypes(const ConstantID argumentTypes) : argumentTypes(argumentTypes) {}
-		//	~NomLoadedArgumentTypes() {}
-		//protected:
-		//	const ConstantID argumentTypes;
-		//public:
-		//	TypeList GetArgumentTypes() const override {
-		//		return NomConstants::GetTypeList(argumentTypes)->GetTypeList((T*)this);
-		//	}
-
-		//	int GetArgumentCount() const override
-		//	{
-		//		return GetArgumentTypes().size();
-		//	}
-		//};
 	}
 }

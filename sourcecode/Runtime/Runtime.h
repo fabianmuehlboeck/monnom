@@ -1,7 +1,9 @@
 #pragma once
 #include <iostream>
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+POPDIAGSUPPRESSION
 #include <vector>
 
 class NomConstant;

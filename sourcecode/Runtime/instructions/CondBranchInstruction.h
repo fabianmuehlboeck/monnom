@@ -12,10 +12,10 @@ namespace Nom
 			std::vector<std::pair<RegIndex, RegIndex>> ElseIncomings;
 		public:
 			const RegIndex Condition;
-			const int ThenTarget;
-			const int ElseTarget;
-			CondBranchInstruction(RegIndex condition, int thenTarget, int elseTarget);
-			~CondBranchInstruction();
+			const size_t ThenTarget;
+			const size_t ElseTarget;
+			CondBranchInstruction(RegIndex condition, size_t thenTarget, size_t elseTarget);
+			~CondBranchInstruction() override;
 
 			void AddThenIncoming(RegIndex to, RegIndex from)
 			{
@@ -27,7 +27,7 @@ namespace Nom
 			}
 
 			// Inherited via NomInstruction
-			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomInstruction
 			virtual void Print(bool resolve = false) override;
@@ -35,7 +35,5 @@ namespace Nom
 
 			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override;
 		};
-
-
 	}
 }

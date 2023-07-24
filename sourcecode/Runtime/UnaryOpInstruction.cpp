@@ -34,7 +34,7 @@ namespace Nom
 		UnaryOpInstruction::~UnaryOpInstruction()
 		{
 		}
-		void UnaryOpInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void UnaryOpInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			switch (this->Operation)
 			{
@@ -46,15 +46,15 @@ namespace Nom
 
 				NomValue val = ((*env)[Arg]);
 
-				int cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, val, &refObjectBlock, nullptr, nullptr, true, &intBlock, &intValue, &floatBlock, &floatValue, &boolBlock, &boolValue);
+				unsigned int cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, val, &refObjectBlock, nullptr, nullptr, true, &intBlock, &intValue, &floatBlock, &floatValue, &boolBlock, &boolValue);
 				if (refObjectBlock!=nullptr)
 				{
-					cases = -1;
+					cases = 0;
 					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Tried to negate non-numeric value!", refObjectBlock);
 				}
 				if (boolBlock != nullptr)
 				{
-					cases = -1;
+					cases = 0;
 					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Tried to numerically negate boolean value!", boolBlock);
 				}
 
@@ -169,6 +169,7 @@ namespace Nom
 				//outPhi->addIncoming(packedNegatedFloat, floatBlock);
 				//RegisterValue(env, NomValue(outPhi, &NomDynamicType::Instance(), false));
 				//return;
+				break;
 			}
 			case UnaryOperation::Not: {
 				RegisterValue(env, NomValue(PackBool(builder, builder->CreateNot(EnsureUnpackedBool(builder, env, (*env)[Arg]))), NomBoolClass::GetInstance()->GetType(), false));
@@ -176,7 +177,7 @@ namespace Nom
 			}
 			}
 		}
-		void UnaryOpInstruction::Print(bool resolve)
+		void UnaryOpInstruction::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "UnaryOp";
 			cout << " " << GetUnaryOpName(Operation) << " #";
@@ -184,7 +185,7 @@ namespace Nom
 			cout << " -> #" << std::dec << WriteRegister;
 			cout << "\n";
 		}
-		void UnaryOpInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void UnaryOpInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 	}

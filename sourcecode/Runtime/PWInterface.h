@@ -1,8 +1,11 @@
 #pragma once
 
 #include "PWrapper.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Type.h"
+POPDIAGSUPPRESSION
 #include "NomBuilder.h"
+#include "PWArr.h"
 
 namespace Nom
 {
@@ -16,16 +19,17 @@ namespace Nom
 		{
 		public:
 			static llvm::Type* GetLLVMType();
-			PWInterface(llvm::Value* wrapped) : PWrapper(wrapped)
+			static llvm::Type* GetWrappedLLVMType();
+			PWInterface(llvm::Value* _wrapped) : PWrapper(_wrapped)
 			{
 
 			}
-			llvm::Value* ReadSuperInstanceCount(NomBuilder& builder);
-			llvm::Value* ReadSuperClassCount(NomBuilder& builder);
-			llvm::Value* ReadSuperInterfaceCount(NomBuilder& builder);
-			PWSuperInstance ReadSuperInstances(NomBuilder& builder);
-			PWSuperInstance ReadSuperInterfaces(NomBuilder& builder);
-			llvm::Value* ReadTypeArgCount(NomBuilder& builder);
+			PWInt64 ReadSuperInstanceCount(NomBuilder& builder);
+			PWInt64 ReadSuperClassCount(NomBuilder& builder);
+			PWInt64 ReadSuperInterfaceCount(NomBuilder& builder);
+			PWFlatArr<PWSuperInstance> ReadSuperInstances(NomBuilder& builder);
+			PWFlatArr<PWSuperInstance> ReadSuperInterfaces(NomBuilder& builder);
+			PWInt32 ReadTypeArgCount(NomBuilder& builder);
 			PWSignature ReadSignature(NomBuilder& builder);
 			PWCheckReturnValueFunction ReadReturnValueCheckFunction(NomBuilder& builder);
 

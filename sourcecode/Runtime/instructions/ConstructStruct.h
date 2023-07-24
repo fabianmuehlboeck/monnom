@@ -13,7 +13,7 @@ namespace Nom
 			const ConstantID TypeArgsID;
 			ConstructStructInstruction(RegIndex reg, ConstantID structure, ConstantID typeArgs);
 			// Inherited via NomValueInstruction
-			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;
 			virtual void Print(bool resolve = false) override;
 
 

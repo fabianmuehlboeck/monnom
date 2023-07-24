@@ -16,27 +16,31 @@ namespace Nom
 		{
 			return RTInterface::GetLLVMType();
 		}
-		llvm::Value* PWInterface::ReadSuperInstanceCount(NomBuilder& builder)
+		llvm::Type* PWInterface::GetWrappedLLVMType()
+		{
+			return NLLVMPointer(GetLLVMType());
+		}
+		PWInt64 PWInterface::ReadSuperInstanceCount(NomBuilder& builder)
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTInterfaceFields::SuperTypesCount), "SuperTypesCount", AtomicOrdering::NotAtomic);
 		}
-		llvm::Value* PWInterface::ReadSuperClassCount(NomBuilder& builder)
+		PWInt64 PWInterface::ReadSuperClassCount(NomBuilder& builder)
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTInterfaceFields::SuperClassCount), "SuperClassCount", AtomicOrdering::NotAtomic);
 		}
-		llvm::Value* PWInterface::ReadSuperInterfaceCount(NomBuilder& builder)
+		PWInt64 PWInterface::ReadSuperInterfaceCount(NomBuilder& builder)
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTInterfaceFields::SuperInterfaceCount), "SuperInterfaceCount", AtomicOrdering::NotAtomic);
 		}
-		PWSuperInstance PWInterface::ReadSuperInstances(NomBuilder& builder)
+		PWFlatArr<PWSuperInstance> PWInterface::ReadSuperInstances(NomBuilder& builder)
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTInterfaceFields::SuperTypes), "SuperTypes", AtomicOrdering::NotAtomic);
 		}
-		PWSuperInstance PWInterface::ReadSuperInterfaces(NomBuilder& builder)
+		PWFlatArr<PWSuperInstance> PWInterface::ReadSuperInterfaces(NomBuilder& builder)
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTInterfaceFields::SuperInterfaces), "SuperInterfaces", AtomicOrdering::NotAtomic);
 		}
-		llvm::Value* PWInterface::ReadTypeArgCount(NomBuilder& builder)
+		PWInt32 PWInterface::ReadTypeArgCount(NomBuilder& builder)
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTInterfaceFields::TypeArgCount), "TypeArgumentCount", AtomicOrdering::NotAtomic);
 		}

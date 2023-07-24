@@ -1,6 +1,8 @@
 #pragma once
 #include "AvailableExternally.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/ArrayRef.h"
+POPDIAGSUPPRESSION
 #include "NomMethod.h"
 #include <vector>
 
@@ -14,13 +16,13 @@ namespace Nom
 		private:
 			std::vector<const NomCallable*> methods;
 			const NomMemberContext* context;
-			NomTypeRef thisType;
+			[[maybe_unused]] NomTypeRef thisType;
 		public:
 			const std::string SymbolName;
 			NomPartialApplication(const std::string symbolName, llvm::ArrayRef<const NomCallable*> methods, const NomMemberContext* context, NomTypeRef thisType);
-			static llvm::FunctionType* GetDynamicDispatcherType(/*uint32_t typeargcount, uint32_t argcount*/);
-			static llvm::Function* GetDispatcherEntry(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage,/* int32_t typeArgCount, int32_t argCount,*/ llvm::ArrayRef<const NomCallable*> overloadings, const NomMemberContext* context/*, NomTypeRef thisType*/);
-			virtual ~NomPartialApplication() {}
+			static llvm::FunctionType* GetDynamicDispatcherType();
+			static llvm::Function* GetDispatcherEntry(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::ArrayRef<const NomCallable*> overloadings, const NomMemberContext* context);
+			virtual ~NomPartialApplication() override {}
 			// Inherited via AvailableExternally
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;

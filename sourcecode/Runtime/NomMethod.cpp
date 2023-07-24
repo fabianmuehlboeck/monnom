@@ -1,13 +1,15 @@
 #include "NomMethod.h"
 #include <iostream>
-#include "llvm/IR/Verifier.h"
 #include "IntClass.h"
 #include "FloatClass.h"
 #include "CompileEnv.h"
 #include "NomInterface.h"
 #include "NomType.h"
 #include "NomTypeVar.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include <iostream>
 #include "StringClass.h"
 #include "NomSubstitutionContext.h"
@@ -21,31 +23,31 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomMethodLoaded::NomMethodLoaded(const NomInterface* container, const std::string& name, const std::string& qname, const ConstantID returnType, const ConstantID argTypes, RegIndex regcount, ConstantID typeParameters, bool isFinal) : NomCallableLoaded(name, container, qname, regcount, typeParameters, argTypes, false, false), returnType(returnType), /*NomMemberContextLoaded(container, typeParameters),*//* argTypes(argTypes),*/ isFinal(isFinal), Container(container)
+		NomMethodLoaded::NomMethodLoaded(const NomInterface* _container, const std::string& _name, const std::string& _qname, const ConstantID _returnType, const ConstantID _argTypes, RegIndex _regcount, ConstantID _typeParameters, bool _isFinal) : NomCallableLoaded(_name, _container, _qname, _regcount, _typeParameters, _argTypes, false, false), returnType(_returnType), isFinal(_isFinal), Container(_container)
 		{
 
 		}
 
-		int NomMethod::GetIMTIndex() const
+		size_t NomMethod::GetIMTIndex() const
 		{
-			return (this->GetContainer()->GetName()->HashCode() + (GetOffset() * 4177)) % IMTsize;
+			return (this->GetContainer()->GetName()->HashCode() + (static_cast<size_t>(GetOffset()) * 4177)) % IMTsize;
 		}
 
 		bool NomMethod::IsOffsetSet()
 		{
 			return offsetSet;
 		}
-		bool NomMethod::SetOffset(int offset)
+		bool NomMethod::SetOffset(size_t _offset)
 		{
 			if (!offsetSet)
 			{
-				this->offset = offset;
+				this->offset = _offset;
 				this->offsetSet = true;
 				return true;
 			}
 			return false;
 		}
-		int NomMethod::GetOffset() const
+		size_t NomMethod::GetOffset() const
 		{
 			return offset;
 		}
@@ -99,16 +101,16 @@ namespace Nom
 			}
 			return true;
 		}
-		NomMethodInternal::NomMethodInternal(const NomInterface* container, const std::string& name, const std::string& qname, bool isFinal) : NomCallableInternal(name, qname, container), isFinal(isFinal), Container(container)
+		NomMethodInternal::NomMethodInternal(const NomInterface* _container, const std::string& _name, const std::string& _qname, bool _isFinal) : NomCallableInternal(_name, _qname, _container), isFinal(_isFinal), Container(_container)
 		{
 		}
-		void NomMethodInternal::SetReturnType(NomTypeRef returnType)
+		void NomMethodInternal::SetReturnType(NomTypeRef _returnType)
 		{
-			if (returnType == nullptr || this->returnType != nullptr)
+			if (_returnType == nullptr || this->returnType != nullptr)
 			{
 				throw new std::exception();
 			}
-			this->returnType = returnType;
+			this->returnType = _returnType;
 		}
 		NomTypeRef NomMethodInternal::GetReturnType(const NomSubstitutionContext* context) const
 		{
@@ -299,7 +301,11 @@ namespace Nom
 			return llvm::FunctionType::get(GetReturnType(context)->GetLLVMType(), args, false);
 		}
 
-		NomMethodDeclLoaded::NomMethodDeclLoaded(const NomInterface* container, const std::string& name, const std::string& qname, const ConstantID returnType, const ConstantID argTypes, ConstantID typeParameters) : NomCallableLoaded(name, container, qname, 0, typeParameters, argTypes, true, false), returnTypeID(returnType)
+		NomMethodDeclLoaded::NomMethodDeclLoaded([[maybe_unused]] const NomInterface* _container, [[maybe_unused]] const std::string& _name, [[maybe_unused]] const std::string& _qname, const ConstantID _returnType, [[maybe_unused]] const ConstantID _argTypes, [[maybe_unused]] ConstantID _typeParameters) :
+#ifndef __clang__
+			NomCallableLoaded(_name, _container, _qname, 0, _typeParameters, _argTypes, true, false), 
+#endif 
+			returnTypeID(_returnType)
 		{
 		}
 
@@ -317,26 +323,26 @@ namespace Nom
 			return returnType;
 		}
 
-		llvm::Function* NomMethodDeclLoaded::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Function* NomMethodDeclLoaded::createLLVMElement([[maybe_unused]] llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			throw new std::exception(); //declaration should never actually be emitted
 		}
 
-		NomMethodDeclInternal::NomMethodDeclInternal(NomInterface* container, const std::string& name, const std::string& qname) : NomCallableInternal(name, qname, container), Container(container)
+		NomMethodDeclInternal::NomMethodDeclInternal(NomInterface* _container, const std::string& _name, const std::string& _qname) : NomCallableInternal(_name, _qname, _container), Container(_container)
 		{
 
 		}
 
-		void NomMethodDeclInternal::SetReturnType(NomTypeRef returnType)
+		void NomMethodDeclInternal::SetReturnType(NomTypeRef _returnType)
 		{
-			if (returnType == nullptr || this->returnType != nullptr)
+			if (_returnType == nullptr || this->returnType != nullptr)
 			{
 				throw new std::exception();
 			}
-			this->returnType = returnType;
+			this->returnType = _returnType;
 		}
 
-		llvm::Function* NomMethodDeclInternal::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Function* NomMethodDeclInternal::createLLVMElement([[maybe_unused]] llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			throw new std::exception(); //declaration should never actually be emitted
 		}

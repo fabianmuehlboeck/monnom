@@ -11,7 +11,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		static const std::string gnprefix = "RT_NOM_TVAR_";
+		[[clang::no_destroy]] static const std::string gnprefix = "RT_NOM_TVAR_";
 		NomTypeVar::NomTypeVar(const NomTypeParameter* ref) : GloballyNamed(&gnprefix), referenceParameter(ref)
 		{
 
@@ -25,11 +25,11 @@ namespace Nom
 		{
 			return referenceParameter->GetLowerBound();
 		}
-		int NomTypeVar::GetIndex() const
+		size_t NomTypeVar::GetIndex() const
 		{
 			return referenceParameter->GetIndex();
 		}
-		const NomTypeParameter* const NomTypeVar::GetParameter() const
+		const NomTypeParameter* NomTypeVar::GetParameter() const
 		{
 			return referenceParameter;
 		}
@@ -46,7 +46,7 @@ namespace Nom
 		{
 			return this->GetUpperBound()->IsSubtype(other, optimistic);
 		}
-		bool NomTypeVar::IsSubtype(NomTopTypeRef other, bool optimistic) const
+		bool NomTypeVar::IsSubtype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
@@ -58,7 +58,7 @@ namespace Nom
 		{
 			return other->IsSubtype(this, optimistic);
 		}
-		bool NomTypeVar::IsSupertype(NomBottomTypeRef other, bool optimistic) const
+		bool NomTypeVar::IsSupertype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
@@ -99,7 +99,7 @@ namespace Nom
 			auto var = new llvm::GlobalVariable(mod, RTTypeVar::GetLLVMType(), true, linkage, nullptr, GetGlobalName());
 			auto cnst = RTTypeVar::GetConstant(GetIndex(), GetLowerBound()->GetLLVMElement(mod), GetUpperBound()->GetLLVMElement(mod), this);
 			var->setInitializer(cnst);
-			return llvm::ConstantExpr::getGetElementPtr(cnst->getType(), var, llvm::ArrayRef<llvm::Constant*>({MakeInt32(0), MakeInt32((unsigned char)RTTypeVarFields::Head)}));
+			return llvm::ConstantExpr::getGetElementPtr(cnst->getType(), var, llvm::ArrayRef<llvm::Constant*>({MakeInt32(0), MakeInt32((RTTypeVarFields::Head))}));
 		}
 		llvm::Constant * NomTypeVar::findLLVMElement(llvm::Module & mod) const
 		{
@@ -108,9 +108,9 @@ namespace Nom
 			{
 				return var;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(RTTypeVar::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTTypeVarFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTTypeVar::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTTypeVarFields::Head)) }));
 		}
-		intptr_t NomTypeVar::GetRTElement() const
+		uintptr_t NomTypeVar::GetRTElement() const
 		{
 			return 0;//TODO: implement
 		}
@@ -122,7 +122,7 @@ namespace Nom
 		{
 			return other->IsDisjoint(this);
 		}
-		bool NomTypeVar::IsDisjoint(NomBottomTypeRef other) const
+		bool NomTypeVar::IsDisjoint([[maybe_unused]] NomBottomTypeRef other) const
 		{
 			return true;
 		}
@@ -133,14 +133,14 @@ namespace Nom
 		}
 		bool NomTypeVar::IsDisjoint(NomTopTypeRef other) const
 		{
-			return this->GetUpperBound()->IsDisjoint(this);
+			return this->GetUpperBound()->IsDisjoint(other);
 		}
 		bool NomTypeVar::IsDisjoint(NomTypeVarRef other) const
 		{
 			NomSingleSubstitutionContext nssc = NomSingleSubstitutionContext(this, GetDynamicType());
 			return other->IsDisjoint(GetUpperBound()->SubstituteSubtyping(&nssc));
 		}
-		bool NomTypeVar::IsSubtype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomTypeVar::IsSubtype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
@@ -176,7 +176,7 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
-		bool NomTypeVar::ContainsVariableIndex(int index) const
+		bool NomTypeVar::ContainsVariableIndex(size_t index) const
 		{
 			return this->GetIndex()==index;
 		}

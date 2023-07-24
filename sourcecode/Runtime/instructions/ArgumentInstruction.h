@@ -1,7 +1,6 @@
 #pragma once
 #include "../NomInstruction.h"
 #include "../CompileEnv.h"
-#include "llvm/IR/IRBuilder.h"
 
 namespace Nom
 {
@@ -13,8 +12,8 @@ namespace Nom
 		public:
 			const RegIndex Register;
 			ArgumentInstruction(RegIndex reg);
-			virtual ~ArgumentInstruction();
-			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override
+			virtual ~ArgumentInstruction() override;
+			virtual void Compile([[maybe_unused]] NomBuilder &builder, CompileEnv* env, [[maybe_unused]] size_t lineno) override
 			{
 				env->PushArgument((*env)[Register]);
 			}

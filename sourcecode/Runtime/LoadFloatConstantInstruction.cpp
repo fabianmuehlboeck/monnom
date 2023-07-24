@@ -18,17 +18,17 @@ namespace Nom
 		{
 		}
 
-		void LoadFloatConstantInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void LoadFloatConstantInstruction::Compile([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			RegisterValue(env, NomValue(ConstantFP::get(FLOATTYPE, Value), NomFloatClass::GetInstance()->GetType()));
 		}
-		void LoadFloatConstantInstruction::Print(bool resolve)
+		void LoadFloatConstantInstruction::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "FloatConstant " << std::dec << Value;
 			cout << " -> #" << std::dec << WriteRegister;
 			cout << "\n";
 		}
-		void LoadFloatConstantInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void LoadFloatConstantInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 	}

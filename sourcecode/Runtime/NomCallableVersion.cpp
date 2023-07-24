@@ -46,7 +46,7 @@ namespace Nom
 					{
 						argbuf[i] = UnpackBool(builder, argbuf[i]);
 					}
-					else if (argtype->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
+					else if (argtype->isIntegerTy(static_cast<unsigned int>(INTTYPE->getPrimitiveSizeInBits())))
 					{
 						argbuf[i] = UnpackInt(builder, argbuf[i]);
 					}
@@ -61,7 +61,7 @@ namespace Nom
 						{
 							argbuf[i] = PackBool(builder, argbuf[i]);
 						}
-						else if (valtype->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
+						else if (valtype->isIntegerTy(static_cast<unsigned int>(INTTYPE->getPrimitiveSizeInBits())))
 						{
 							argbuf[i] = PackInt(builder, argbuf[i]);
 						}
@@ -89,7 +89,7 @@ namespace Nom
 				{
 					builder->CreateRet(UnpackBool(builder, callinst));
 				}
-				else if (fun->getReturnType()->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
+				else if (fun->getReturnType()->isIntegerTy(static_cast<unsigned int>(INTTYPE->getPrimitiveSizeInBits())))
 				{
 					builder->CreateRet(UnpackInt(builder, callinst));
 				}
@@ -113,7 +113,7 @@ namespace Nom
 					throw new std::exception();
 				}
 			}
-			else if (callinst->getType()->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()))
+			else if (callinst->getType()->isIntegerTy(static_cast<unsigned int>(INTTYPE->getPrimitiveSizeInBits())))
 			{
 				if (fun->getReturnType() == REFTYPE)
 				{

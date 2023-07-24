@@ -10,9 +10,6 @@ namespace Nom
 		}
 
 
-		Directory::~Directory()
-		{
-		}
 
 		std::vector<Directory> Directory::GetDirectories()
 		{

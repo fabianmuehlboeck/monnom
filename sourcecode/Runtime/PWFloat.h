@@ -8,7 +8,7 @@ namespace Nom
 		class PWFloat : public PWrapper
 		{
 		public:
-			PWFloat(llvm::Value* wrapped) : PWrapper(wrapped)
+			PWFloat(llvm::Value* _wrapped) : PWrapper(_wrapped)
 			{
 
 			}

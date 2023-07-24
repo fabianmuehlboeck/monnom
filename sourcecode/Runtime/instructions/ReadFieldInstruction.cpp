@@ -22,33 +22,31 @@ namespace Nom
 		ReadFieldInstruction::~ReadFieldInstruction()
 		{
 		}
-		void ReadFieldInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void ReadFieldInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			if (ReceiverType != 0)
 			{
 				NomConstant* receiverConstant = NomConstants::Get(ReceiverType);
-				switch (receiverConstant->Type)
+				if (receiverConstant->Type == NomConstantType::CTClass)
 				{
-				case NomConstantType::CTClass: {
-
-					auto reccls = ((NomClassConstant *)receiverConstant)->GetClass();
+					auto reccls = (static_cast<NomClassConstant*>(receiverConstant))->GetClass();
 					auto field = reccls->GetField(NomConstants::GetString(FieldName)->GetText());
 					RegisterValue(env, field->GenerateRead(builder, env, (*env)[Receiver]));
-					break;
 				}
-				case NomConstantType::CTLambda: {
-					auto reclambda = ((NomLambdaConstant*)receiverConstant)->GetLambda();
+				else if(receiverConstant->Type == NomConstantType::CTLambda)
+				{
+					auto reclambda = (static_cast<NomLambdaConstant*>(receiverConstant))->GetLambda();
 					auto field = reclambda->GetField(NomConstants::GetString(FieldName)->GetText());
 					RegisterValue(env, field->GenerateRead(builder, env, (*env)[Receiver]));
-					break;
 				}
-				case NomConstantType::CTRecord: {
-					auto recstruct = ((NomRecordConstant*)receiverConstant)->GetRecord();
+				else if (receiverConstant->Type == NomConstantType::CTRecord)
+				{
+					auto recstruct = (static_cast<NomRecordConstant*>(receiverConstant))->GetRecord();
 					auto field = recstruct->GetField(NomConstants::GetString(FieldName)->GetText());
 					RegisterValue(env, field->GenerateRead(builder, env, (*env)[Receiver]));
-					break;
 				}
-				default:
+				else
+				{
 					throw new std::exception();
 				}
 

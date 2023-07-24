@@ -1,6 +1,8 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 #include "NomBuilder.h"
 
 namespace Nom
@@ -21,7 +23,7 @@ namespace Nom
 			RTSubstStackValue(NomBuilder& builder, llvm::Value* typelist, llvm::Value* previousStack = nullptr, llvm::ConstantInt* typeListSize = nullptr, llvm::Value* typeListOrigPtr = nullptr);
 			RTSubstStackValue(RTSubstStackValue& other) = delete;
 			RTSubstStackValue(RTSubstStackValue&& other) = default;
-			~RTSubstStackValue();
+			~RTSubstStackValue() noexcept(false);
 			llvm::Value* operator*()
 			{
 				return stack;

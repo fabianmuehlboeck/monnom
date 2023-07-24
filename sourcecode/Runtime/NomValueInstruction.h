@@ -1,7 +1,9 @@
 #pragma once
 #include "NomInstruction.h"
 #include "CompileEnv.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 
 
 namespace Nom

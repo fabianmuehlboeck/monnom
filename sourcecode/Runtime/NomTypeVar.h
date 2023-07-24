@@ -19,10 +19,10 @@ namespace Nom
 
 			NomTypeRef GetUpperBound() const;
 			NomTypeRef GetLowerBound() const;
-			int GetIndex() const;
-			const NomTypeParameter* const GetParameter() const;
+			size_t GetIndex() const;
+			const NomTypeParameter* GetParameter() const;
 
-			~NomTypeVar()
+			~NomTypeVar() override
 			{
 
 			}
@@ -62,7 +62,7 @@ namespace Nom
 			virtual llvm::Constant * findLLVMElement(llvm::Module & mod) const override;
 
 			// Inherited via NomType
-			virtual intptr_t GetRTElement() const override;
+			virtual uintptr_t GetRTElement() const override;
 
 			// Inherited via NomType
 			virtual NomClassTypeRef GetClassInstantiation(const NomNamed * named) const override;
@@ -93,7 +93,7 @@ namespace Nom
 			virtual TypeReferenceType GetTypeReferenceType() const override;
 
 			// Inherited via NomType
-			virtual bool ContainsVariableIndex(int index) const override;
+			virtual bool ContainsVariableIndex(size_t index) const override;
 		};
 	}
 }

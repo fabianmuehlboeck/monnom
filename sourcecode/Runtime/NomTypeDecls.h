@@ -1,5 +1,7 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/ArrayRef.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {

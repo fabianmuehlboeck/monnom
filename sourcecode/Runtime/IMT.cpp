@@ -1,6 +1,10 @@
 #include "IMT.h"
 #include "Defs.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "Context.h"
 //#include "llvm/ADT/VariadicFunction.h"
 #include <map>
@@ -11,8 +15,6 @@
 #include "NomCallableVersion.h"
 #include "CallingConvConf.h"
 #include <iostream>
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/IR/Verifier.h"
 #include "RefValueHeader.h"
 #include <stdarg.h>
 #include "NomInterfaceCallTag.h"
@@ -52,7 +54,7 @@ namespace Nom
 				{
 					argtypes[i + 2] = POINTERTYPE;
 				}
-				ft = FunctionType::get(POINTERTYPE, ArrayRef<Type*>(argtypes, 2 + RTConfig_NumberOfVarargsArguments), false);
+				ft = FunctionType::get(POINTERTYPE, ArrayRef<Type*>(argtypes, static_cast<size_t>(2 + RTConfig_NumberOfVarargsArguments)), false);
 				once = true;
 			}
 
@@ -103,7 +105,7 @@ namespace Nom
 				{
 					argtypes[i + 3] = POINTERTYPE;
 				}
-				ft = FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), ArrayRef<Type*>(argtypes, 3 + RTConfig_NumberOfVarargsArguments), false);
+				ft = FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), ArrayRef<Type*>(argtypes, static_cast<size_t>(3 + RTConfig_NumberOfVarargsArguments)), false);
 				once = true;
 			}
 
@@ -143,10 +145,10 @@ namespace Nom
 			{
 				auto givenKey = builder->CreatePtrToInt(id_and_dynhandler, INTTYPE, "key");
 
-				int cases = imtPairs.size();
+				auto cases = imtPairs.size();
 				BasicBlock* currentBlock;
 				BasicBlock* nextBlock = startBlock;
-				for (int i = 0; i < cases; i++)
+				for (decltype(cases) i = 0; i < cases; i++)
 				{
 					currentBlock = nextBlock;
 					auto& pair = imtPairs[i];
@@ -166,9 +168,9 @@ namespace Nom
 					argBuf.clear();
 
 					Function* callFun = std::get<1>(pair);
-					int argpos = 0;
 
-					int argcount = callFun->arg_size();
+					auto argcount = callFun->arg_size();
+					decltype(argcount) argpos = 0;
 					for (auto& argSpec : callFun->args())
 					{
 						if (argpos > 2 && argcount > 4)

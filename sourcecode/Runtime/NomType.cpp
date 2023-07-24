@@ -5,6 +5,14 @@
 #include "TypeList.h"
 #include "NomDynamicType.h"
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wglobal-constructors"
+#elif defined(__GNU__)
+#pragma GCC diagnostic ignored "-Wglobal-constructors"
+#elif defined(_MSC_VER)
+
+#endif
+
 namespace Nom
 {
 	namespace Runtime
@@ -38,7 +46,7 @@ namespace Nom
 			{
 				return false;
 			}
-			for (int i = size - 1; i >= 0; i--)
+			for (size_t i = 0;i < size; i++)
 			{
 				if (!l[i]->IsSubtype(r[i], optimistic))
 				{

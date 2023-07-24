@@ -11,9 +11,13 @@ namespace Nom
 		{
 			return RTMaybeType::GetLLVMType();
 		}
+		llvm::Type* PWMaybeType::GetWrappedLLVMType()
+		{
+			return NLLVMPointer(GetLLVMType());
+		}
 		PWType PWMaybeType::ReadPotentialType(NomBuilder& builder)
 		{
-			return PWType(MakeLoad(builder, GetLLVMType(), wrapped, MakeInt<RTMaybeTypeFields>(RTMaybeTypeFields::PotentialType)));
+			return PWType(MakeLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTMaybeTypeFields::PotentialType)));
 		}
 	}
 }

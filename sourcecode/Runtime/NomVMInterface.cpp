@@ -1,14 +1,16 @@
 #include "NomVMInterface.h"
-#include "llvm/IR/Function.h"
-#include "Context.h"
-#include "Defs.h"
-#include "NomConstants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "NomString.h"
-#include "llvm/Support/DynamicLibrary.h"
 #include <iostream>
 #include <forward_list>
 #include <cinttypes>
+PUSHDIAGSUPPRESSION
+#include "llvm/IR/Function.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/DynamicLibrary.h"
+POPDIAGSUPPRESSION
+#include "Context.h"
+#include "Defs.h"
+#include "NomConstants.h"
+#include "NomString.h"
 #include "NullClass.h"
 #include "NomAlloc.h"
 #include "LambdaHeader.h"
@@ -91,7 +93,7 @@ llvm::Function* GetClassTypeAlloc(llvm::Module* mod)
 
 void GenerateLLVMDebugPrint(IRBuilder<>& builder, llvm::Module* mod, const std::string& str)
 {
-	static std::forward_list<std::string> strings;
+	[[clang::no_destroy]] static std::forward_list<std::string> strings;
 	strings.push_front(str);
 	uint64_t strptr = reinterpret_cast<uint64_t>(&(strings.front()));
 	fprintf(stdout, "%" PRIu64 "\n", strptr);
@@ -123,7 +125,7 @@ extern "C" DLLEXPORT void* CPP_NOM_NEWALLOC(size_t numfields, size_t numtargs)
 	{
 		RT_NOM_STATS_IncAllocations(AllocationType::Object);
 	}
-	auto ret = (void*)(((char**)gcalloc(ObjectHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs)))) + numtargs);
+	auto ret = reinterpret_cast<void*>((reinterpret_cast<char**>(gcalloc(ObjectHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs))))) + numtargs);
 	return ret;
 }
 
@@ -133,7 +135,7 @@ extern "C" DLLEXPORT void* CPP_NOM_CLOSUREALLOC(size_t numfields, size_t numtarg
 	{
 		RT_NOM_STATS_IncAllocations(AllocationType::Lambda);
 	}
-	auto ret = (void*)(((char**)gcalloc(LambdaHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs)))) + numtargs);
+	auto ret = reinterpret_cast<void*>((reinterpret_cast<char**>(gcalloc(LambdaHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs))))) + numtargs);
 	return ret;
 }
 
@@ -143,9 +145,7 @@ extern "C" DLLEXPORT void* CPP_NOM_RECORDALLOC(size_t numfields, size_t numtargs
 	{
 		RT_NOM_STATS_IncAllocations(AllocationType::Record);
 	}
-	auto ret = (void*)(((char**)gcalloc(RecordHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs)))) + numtargs);
-	//auto retDictRoot = (void*)(((char*)(((intptr_t)ret))) + RecordHeader::GetLLVMLayout()->getElementOffset((unsigned int)StructHeaderFields::InstanceDictionary));
-	//RT_NOM_ConcurrentDictionaryEmplace(retDictRoot);
+	auto ret = reinterpret_cast<void*>((reinterpret_cast<char**>(gcalloc(RecordHeader::SizeOf() + (sizeof(char*) * (numfields + numtargs))))) + numtargs);
 	return ret;
 }
 
@@ -155,7 +155,7 @@ extern "C" DLLEXPORT void* CPP_NOM_CLASSTYPEALLOC(size_t numtargs)
 	{
 		RT_NOM_STATS_IncAllocations(AllocationType::ClassType);
 	}
-	auto ret = (void*)(((char**)gcalloc(GetNomJITDataLayout().getTypeAllocSize(RTClassType::GetLLVMType()).getFixedSize() + (sizeof(char*) * (numtargs)))) + numtargs);
+	auto ret = reinterpret_cast<void*>((reinterpret_cast<char**>(gcalloc(GetNomJITDataLayout().getTypeAllocSize(RTClassType::GetLLVMType()).getFixedValue() + (sizeof(char*) * (numtargs))))) + numtargs);
 	return ret;
 }
 

@@ -38,7 +38,7 @@ namespace Nom
 				preInstructions.push_back(instr);
 				if (instr->GetOpCode() == OpCode::PhiNode)
 				{
-					phiNodes.push_back((PhiNode*)instr);
+					phiNodes.push_back(static_cast<PhiNode*>(instr));
 				}
 			}
 			void AddSuperConstructorArgReg(RegIndex reg)

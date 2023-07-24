@@ -1,6 +1,8 @@
 #pragma once
 #include "ARTRep.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
+POPDIAGSUPPRESSION
 #include "NomBuilder.h"
 #include "RTPartialApp.h"
 

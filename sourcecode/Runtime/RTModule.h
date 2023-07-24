@@ -3,7 +3,9 @@
 #include "RTClass.h"
 #include "NomModule.h"
 #include <forward_list>
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Module.h"
+POPDIAGSUPPRESSION
 #include "NomJIT.h"
 #include "NomTypeRegistry.h"
 

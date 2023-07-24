@@ -14,8 +14,8 @@ namespace Nom
 			const NomTypeVar variable;
 		protected:
 			const NomMemberContext* const parent;
-			const int index;
-			NomTypeParameter(const NomMemberContext* parent, int index) : variable(this), parent(parent), index(index)
+			const size_t index;
+			NomTypeParameter(const NomMemberContext* _parent, size_t _index) : variable(this), parent(_parent), index(_index)
 			{
 			}
 		public:
@@ -31,9 +31,9 @@ namespace Nom
 			virtual size_t GetHashCode() const = 0;
 
 			const NomMemberContext* GetParent() const { return parent; }
-			int GetDirectIndex() { return index; }
-			int GetIndex() const;
-			const NomTypeVarRef GetVariable() const
+			size_t GetDirectIndex() { return index; }
+			size_t GetIndex() const;
+			NomTypeVarRef GetVariable() const
 			{
 				return &variable;
 			}
@@ -45,7 +45,7 @@ namespace Nom
 			NomTypeRef upperBound;
 			NomTypeRef lowerBound;
 		public:
-			NomTypeParameterInternal(const NomMemberContext* parent, int index, NomTypeRef upperBound, NomTypeRef lowerBound) : NomTypeParameter(parent, index), upperBound(upperBound), lowerBound(lowerBound)
+			NomTypeParameterInternal(const NomMemberContext* _parent, size_t _index, NomTypeRef _upperBound, NomTypeRef _lowerBound) : NomTypeParameter(_parent, _index), upperBound(_upperBound), lowerBound(_lowerBound)
 			{
 
 			}
@@ -72,14 +72,14 @@ namespace Nom
 			mutable NomTypeRef upperBound = nullptr;
 			mutable NomTypeRef lowerBound = nullptr;
 		public:
-			NomTypeParameterLoaded(const NomMemberContext* parent, int index, ConstantID upperBound, ConstantID lowerBound);
+			NomTypeParameterLoaded(const NomMemberContext* _parent, size_t _index, ConstantID _upperBound, ConstantID _lowerBound);
 			virtual ~NomTypeParameterLoaded() override = default;
 
 			virtual NomTypeRef GetUpperBound() const override;
 			virtual NomTypeRef GetLowerBound() const override;
 			virtual size_t GetHashCode() const override
 			{
-				return this->GetIndex() + ((size_t)lowerBoundID * 31 + (size_t)upperBoundID) * 31;
+				return this->GetIndex() + (static_cast<size_t>(lowerBoundID) * 31 + static_cast<size_t>(upperBoundID)) * 31;
 			}
 		};
 	}

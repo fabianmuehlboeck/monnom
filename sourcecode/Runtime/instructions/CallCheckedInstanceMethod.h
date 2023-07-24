@@ -2,7 +2,9 @@
 #include "../NomValueInstruction.h"
 #include "../NomConstants.h"
 #include "../ObjectHeader.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {
@@ -18,8 +20,8 @@ namespace Nom
 			{
 
 			}
-			virtual ~CallCheckedInstanceMethod();
-			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
+			virtual ~CallCheckedInstanceMethod() override;
+			virtual void Compile(NomBuilder &builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

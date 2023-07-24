@@ -1,6 +1,8 @@
 #include "RTPartialApp.h"
 #include "Defs.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
+POPDIAGSUPPRESSION
 #include "RTDictionary.h"
 #include "CompileHelpers.h"
 #include "ObjectHeader.h"
@@ -25,11 +27,11 @@ namespace Nom
 				}, "RT_NOM_PartialAppDescriptor");
 			return pat;
 		}
-		llvm::Constant* GetKeyConstant(uint32_t typeargcount, uint32_t argcount)
+		static llvm::Constant* GetKeyConstant(size_t typeargcount, size_t argcount)
 		{
-			return MakeInt<uint64_t>((((uint64_t)typeargcount) << 32) + (uint64_t)argcount);
+			return MakeInt<uint64_t>(((typeargcount) << 32) + argcount);
 		}
-		llvm::Constant* RTPartialApp::CreateConstant(llvm::ArrayRef<std::pair<std::pair<uint32_t, uint32_t>, llvm::Constant*>> entries)
+		llvm::Constant* RTPartialApp::CreateConstant(llvm::ArrayRef<std::pair<std::pair<size_t, size_t>, llvm::Constant*>> entries)
 		{
 			llvm::Constant ** cbuf = makealloca(llvm::Constant*, entries.size());
 			int pos = 0;
@@ -41,7 +43,7 @@ namespace Nom
 			return ConstantStruct::get(llvm::StructType::get(numtype(uint64_t), arr->getType()), MakeInt<uint64_t>(entries.size()), arr);
 		}
 
-		llvm::Value* RTPartialApp::GenerateFindDispatcher(NomBuilder& builder, llvm::Value* partialAppDesc, uint32_t typeargcount, uint32_t argcount)
+		llvm::Value* RTPartialApp::GenerateFindDispatcher([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] llvm::Value* partialAppDesc, [[maybe_unused]] size_t typeargcount, [[maybe_unused]] size_t argcount)
 		{
 			throw new std::exception();
 		}

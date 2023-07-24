@@ -2,11 +2,11 @@
 //parts of RTConfig.h relevant for more wide-spread compilation code -- hopefully changes less
 
 extern int NomLambdaOptimizationLevel;
-extern int IMTsize;
+extern size_t IMTsize;
 extern bool PreferTypeArgumentsInVTables;
 
 extern bool RTConfig_CheckLambdaSignaturesAtCast;
-extern int RTConfig_NumberOfVarargsArguments;
+extern size_t RTConfig_NumberOfVarargsArguments;
 extern bool RTConfig_AlwaysEnsureMethod;
 extern bool RTConfig_IgnoreEnsureMethod;
 extern bool RTConfig_RunUnncessesaryCallTagChecks;

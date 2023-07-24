@@ -45,7 +45,7 @@ namespace Nom
 			virtual llvm::Type* GetLLVMType() const override;
 			virtual const std::string GetSymbolRep() const override;
 			virtual TypeKind GetKind() const override;
-			virtual intptr_t GetRTElement() const override;
+			virtual uintptr_t GetRTElement() const override;
 			virtual NomClassTypeRef GetClassInstantiation(const NomNamed* named) const override;
 
 			// Inherited via NomType
@@ -61,7 +61,9 @@ namespace Nom
 			virtual TypeReferenceType GetTypeReferenceType() const override;
 
 			// Inherited via NomType
-			virtual bool ContainsVariableIndex(int index) const override;
+			virtual bool ContainsVariableIndex(size_t index) const override;
 		};
 	}
 }
+
+extern "C" uintptr_t NOM_RTInstantiateMaybe(uintptr_t ptype);

@@ -9,7 +9,7 @@ namespace Nom
 		class PWCheckReturnValueFunction: public PWrapper
 		{
 		public:
-			PWCheckReturnValueFunction(llvm::Value* wrapped) : PWrapper(wrapped)
+			PWCheckReturnValueFunction(llvm::Value* _wrapped) : PWrapper(_wrapped)
 			{
 
 			}

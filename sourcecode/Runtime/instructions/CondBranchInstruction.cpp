@@ -12,7 +12,7 @@ namespace Nom
 	namespace Runtime
 	{
 
-		CondBranchInstruction::CondBranchInstruction(RegIndex condition, int thenTarget, int elseTarget) : NomInstruction(OpCode::CondBranch), Condition(condition), ThenTarget(thenTarget), ElseTarget(elseTarget)
+		CondBranchInstruction::CondBranchInstruction(RegIndex _condition, size_t _thenTarget, size_t _elseTarget) : NomInstruction(OpCode::CondBranch), Condition(_condition), ThenTarget(_thenTarget), ElseTarget(_elseTarget)
 		{
 		}
 
@@ -20,7 +20,7 @@ namespace Nom
 		CondBranchInstruction::~CondBranchInstruction()
 		{
 		}
-		void CondBranchInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void CondBranchInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			PhiNode *thenPhi = env->GetPhiNode(ThenTarget);
 			PhiNode *elsePhi = env->GetPhiNode(ElseTarget);
@@ -36,20 +36,18 @@ namespace Nom
 			for (auto ti : ThenIncomings)
 			{
 				NomValue nv = (*env)[std::get<0>(ti)];
-				llvm::PHINode* llvmPHI = ((llvm::PHINode*)(llvm::Value*)nv);
+				llvm::PHINode* llvmPHI = static_cast<llvm::PHINode*>(static_cast<llvm::Value*>(nv));
 				auto incval = EnsureType(builder, env, (*env)[std::get<1>(ti)], nv.GetNomType(), llvmPHI->getType());
 				incPairs[incPos] = std::make_pair(llvmPHI, incval);
 				incPos++;
-				//((llvm::PHINode*)(llvm::Value*)nv)->addIncoming(incval, builder->GetInsertBlock());
 			}
 			for (auto ei : ElseIncomings)
 			{
 				NomValue nv = (*env)[std::get<0>(ei)];
-				llvm::PHINode* llvmPHI = ((llvm::PHINode*)(llvm::Value*)nv);
+				llvm::PHINode* llvmPHI = static_cast<llvm::PHINode*>(static_cast<llvm::Value*>(nv));
 				auto incval = EnsureType(builder, env, (*env)[std::get<1>(ei)], nv.GetNomType(), llvmPHI->getType());
 				incPairs[incPos] = std::make_pair(llvmPHI, incval);
 				incPos++;
-				//((llvm::PHINode*)(llvm::Value*)nv)->addIncoming(incval, builder->GetInsertBlock());
 			}
 			BasicBlock* curBlock = builder->GetInsertBlock();
 			while (incPos > 0)
@@ -60,14 +58,14 @@ namespace Nom
 			builder->CreateCondBr(condition, thenPhi->getBlock(), elsePhi->getBlock());
 			env->basicBlockTerminated = true;
 		}
-		void CondBranchInstruction::Print(bool resolve)
+		void CondBranchInstruction::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "CondBranch #" << std::dec << Condition;
 			cout << ", " << std::dec << ThenTarget;
 			cout << ", " << std::dec << ElseTarget;
 			cout << "\n";
 		}
-		void CondBranchInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void CondBranchInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 	}

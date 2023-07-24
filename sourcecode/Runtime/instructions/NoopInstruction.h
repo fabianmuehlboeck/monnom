@@ -13,20 +13,20 @@ namespace Nom
 			{
 
 			}
-			virtual ~NoopInstruction()
+			virtual ~NoopInstruction() override
 			{
 
 			}
 
-			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override
+			virtual void Compile([[maybe_unused]] NomBuilder &builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno) override
 			{
 
 			}
 
 			// Inherited via NomInstruction
-			virtual void Print(bool resolve = false) override;
+			virtual void Print([[maybe_unused]] bool resolve = false) override;
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override;
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override;
 		};
 
 	}

@@ -2,13 +2,15 @@
 #include "NomType.h"
 #include "Defs.h"
 #include "TypeList.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/Error.h"
+POPDIAGSUPPRESSION
 #include "Context.h"
 #include "RTClassType.h"
 #include "NomAlloc.h"
 #include "NomNamed.h"
 #include "GloballyNamed.h"
-#include "llvm/Support/Error.h"
 #include "AvailableExternally.h"
 
 namespace Nom
@@ -85,7 +87,7 @@ namespace Nom
 			// Inherited via NomType
 			virtual llvm::Constant * createLLVMElement(llvm::Module & mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant * findLLVMElement(llvm::Module & mod) const override;
-			virtual intptr_t GetRTElement() const override;
+			virtual uintptr_t GetRTElement() const override;
 
 			// Inherited via NomType
 			virtual NomClassTypeRef GetClassInstantiation(const NomNamed * named) const override;
@@ -116,9 +118,9 @@ namespace Nom
 			virtual TypeReferenceType GetTypeReferenceType() const override;
 
 			// Inherited via NomType
-			virtual bool ContainsVariableIndex(int index) const override;
+			virtual bool ContainsVariableIndex(size_t index) const override;
 		};
 	}
 }
 
-extern "C" intptr_t NOM_RTInstantiateClass(intptr_t cls, intptr_t *args);
+extern "C" uintptr_t NOM_RTInstantiateClass(intptr_t cls, intptr_t *args);

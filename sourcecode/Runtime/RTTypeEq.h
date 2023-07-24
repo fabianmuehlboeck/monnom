@@ -2,8 +2,10 @@
 #include "AvailableExternally.h"
 #include "NomTypeDecls.h"
 #include "NomBuilder.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {
@@ -16,6 +18,7 @@ namespace Nom
 			RTTypeEq(bool optimistic);
 		public:
 			static RTTypeEq& Instance(bool optimistic);
+			~RTTypeEq() override {}
 			static llvm::FunctionType* GetLLVMFunctionType(bool optimistic);
 			// Inherited via AvailableExternally
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;

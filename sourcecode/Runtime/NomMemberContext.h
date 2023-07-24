@@ -1,5 +1,7 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/ArrayRef.h"
+POPDIAGSUPPRESSION
 #include "Defs.h"
 #include "NomSubstitutionContext.h"
 
@@ -15,9 +17,9 @@ namespace Nom
 		class NomMemberContext
 		{
 		private:
-			mutable llvm::ArrayRef<NomTypeParameterRef> allParameters = llvm::ArrayRef<NomTypeParameterRef>((NomTypeParameterRef*)nullptr, (size_t)0);
-			mutable llvm::ArrayRef<NomTypeRef> allVariables = llvm::ArrayRef<NomTypeRef>((NomTypeRef*)nullptr, (size_t)0);
-			mutable llvm::ArrayRef<NomTypeRef> directVariables = llvm::ArrayRef<NomTypeRef>((NomTypeRef*)nullptr, (size_t)0);
+			mutable llvm::ArrayRef<NomTypeParameterRef> allParameters = llvm::ArrayRef<NomTypeParameterRef>(static_cast<NomTypeParameterRef*>(nullptr), static_cast<size_t>(0));
+			mutable llvm::ArrayRef<NomTypeRef> allVariables = llvm::ArrayRef<NomTypeRef>(static_cast<NomTypeRef*>(nullptr), static_cast<size_t>(0));
+			mutable llvm::ArrayRef<NomTypeRef> directVariables = llvm::ArrayRef<NomTypeRef>(static_cast<NomTypeRef*>(nullptr), static_cast<size_t>(0));
 		protected:
 			NomMemberContext() {}
 		public:
@@ -32,12 +34,12 @@ namespace Nom
 			const llvm::ArrayRef<NomTypeParameterRef> GetAllTypeParameters() const;
 			size_t GetTypeParametersCount() const;
 			size_t GetTypeParametersStart() const;
-			NomTypeParameterRef GetTypeParameter(int index) const;
+			NomTypeParameterRef GetTypeParameter(size_t index) const;
 
 			const llvm::ArrayRef<NomTypeRef> GetDirectTypeVariables() const;
 			virtual const llvm::ArrayRef<NomTypeParameterRef> GetDirectTypeParameters() const = 0;
 			virtual size_t GetDirectTypeParametersCount() const = 0;
-			virtual NomTypeParameterRef GetLocalTypeParameter(int index) const = 0;
+			virtual NomTypeParameterRef GetLocalTypeParameter(size_t index) const = 0;
 
 			virtual const std::string* GetSymbolName() const = 0;
 			virtual const NomMemberContext* GetParent() const = 0;
@@ -57,8 +59,7 @@ namespace Nom
 			const llvm::ArrayRef<NomTypeParameterRef> GetDirectTypeParameters() const override;
 			size_t GetDirectTypeParametersCount() const override;
 
-			NomTypeParameterRef GetLocalTypeParameter(int index) const override;
-			//virtual const std::string * GetSymbolName() const = 0;
+			NomTypeParameterRef GetLocalTypeParameter(size_t index) const override;
 			const NomMemberContext* GetParent() const override { return parent; }
 		};
 
@@ -68,7 +69,7 @@ namespace Nom
 			const llvm::ArrayRef<NomTypeParameterRef> typeParameters;
 			const NomMemberContext* const parent;
 		public:
-			NomMemberContextList(llvm::ArrayRef<NomTypeParameterRef> typeParameters, const NomMemberContext* parent = nullptr) : typeParameters(typeParameters), parent(parent)
+			NomMemberContextList(llvm::ArrayRef<NomTypeParameterRef> typeParams, const NomMemberContext* parentContext = nullptr) : typeParameters(typeParams), parent(parentContext)
 			{
 
 			}
@@ -90,7 +91,7 @@ namespace Nom
 				return typeParameters.size();
 			}
 
-			virtual NomTypeParameterRef GetLocalTypeParameter(int index) const override
+			virtual NomTypeParameterRef GetLocalTypeParameter(size_t index) const override
 			{
 				return typeParameters[index];
 			}
@@ -106,28 +107,27 @@ namespace Nom
 		class NomMemberContextInternal : public virtual NomMemberContext
 		{
 		private:
-			llvm::ArrayRef<NomTypeParameterRef> typeParameters = llvm::ArrayRef<NomTypeParameterRef>((NomTypeParameterRef *)nullptr, (size_t)0);
+			llvm::ArrayRef<NomTypeParameterRef> typeParameters = llvm::ArrayRef<NomTypeParameterRef>(static_cast<NomTypeParameterRef *>(nullptr), static_cast<size_t>(0));
 			const NomMemberContext* const parent;
 		public:
 			//One version of SetDirectTypeParameters must be called eventually (TypeParameters need to be able to access "this" context object to set parent)
-			NomMemberContextInternal(const NomMemberContext* parent = nullptr) : parent(parent)
+			NomMemberContextInternal(const NomMemberContext* parentContext = nullptr) : parent(parentContext)
 			{
 
 			}
 			virtual ~NomMemberContextInternal() override = default;
 
-			void SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef> typeParameters)
+			void SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef> typeParams)
 			{
-				if (this->typeParameters.data() != nullptr || typeParameters.data()==nullptr)
+				if (this->typeParameters.data() != nullptr || typeParams.data()==nullptr)
 				{
 					throw new std::exception();
 				}
-				this->typeParameters = typeParameters;
+				this->typeParameters = typeParams;
 			}
-			//Used to set type parameters to empty array point to self
 			void SetDirectTypeParameters()
 			{
-				this->typeParameters = llvm::ArrayRef<NomTypeParameterRef>((NomTypeParameterRef*)this, (size_t)0);
+				this->typeParameters = llvm::ArrayRef<NomTypeParameterRef>(static_cast<NomTypeParameterRef*>(nullptr), static_cast<size_t>(0));
 			}
 
 			// Inherited via NomMemberContext
@@ -141,7 +141,7 @@ namespace Nom
 				return typeParameters.size();
 			}
 
-			virtual NomTypeParameterRef GetLocalTypeParameter(int index) const override
+			virtual NomTypeParameterRef GetLocalTypeParameter(size_t index) const override
 			{
 				return typeParameters[index];
 			}
@@ -152,17 +152,5 @@ namespace Nom
 			}
 
 		};
-
-		//class SimpleNomMemberContext : public NomMemberContext
-		//{
-		//private:
-		//	const std::string symbolName;
-		//public:
-		//	SimpleNomMemberContext(const NomMemberContext* parent, ConstantID typeParametersID, const std::string &symbolName);
-		//	SimpleNomMemberContext(const NomMemberContext* parent, llvm::ArrayRef<NomTypeVarRef> typeParameters, const std::string& symbolName);
-		//	// Inherited via NomMemberContext
-		//	virtual const std::string* GetSymbolName() const override;
-		//};
-
 	}
 }

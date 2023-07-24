@@ -14,13 +14,16 @@
 #include "BoolClass.h"
 #include "NomMethod.h"
 #include "NomMethodTableEntry.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/SmallSet.h"
+POPDIAGSUPPRESSION
 #include "CastStats.h"
 #include "RTLambda.h"
 #include "LambdaHeader.h"
 #include "IMT.h"
 #include "Metadata.h"
 #include "PWRefValue.h"
+#include "PWDispatchPair.h"
 
 using namespace std;
 using namespace llvm;
@@ -43,7 +46,7 @@ namespace Nom
 
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
-			int mergeBlocks = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, receiver, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
+			unsigned int mergeBlocks = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, receiver, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
 
 			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge", fun);
 			PHINode* mergePHI = nullptr;
@@ -56,7 +59,7 @@ namespace Nom
 			if (mergeBlocks > 1)
 			{
 				builder->SetInsertPoint(mergeBlock);
-				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), mergeBlocks);
+				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), static_cast<unsigned int>(mergeBlocks));
 				returnVal = mergePHI;
 			}
 
@@ -112,7 +115,7 @@ namespace Nom
 			return returnVal;
 		}
 
-		void EnsureDynamicMethodInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void EnsureDynamicMethodInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			NomValue receiver = (*env)[Receiver];
 			BasicBlock* origBlock = builder->GetInsertBlock();
@@ -138,7 +141,7 @@ namespace Nom
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 			Value* primitiveIntVal, * primitiveFloatVal, * primitiveBoolVal;
 
-			int mergeBlocks = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, receiver, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, &primitiveIntVal, &primitiveFloatBlock, &primitiveFloatVal, &primitiveBoolBlock, &primitiveBoolVal);
+			unsigned int mergeBlocks = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, receiver, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, &primitiveIntVal, &primitiveFloatBlock, &primitiveFloatVal, &primitiveBoolBlock, &primitiveBoolVal);
 
 			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge", fun);
 			PHINode* mergePHI = nullptr;
@@ -151,7 +154,7 @@ namespace Nom
 			if (mergeBlocks > 1)
 			{
 				builder->SetInsertPoint(mergeBlock);
-				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), mergeBlocks);
+				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), static_cast<unsigned int>(mergeBlocks));
 				returnVal = mergePHI;
 			}
 

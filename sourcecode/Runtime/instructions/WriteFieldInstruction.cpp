@@ -20,40 +20,33 @@ namespace Nom
 		WriteFieldInstruction::~WriteFieldInstruction()
 		{
 		}
-		void WriteFieldInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void WriteFieldInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			if (ReceiverType != 0)
 			{
 				NomConstant* receiverConstant = NomConstants::Get(ReceiverType);
-				switch (receiverConstant->Type)
+				if (receiverConstant->Type == NomConstantType::CTClass)
 				{
-				case NomConstantType::CTClass: {
 
-					auto reccls = ((NomClassConstant*)receiverConstant)->GetClass();
+					auto reccls = (static_cast<NomClassConstant*>(receiverConstant))->GetClass();
 					auto field = reccls->GetField(NomConstants::GetString(FieldName)->GetText());
 					field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
-					break;
 				}
-				case NomConstantType::CTLambda: {
-					//auto reclambda = ((NomLambdaConstant*)receiverConstant)->GetLambda();
-					//auto field = reclambda->GetField(NomConstants::GetString(FieldName)->GetText());
-					//field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
+				else if (receiverConstant->Type == NomConstantType::CTLambda)
+				{
 					//this should never happen, but if it does, we'll get the appropriate error by calling the dynamic field write function
 					NomDictField::GetInstance(NomConstants::GetString(FieldName)->GetText())->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
-					break;
 				}
-				case NomConstantType::CTRecord: {
-					auto recstruct = ((NomRecordConstant*)receiverConstant)->GetRecord();
+				else if (receiverConstant->Type == NomConstantType::CTRecord)
+				{
+					auto recstruct = (static_cast<NomRecordConstant*>(receiverConstant))->GetRecord();
 					auto field = recstruct->GetField(NomConstants::GetString(FieldName)->GetText());
 					field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
-					break;
 				}
-				default:
+				else
+				{
 					throw new std::exception();
 				}
-				//auto reccls = NomConstants::GetClass(ReceiverType)->GetClass();
-				//auto field = reccls->GetField(NomConstants::GetString(FieldName)->GetText());
-				//field->GenerateWrite(builder, env, (*env)[Receiver], (*env)[ValueRegister]);
 			}
 			else
 			{

@@ -1,5 +1,7 @@
 #pragma once
-
+PUSHDIAGSUPPRESSION
+#include "llvm/IR/Constant.h"
+POPDIAGSUPPRESSION
 #include "Defs.h"
 #include "AvailableExternally.h"
 
@@ -11,8 +13,6 @@ namespace Nom
 		{
 		private:
 			mutable size_t hashCode = 0;
-			//mutable llvm::GlobalVariable* llvmVar = nullptr;
-			//mutable llvm::GlobalVariable* llvmStruct = nullptr;
 		public:
 			NomString() : NomStringType()
 			{
@@ -23,33 +23,50 @@ namespace Nom
 			NomString(const NomString&& other) : NomStringType(other)
 			{
 			}
-			NomString(const char* const other) : NomStringType(strlen(other), 0)
+			NomString(const char* const other) : NomStringType(static_cast<NomStringType::size_type>(strlen(other)), 0)
 			{
-				for (int i = strlen(other) - 1; i >= 0; i--)
+				NomStringType::size_type bound = static_cast<NomStringType::size_type>(strlen(other));
+				if (bound > 0)
 				{
-					(*this)[i] = other[i];
+					do
+					{
+						bound--;
+						(*this)[bound] = static_cast<NomStringType::value_type>(other[bound]);
+					} while (bound > 0);
 				}
 			}
-			NomString(std::string other) : NomStringType(other.size(), 0)
+			NomString(std::string other) : NomStringType(static_cast<NomStringType::size_type>(other.size()), 0)
 			{
-				for (int i = other.size() - 1; i >= 0; i--)
+				NomStringType::size_type bound = static_cast<NomStringType::size_type>(other.size());
+				if (bound > 0)
 				{
-					(*this)[i] = other[i];
+					do
+					{
+						bound--;
+						(*this)[bound] = static_cast<NomStringType::value_type>(other[bound]);
+					} while (bound > 0);
 				}
 			}
-			NomString(const uint64_t length, CharStream &stream) : NomStringType(length, 0) {
-				for (uint64_t i = 0; i < length; i++) {
+			NomString(const uint64_t length, CharStream &stream) : NomStringType(static_cast<NomStringType::size_type>(length), 0) {
+				auto llength = static_cast<NomStringType::size_type>(length);
+				for (NomStringType::size_type i = 0; i < llength; i++) {
 					std::array<unsigned char, sizeof(NomChar)> chars = stream.read_chars<sizeof(NomChar)>();
 					unsigned char* charptr = chars.data();
 					(*this)[i] = *(reinterpret_cast<NomChar*>(charptr));
 				}
 			}
+			virtual ~NomString() override {}
 			std::string ToStdString() const
 			{
-				std::string ret(size(), 0);
-				for (int i = size() - 1; i >= 0; i--)
+				NomStringType::size_type sz = size();
+				std::string ret(static_cast<size_t>(sz), 0);
+				if (sz > 0)
 				{
-					ret[i] = (*this)[i];
+					do
+					{
+						sz--;
+						ret[sz] = static_cast<std::string::value_type>((*this)[sz]);
+					} while (sz > 0);
 				}
 				return ret;
 			}
@@ -60,7 +77,8 @@ namespace Nom
 				{
 					size_t hcval = 0; //needed for concurrent computations
 					size_t mult = 1;
-					for (int i = size() - 1; i >= 0; i--)
+					NomStringType::size_type sz = size();
+					for (NomStringType::size_type i = 0; i < sz; i++)
 					{
 						size_t charval = (*this)[i];
 						hcval += charval * mult;
@@ -99,13 +117,13 @@ namespace Nom
 				while (singles-- > 0)
 				{
 					n--;
-					ret += ((const std::size_t)(*(s.data() + n))) * mult;
+					ret += (static_cast<const std::size_t>(*(s.data() + n))) * mult;
 					mult *= 31;
 				}
 				while (n > 0)
 				{
 					n -= points;
-					ret += (*((const std::size_t *)(s.data() + n))) * mult;
+					ret += (static_cast<const std::size_t>(*(s.data() + n))) * mult;
 					mult *= 31;
 				}
 				return ret;
@@ -147,6 +165,7 @@ namespace Nom
 				return std::equal_to<std::string>()(*lhs, *rhs);
 			}
 		};
+		const std::string* getStringID(NomStringRef str);
 	}
 }
 

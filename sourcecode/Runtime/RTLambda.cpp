@@ -25,7 +25,7 @@ namespace Nom
 			}
 			return ltype;
 		}
-		llvm::Constant* RTLambda::CreateConstant(const NomLambda* lambda, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable, llvm::Function* fieldRead, llvm::Function* fieldWrite)
+		llvm::Constant* RTLambda::CreateConstant([[maybe_unused]] const NomLambda* lambda, llvm::Constant* interfaceMethodTable, llvm::Constant* dynamicDispatcherTable, llvm::Function* fieldRead, llvm::Function* fieldWrite)
 		{
 			return ConstantStruct::get(GetLLVMType(), { RTVTable::CreateConstant(RTDescriptorKind::Lambda, interfaceMethodTable, dynamicDispatcherTable,fieldRead, fieldWrite, MakeInt32(1)) });
 		}

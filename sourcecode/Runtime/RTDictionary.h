@@ -19,8 +19,8 @@ namespace Nom
 		private:
 			RTDictionaryCreate();
 		public:
-			virtual ~RTDictionaryCreate()
-			{};
+			virtual ~RTDictionaryCreate() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -34,7 +34,7 @@ namespace Nom
 		private:
 			RTDictionaryLookup();
 		public:
-			virtual ~RTDictionaryLookup() {};
+			virtual ~RTDictionaryLookup() override {}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -48,8 +48,8 @@ namespace Nom
 		private:
 			RTDictionarySet();
 		public:
-			virtual ~RTDictionarySet()
-			{};
+			virtual ~RTDictionarySet() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -63,8 +63,8 @@ namespace Nom
 		private:
 			RTConcurrentDictionaryCreate();
 		public:
-			virtual ~RTConcurrentDictionaryCreate()
-			{};
+			virtual ~RTConcurrentDictionaryCreate() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -78,8 +78,8 @@ namespace Nom
 		private:
 			RTConcurrentDictionaryEmplace();
 		public:
-			virtual ~RTConcurrentDictionaryEmplace()
-			{};
+			virtual ~RTConcurrentDictionaryEmplace() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -93,7 +93,7 @@ namespace Nom
 		private:
 			RTConcurrentDictionaryLookup();
 		public:
-			virtual ~RTConcurrentDictionaryLookup() {};
+			virtual ~RTConcurrentDictionaryLookup() override {}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -107,7 +107,7 @@ namespace Nom
 		private:
 			RTConcurrentDictionaryLookupFreeze();
 		public:
-			virtual ~RTConcurrentDictionaryLookupFreeze() {};
+			virtual ~RTConcurrentDictionaryLookupFreeze() override {}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -121,8 +121,8 @@ namespace Nom
 		private:
 			RTConcurrentDictionarySet();
 		public:
-			virtual ~RTConcurrentDictionarySet()
-			{};
+			virtual ~RTConcurrentDictionarySet() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -136,8 +136,8 @@ namespace Nom
 		private:
 			RTConcurrentDictionaryGetCastTypeCount();
 		public:
-			virtual ~RTConcurrentDictionaryGetCastTypeCount()
-			{};
+			virtual ~RTConcurrentDictionaryGetCastTypeCount() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -151,8 +151,8 @@ namespace Nom
 		private:
 			RTConcurrentDictionaryGetCastType();
 		public:
-			virtual ~RTConcurrentDictionaryGetCastType()
-			{};
+			virtual ~RTConcurrentDictionaryGetCastType() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -160,29 +160,14 @@ namespace Nom
 			virtual llvm::Function* findLLVMElement(llvm::Module& mod) const override;
 		};
 
-		//class RTConcurrentDictionaryEnterCast : public AvailableExternally<llvm::Function>, public Singleton< RTConcurrentDictionaryEnterCast>
-		//{
-		//	friend class Singleton<RTConcurrentDictionaryEnterCast>;
-		//private:
-		//	RTConcurrentDictionaryEnterCast();
-		//public:
-		//	virtual ~RTConcurrentDictionaryEnterCast()
-		//	{};
-
-		//	static llvm::FunctionType* GetFunctionType();
-		//	// Inherited via AvailableExternally
-		//	virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
-		//	virtual llvm::Function* findLLVMElement(llvm::Module& mod) const override;
-		//};
-
 		class RTConcurrentDictionaryAddCastType : public AvailableExternally<llvm::Function>, public Singleton< RTConcurrentDictionaryAddCastType>
 		{
 			friend class Singleton<RTConcurrentDictionaryAddCastType>;
 		private:
 			RTConcurrentDictionaryAddCastType();
 		public:
-			virtual ~RTConcurrentDictionaryAddCastType()
-			{};
+			virtual ~RTConcurrentDictionaryAddCastType() override
+			{}
 
 			static llvm::FunctionType* GetFunctionType();
 			// Inherited via AvailableExternally
@@ -192,4 +177,14 @@ namespace Nom
 	}
 }
 
+extern "C" DLLEXPORT void* RT_NOM_DictionaryCreate();
+extern "C" DLLEXPORT void* RT_NOM_DictionaryLookup(void* dictref, DICTKEYTYPE key);
+extern "C" DLLEXPORT void RT_NOM_DictionarySet(void* dictref, DICTKEYTYPE key, void* value);
+extern "C" DLLEXPORT void* RT_NOM_ConcurrentDictionaryCreate();
 extern "C" DLLEXPORT void* RT_NOM_ConcurrentDictionaryEmplace(void* addr);
+extern "C" DLLEXPORT size_t RT_NOM_ConcurrentDictionaryGetCastTypeCount(void* dictref);
+extern "C" DLLEXPORT void* RT_NOM_ConcurrentDictionaryGetCastType(void* dictref, size_t index);
+extern "C" DLLEXPORT size_t RT_NOM_ConcurrentDictionaryAddCastType(void* dictref, size_t basecount, void* typeref);
+extern "C" DLLEXPORT void* RT_NOM_ConcurrentDictionaryLookupFreeze(void* dictref, DICTKEYTYPE key);
+extern "C" DLLEXPORT void* RT_NOM_ConcurrentDictionaryLookup(void* dictref, DICTKEYTYPE key);
+extern "C" DLLEXPORT int RT_NOM_ConcurrentDictionarySet(void* dictref, DICTKEYTYPE key, void* value);

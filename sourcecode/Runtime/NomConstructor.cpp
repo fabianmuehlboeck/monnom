@@ -1,31 +1,34 @@
 #include "NomConstructor.h"
+PUSHDIAGSUPPRESSION
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "NomClass.h"
 #include "NomType.h"
 #include "NomClassType.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "NomMemberContext.h"
 #include "NomTypeVar.h"
-#include "llvm/IR/Verifier.h"
 #include "IntClass.h"
 #include "FloatClass.h"
 #include <iostream>
-#include "llvm/Support/raw_os_ostream.h"
 #include "instructions/PhiNode.h"
 #include "StringClass.h"
 #include "ObjectClass.h"
 #include "CallingConvConf.h"
 #include "instructions/CallConstructor.h"
+#include "PWObject.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
-		std::string constructorPrefix = "RT_NOM_Constructor_";
+		[[clang::no_destroy]] static std::string constructorPrefix = "RT_NOM_Constructor_";
 		NomConstructor::NomConstructor() : GloballyNamed(&constructorPrefix)
 		{
 
 		}
-		NomConstructorLoaded::NomConstructorLoaded(const NomClass * cls, const std::string &name, const std::string &qname, const ConstantID arguments, const RegIndex regcount, const ConstantID typeArgs, bool declOnly, bool cppWrapper) : NomConstructor(), NomCallableLoaded(name, cls, qname, regcount, typeArgs, arguments, declOnly, cppWrapper), /*argumentTypes(arguments),*/ returnTypeBuf(nullptr), Class(cls)
+		NomConstructorLoaded::NomConstructorLoaded(const NomClass * _cls, const std::string &_name, const std::string &_qname, const ConstantID _arguments, const RegIndex _regcount, const ConstantID _typeArgs, bool _declOnly, bool _cppWrapper) : NomConstructor(), NomCallableLoaded(_name, _cls, _qname, _regcount, _typeArgs, _arguments, _declOnly, _cppWrapper), returnTypeBuf(nullptr), Class(_cls)
 		{
 		}
 
@@ -91,7 +94,7 @@ namespace Nom
 			size_t offset = Class->GetTypeArgOffset();
 			for (size_t pos = 0; pos < this->Class->GetTypeParametersCount(); pos++)
 			{
-				ObjectHeader::GenerateWriteTypeArgument(builder,(*env)[0], offset + pos, env->GetTypeArgument(builder, pos));
+				PWObject((*env)[0]).WriteTypeArgument(builder, PWCInt32(offset + pos, false), env->GetTypeArgument(builder, pos));
 			}
 
 			auto preinstructions = this->preInstructions;
@@ -103,7 +106,7 @@ namespace Nom
 			auto superclass = Class->GetSuperClass();
 			if (superclass.HasElem()&&superclass.Elem!=NomObjectClass::GetInstance())
 			{
-				NomValue *superArgsBuf = (NomValue *)(nmalloc(sizeof(NomValue)*superConstructorArgs.size()));
+				NomValue *superArgsBuf = makenmalloc(NomValue,superConstructorArgs.size());
 				auto scasize = superConstructorArgs.size();
 				for (decltype(scasize) i = 0; i < scasize; i++)
 				{
@@ -239,5 +242,5 @@ namespace Nom
 		{
 			return Container;
 		}
-}
+	}
 }

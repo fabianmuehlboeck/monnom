@@ -8,9 +8,9 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		IEnumerableInterface::IEnumerableInterface() : NomInterface("IEnumerable_1"), NomInterfaceInternal(new NomString("IEnumerable_1"))
+		IEnumerableInterface::IEnumerableInterface() : NomInterface(), NomInterfaceInternal(new NomString("IEnumerable_1"))
 		{
-			NomTypeParameterRef* ntparr = (NomTypeParameterRef*)nmalloc(sizeof(NomTypeParameterRef));
+			NomTypeParameterRef* ntparr = makenmalloc(NomTypeParameterRef,1);
 			ntparr[0] = new NomTypeParameterInternal(this, 0, NomType::AnythingRef, NomType::NothingRef);
 			SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef>(ntparr, 1));
 			SetSuperInterfaces();
@@ -22,7 +22,7 @@ namespace Nom
 
 		IEnumerableInterface* IEnumerableInterface::GetInstance()
 		{
-			static IEnumerableInterface iei;
+			[[clang::no_destroy]] static IEnumerableInterface iei;
 			static bool once = true;
 			if (once)
 			{
@@ -38,8 +38,6 @@ namespace Nom
 				meth->SetReturnType(enumeratorType);
 				meth->SetArgumentTypes();
 				iei.AddMethod(meth);
-
-				//iei.PreprocessInheritance();
 			}
 			return &iei;
 		}

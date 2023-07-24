@@ -24,18 +24,13 @@ namespace Nom
 			Loader(const Loader&) = delete;
 			Loader(Loader&&) = delete;
 			static const Loader * GetInstance() {
-				static const Loader instance;
+				[[clang::no_destroy]] static const Loader instance;
 				return &instance;
 			}
 			~Loader();
-/*
-			const NomClass * const GetClass(const std::string *libraryName, const std::string *name) const;*/
 
 			const LibraryVersion * GetLibrary(const std::string *libraryName) const;
 
-			//bool LoadAssemblyUnit(const std::string &name, NomProgram *parent) const;
-
-			//const Library *GetLibrary(const std::string &name) const;
 		};
 
 	}

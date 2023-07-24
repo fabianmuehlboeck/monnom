@@ -24,63 +24,63 @@ namespace Nom
 		{
 		}
 
-		bool NomBottomType::IsSubtype(NomTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSubtype([[maybe_unused]] NomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSubtype(NomBottomTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSubtype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSubtype(NomClassTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSubtype([[maybe_unused]] NomClassTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSubtype(NomTopTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSubtype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSubtype(NomTypeVarRef other, bool optimistic) const
+		bool NomBottomType::IsSubtype([[maybe_unused]] NomTypeVarRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSupertype(NomTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSupertype([[maybe_unused]] NomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSubtype(this);
 		}
-		bool NomBottomType::IsSupertype(NomBottomTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSupertype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSubtype(this);
 		}
-		bool NomBottomType::IsSupertype(NomClassTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSupertype([[maybe_unused]] NomClassTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSubtype(this);
 		}
-		bool NomBottomType::IsSupertype(NomTopTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSupertype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return false;
 		}
-		bool NomBottomType::IsSupertype(NomTypeVarRef other, bool optimistic) const
+		bool NomBottomType::IsSupertype([[maybe_unused]] NomTypeVarRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSubtype(this);
 		}
-		NomTypeRef NomBottomType::SubstituteSubtyping(const NomSubstitutionContext* context) const
+		NomTypeRef NomBottomType::SubstituteSubtyping([[maybe_unused]] const NomSubstitutionContext* context) const
 		{
 			return this;
 		}
-		llvm::Value * NomBottomType::GenerateRTInstantiation(NomBuilder& builder, CompileEnv* env) const
+		llvm::Value* NomBottomType::GenerateRTInstantiation([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env) const
 		{
 			return NomBottomType::GetLLVMElement(*(env->Module));
 		}
-		llvm::Type * NomBottomType::GetLLVMType() const
+		llvm::Type* NomBottomType::GetLLVMType() const
 		{
-			return llvm::StructType::get(LLVMCONTEXT, llvm::ArrayRef<llvm::Type *>({}));
+			return llvm::StructType::get(LLVMCONTEXT, llvm::ArrayRef<llvm::Type*>({}));
 		}
 		const std::string NomBottomType::GetSymbolRep() const
 		{
 			return "Nothing";
 		}
-		llvm::Constant * NomBottomType::createLLVMElement(llvm::Module & mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Constant* NomBottomType::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			Function* fun = Function::Create(GetCastFunctionType(), linkage, "MONNOM_RT_TYPECASTFUN_BOTTOM", mod);
 			{
@@ -91,44 +91,44 @@ namespace Nom
 			}
 			return new llvm::GlobalVariable(mod, RTTypeHead::GetLLVMType(), true, linkage, RTTypeHead::GetConstant(TypeKind::TKBottom, MakeInt(GetHashCode()), this, fun), "RT_NOM_BottomType");
 		}
-		llvm::Constant * NomBottomType::findLLVMElement(llvm::Module & mod) const
+		llvm::Constant* NomBottomType::findLLVMElement(llvm::Module& mod) const
 		{
 			return mod.getGlobalVariable("RT_NOM_BottomType");
 		}
-		intptr_t NomBottomType::GetRTElement() const
+		uintptr_t NomBottomType::GetRTElement() const
 		{
 			return 0; //TODO: implement
 		}
-		NomClassTypeRef NomBottomType::GetClassInstantiation(const NomNamed * named) const
+		NomClassTypeRef NomBottomType::GetClassInstantiation([[maybe_unused]] const NomNamed* named) const
 		{
 			throw new std::exception();
 			//return named->GetGeneralBottomType();
 		}
-		bool NomBottomType::IsDisjoint(NomTypeRef other) const
+		bool NomBottomType::IsDisjoint([[maybe_unused]] NomTypeRef other) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsDisjoint(NomBottomTypeRef other) const
+		bool NomBottomType::IsDisjoint([[maybe_unused]] NomBottomTypeRef other) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsDisjoint(NomClassTypeRef other) const
+		bool NomBottomType::IsDisjoint([[maybe_unused]] NomClassTypeRef other) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsDisjoint(NomTopTypeRef other) const
+		bool NomBottomType::IsDisjoint([[maybe_unused]] NomTopTypeRef other) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsDisjoint(NomTypeVarRef other) const
+		bool NomBottomType::IsDisjoint([[maybe_unused]] NomTypeVarRef other) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSubtype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSubtype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSupertype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSupertype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return optimistic;
 		}
@@ -141,15 +141,15 @@ namespace Nom
 			return false;
 		}
 
-		bool NomBottomType::IsSubtype(NomMaybeTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSubtype([[maybe_unused]] NomMaybeTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomBottomType::IsSupertype(NomMaybeTypeRef other, bool optimistic) const
+		bool NomBottomType::IsSupertype([[maybe_unused]] NomMaybeTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return false;
 		}
-		bool NomBottomType::IsDisjoint(NomMaybeTypeRef other) const
+		bool NomBottomType::IsDisjoint([[maybe_unused]] NomMaybeTypeRef other) const
 		{
 			return true;
 		}
@@ -157,7 +157,7 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
-		bool NomBottomType::ContainsVariableIndex(int index) const
+		bool NomBottomType::ContainsVariableIndex([[maybe_unused]] size_t index) const
 		{
 			return false;
 		}

@@ -10,9 +10,13 @@ namespace Nom
 		{
 			return RTTypeVar::GetLLVMType();
 		}
-		llvm::Value* PWTypeVar::ReadIndex(NomBuilder& builder)
+		llvm::Type* PWTypeVar::GetWrappedLLVMType()
 		{
-			return MakeLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTTypeVarFields::Index), "typeVarIndex");
+			return NLLVMPointer(GetLLVMType());
+		}
+		PWInt32 PWTypeVar::ReadIndex(NomBuilder& builder)
+		{
+			return PWInt64(MakeLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTTypeVarFields::Index), "typeVarIndex")).Resize<32>(builder);
 		}
 	}
 }

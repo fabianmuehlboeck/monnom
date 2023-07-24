@@ -12,10 +12,6 @@ namespace Nom
 #endif
 		{
 		}
-		CharStream::~CharStream()
-		{
-
-		}
 		bool CharStream::HasNext()
 		{
 #ifdef _WIN32
@@ -41,7 +37,7 @@ namespace Nom
 #else
 			if (HasNext())
 			{
-				return (int_type)buf[pos];
+				return static_cast<int_type>(buf[pos]);
 			}
 			return CS_EOF;
 #endif
@@ -51,14 +47,14 @@ namespace Nom
 			if (read == CS_EOF) {
 				throw "Unexpected EOF";
 			}
-			return (unsigned char)read;
+			return static_cast<unsigned char>(read);
 		}
 		bool CharStream::try_peek(unsigned char& val) {
 			int_type read = peek_eof();
 			if (read == CS_EOF) {
 				return false;
 			}
-			val = (unsigned char)read;
+			val = static_cast<unsigned char>(read);
 			return true;
 		}
 		unsigned char CharStream::read_char() {
@@ -67,12 +63,12 @@ namespace Nom
 			int_type read = stream->get();
 			if (read != CS_EOF)
 			{
-				return (unsigned char)read;
+				return static_cast<unsigned char>(read);
 			}
 #else
 			if (HasNext())
 			{
-				return (unsigned char)buf[pos++];
+				return static_cast<unsigned char>(buf[pos++]);
 			}
 #endif
 			throw "Unexpected EOF";

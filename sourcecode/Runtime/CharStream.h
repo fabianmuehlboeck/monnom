@@ -38,7 +38,6 @@ namespace Nom
 			using int_type = int;
 #endif
 			CharStream(std::string& path);
-			~CharStream();
 			bool HasNext();
 
 			int_type peek_eof();

@@ -87,7 +87,7 @@ extern "C" DLLEXPORT void* NOM_RT_Fail(const char* errstr)
 	RT_debugout->flush();
 	RT_NOM_STATS_Print(3);
 	exit(1);
-	return nullptr;
+	//return nullptr;
 }
 
 extern "C" DLLEXPORT void NOM_RT_PrintReverseName(const char* str, size_t id)

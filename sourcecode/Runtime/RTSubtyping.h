@@ -1,8 +1,10 @@
 #pragma once
 #include "AvailableExternally.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 #include "NomBuilder.h"
 #include "NomTypeDecls.h"
 
@@ -16,7 +18,7 @@ namespace Nom
 			RTSubtyping();
 		public:
 			static RTSubtyping& Instance();
-			virtual ~RTSubtyping();
+			virtual ~RTSubtyping() override;
 
 			// Inherited via AvailableExternally
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;

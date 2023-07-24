@@ -12,7 +12,7 @@ namespace Nom
 		BranchInstruction::~BranchInstruction()
 		{
 		}
-		void BranchInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void BranchInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			PhiNode *phi = env->GetPhiNode(Target);
 			auto incCount = Incomings.size();
@@ -22,7 +22,7 @@ namespace Nom
 			for (auto &i : Incomings)
 			{
 				NomValue nv = (*env)[std::get<0>(i)];
-				llvm::PHINode* llvmPHI = ((llvm::PHINode*)(llvm::Value*)nv);
+				llvm::PHINode* llvmPHI = static_cast<llvm::PHINode*>(static_cast<llvm::Value*>(nv));
 				auto incVal = EnsureType(builder, env, (*env)[std::get<1>(i)], nv.GetNomType(), llvmPHI->getType());
 				incPairs[incPos] = std::make_pair(llvmPHI, incVal);
 				incPos++;
@@ -36,7 +36,7 @@ namespace Nom
 			builder->CreateBr(phi->getBlock());
 			env->basicBlockTerminated = true;
 		}
-		void BranchInstruction::Print(bool resolve)
+		void BranchInstruction::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "Branch %" << std::dec << Target << " {";
 			bool first = true;
@@ -51,7 +51,7 @@ namespace Nom
 			}
 			cout << "}\n";
 		}
-		void BranchInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void BranchInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 	}

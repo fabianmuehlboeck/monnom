@@ -4,6 +4,12 @@
 #include <vector>
 #include <list>
 #include <map>
+PUSHDIAGSUPPRESSION
+#include "llvm/ADT/StringMap.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/ADT/SmallVector.h"
+POPDIAGSUPPRESSION
 #include <unordered_map>
 #include "NomStaticMethod.h"
 #include "NomConstructor.h"
@@ -11,13 +17,9 @@
 #include "Defs.h"
 #include "NomString.h"
 #include "RTClass.h"
-#include "llvm/ADT/StringMap.h"
 #include "NomInstantiationRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "NomInterface.h"
 #include "NomConstructor.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/IRBuilder.h"
 #include "NomField.h"
 #include "RTDictionary.h"
 #include "NomLambda.h"
@@ -32,7 +34,7 @@ namespace Nom
 		{
 		private:
 			static auto& classes() {
-				static std::unordered_map < NomStringRef, NomClass*, NomStringHash, NomStringEquality > classes; return classes;
+				[[clang::no_destroy]] static std::unordered_map < NomStringRef, NomClass*, NomStringHash, NomStringEquality > classes; return classes;
 			}
 		protected:
 			std::vector<NomTypedField*> Fields;
@@ -87,7 +89,7 @@ namespace Nom
 		public:
 			virtual llvm::Constant* GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const override;
 			virtual llvm::ArrayType* GetSuperInstancesType(bool generic = true) const override;
-			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds(llvm::ArrayRef<NomTypeRef> args) const override;
+			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds() const override;
 
 			llvm::Constant* GetInterfaceTableLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 
@@ -101,7 +103,7 @@ namespace Nom
 			static llvm::FunctionType* GetInterfaceTableLookupType();
 			virtual llvm::Constant* GetInterfaceDescriptor(llvm::Module& mod) const override;
 			virtual llvm::Constant* GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
-			virtual int GetSuperClassCount() const override;
+			virtual size_t GetSuperClassCount() const override;
 
 		protected:
 			virtual llvm::Constant* GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::StructType* stype) const;
@@ -155,7 +157,7 @@ namespace Nom
 
 			NomTypedField* AddField(const ConstantID name, const ConstantID type, Visibility visibility, bool isReadOnly, bool isVolatile);
 
-			NomLambda* AddLambda(const ConstantID lambdaID, int regcount, ConstantID closureTypeParams, ConstantID closureArguments, ConstantID typeParams, ConstantID argTypes, ConstantID returnType);
+			NomLambda* AddLambda(const ConstantID lambdaID, RegIndex regcount, ConstantID closureTypeParams, ConstantID closureArguments, ConstantID typeParams, ConstantID argTypes, ConstantID returnType);
 			NomRecord* AddStruct(const ConstantID structID, ConstantID closureTypeParams, RegIndex regcount, RegIndex endargregcount, ConstantID initializerArgTypes);
 
 

@@ -8,7 +8,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomNamedLoaded::NomNamedLoaded(const ConstantID name, ConstantID typeArgs, const NomMemberContext *parent) : NomMemberContextLoaded(parent, typeArgs), name(name)
+		NomNamedLoaded::NomNamedLoaded(const ConstantID _name, ConstantID _typeArgs, const NomMemberContext *_parent) : NomMemberContextLoaded(_parent, _typeArgs), name(_name)
 		{
 			NomNamed::Register(NomConstants::GetString(name)->GetText(), this);
 		}
@@ -31,7 +31,7 @@ namespace Nom
 		}
 		intptr_t NomNamed::GetRTElement() const
 		{
-			return (intptr_t)(void*)NomJIT::Instance().lookup("NOM_CD_" + (GetName()->ToStdString()))->getValue();
+			return static_cast<intptr_t>(NomJIT::Instance().lookup("NOM_CD_" + (GetName()->ToStdString()))->getValue());
 		}
 		NomClassTypeRef NomNamed::GetInstantiation(NomTypeRef type) const
 		{
@@ -43,7 +43,7 @@ namespace Nom
 				throw new std::exception();
 			}
 			if (instances.count(args) == 0) {
-				NomTypeRef *argsarr = (NomTypeRef*)(nmalloc(sizeof(NomTypeRef)*args.size()));
+				NomTypeRef *argsarr = makenmalloc(NomTypeRef,args.size());
 				memcpy(argsarr, args.data(), sizeof(NomTypeRef)*args.size());
 				auto argsarrref = llvm::ArrayRef<NomTypeRef>(argsarr, args.size());
 				instances[argsarrref] = new NomClassType(this, argsarrref);
@@ -62,7 +62,7 @@ namespace Nom
 		{
 			return &symname;
 		}
-		NomNamedInternal::NomNamedInternal(NomStringRef name, const NomMemberContext* parent) : NomMemberContextInternal(parent), name(name), symname(name->ToStdString())
+		NomNamedInternal::NomNamedInternal(NomStringRef _name, const NomMemberContext* _parent) : NomMemberContextInternal(_parent), name(_name), symname(_name->ToStdString())
 		{
 		}
 		NomStringRef NomNamedInternal::GetName() const

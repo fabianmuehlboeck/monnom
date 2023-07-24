@@ -15,5 +15,3 @@ namespace FSNamespace = boost::filesystem;
 #  endif
 #endif
 
-//#include <filesystem>
-//#define FSNamespace std::filesystem

@@ -52,16 +52,16 @@ namespace Nom
 				return opcode;
 			}
 
-			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) = 0;
-			virtual void Print(bool resolve = false) = 0;
+			virtual void Compile([[maybe_unused]] NomBuilder &builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno) = 0;
+			virtual void Print([[maybe_unused]] bool resolve = false) = 0;
 
-			NomInstruction(OpCode opcode):opcode(opcode)
+			NomInstruction(OpCode opc):opcode(opc)
 			{
 
 			}
 			virtual ~NomInstruction();
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER & result) = 0;
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER & result) = 0;
 		};
 	}
 }

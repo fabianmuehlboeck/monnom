@@ -9,7 +9,7 @@ namespace Nom
 		class PWPartialApp : public PWRefValue
 		{
 		public:
-			PWPartialApp(llvm::Value* wrapped) : PWRefValue(wrapped)
+			PWPartialApp(llvm::Value* _wrapped) : PWRefValue(_wrapped)
 			{
 
 			}

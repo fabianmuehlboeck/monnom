@@ -12,7 +12,7 @@ namespace Nom
 			const ConstantID TypeArgsID;
 			CreateClosure(RegIndex reg, ConstantID lambda, ConstantID typeArgs);
 			// Inherited via NomValueInstruction
-			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

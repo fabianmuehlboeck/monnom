@@ -34,12 +34,21 @@
 #include <iostream>
 #include "UnaryOpInstruction.h"
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+#pragma clang diagnostic ignored "-Wswitch-enum"
+#elif defined(__GCC__)
+
+#elif defined(_MSC_VER)
+
+#endif
+
 namespace Nom
 {
 	namespace Runtime
 	{
 		using namespace std;
-		BytecodeReader::BytecodeReader(CharStream& stream) :stream(stream)
+		BytecodeReader::BytecodeReader(CharStream& _stream) : stream(_stream)
 		{
 			uint64_t versionflag = this->stream.read<uint32_t>();
 			if (versionflag != 2)
@@ -74,85 +83,85 @@ namespace Nom
 				return new RTCmdInstruction(context.GetGlobalID(cmdConstant));
 			}
 			case OpCode::Argument:
-				return new ArgumentInstruction(stream.read<RegIndex>());
+				return new ArgumentInstruction(stream.read<BinRegIndex>());
 			case OpCode::Return:
-				return new ReturnInstruction(stream.read<RegIndex>());
+				return new ReturnInstruction(stream.read<BinRegIndex>());
 			case OpCode::ReturnVoid: {
 				return new ReturnVoidInstruction();
 			}
 			case OpCode::EnsureCheckedMethod: {
 				LocalConstantID methodName = stream.read<LocalConstantID>();
-				RegIndex receiver = stream.read<RegIndex>();
+				RegIndex receiver = stream.read<BinRegIndex>();
 				return new EnsureCheckedMethodInstruction(context.GetGlobalID(methodName), receiver);
 			}
 			case OpCode::EnsureDynamicMethod: {
 				LocalConstantID methodName = stream.read<LocalConstantID>();
-				RegIndex receiver = stream.read<RegIndex>();
+				RegIndex receiver = stream.read<BinRegIndex>();
 				return new EnsureDynamicMethodInstruction(context.GetGlobalID(methodName), receiver);
 			}
 			case OpCode::LoadIntConstant: {
 				uint64_t value = stream.read<uint64_t>();
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new LoadIntConstantInstruction(value, reg);
 			}
 			case OpCode::LoadFloatConstant: {
 				double value = stream.read<double>();
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new LoadFloatConstantInstruction(value, reg);
 			}
 			case OpCode::LoadBoolConstant: {
-				bool value = (bool)stream.read_char();
-				RegIndex reg = stream.read<RegIndex>();
+				bool value = static_cast<bool>(stream.read_char());
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new LoadBoolConstantInstruction(reg, value); }
 			case OpCode::LoadNullConstant: {
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new LoadNullConstantInstruction(reg);
 			}
 			case OpCode::LoadStringConstant: {
 				LocalConstantID strConstant = stream.read<LocalConstantID>();
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new LoadStringConstantInstruction(reg, context.GetGlobalID(strConstant)); }
 			case OpCode::InvokeCheckedInstance: {
 				LocalConstantID method = stream.read<LocalConstantID>();
 				LocalConstantID typeArgs = stream.read <LocalConstantID>();
-				RegIndex reg = stream.read<RegIndex>();
-				RegIndex receiver = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
+				RegIndex receiver = stream.read<BinRegIndex>();
 				return new CallCheckedInstanceMethod(reg, context.GetGlobalID(method), context.GetGlobalID(typeArgs), receiver); }
 			case OpCode::CallFinal: {
 				//LocalConstantID method = stream.read<LocalConstantID>();
 				//LocalConstantID typeArgs = stream.read <LocalConstantID>();
-				//RegIndex reg = stream.read<RegIndex>();
-				//RegIndex receiver = stream.read<RegIndex>();
+				//RegIndex reg = stream.read<BinRegIndex>();
+				//RegIndex receiver = stream.read<BinRegIndex>();
 				//return new CallFinalInstanceMethod(reg, receiver, context.GetGlobalID(method)); }
 				throw new std::exception(); }
 			case OpCode::CallCheckedStatic: {
 				LocalConstantID method = stream.read <LocalConstantID>();
 				LocalConstantID typeArgs = stream.read <LocalConstantID>();
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new CallCheckedStaticMethod(context.GetGlobalID(method), context.GetGlobalID(typeArgs), reg);
 			}
 			case OpCode::CallDispatchBest: {
-				RegIndex reg = stream.read<RegIndex>();
-				RegIndex receiver = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
+				RegIndex receiver = stream.read<BinRegIndex>();
 				LocalConstantID methodName = stream.read<LocalConstantID>();
 				LocalConstantID typeArgs = stream.read<LocalConstantID>();
 				return new CallDispatchBestMethod(reg, receiver, context.GetGlobalID(methodName), context.GetGlobalID(typeArgs));
 			}
 			case OpCode::BinOp: {
-				BinaryOperation op = (BinaryOperation)stream.read<unsigned char>();
-				RegIndex left = stream.read<RegIndex>();
-				RegIndex right = stream.read<RegIndex>();
-				RegIndex reg = stream.read<RegIndex>();
+				BinaryOperation op = static_cast<BinaryOperation>(stream.read<unsigned char>());
+				RegIndex left = stream.read<BinRegIndex>();
+				RegIndex right = stream.read<BinRegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new BinOpInstruction(op, left, right, reg);
 			}
 			case OpCode::UnaryOp: {
-				UnaryOperation op = (UnaryOperation)stream.read<unsigned char>();
-				RegIndex arg = stream.read<RegIndex>();
-				RegIndex reg = stream.read<RegIndex>();
+				UnaryOperation op = static_cast<UnaryOperation>(stream.read<unsigned char>());
+				RegIndex arg = stream.read<BinRegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new UnaryOpInstruction(op, arg, reg);
 			}
 			case OpCode::CallConstructor: {
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				LocalConstantID cls = stream.read <LocalConstantID>();
 				LocalConstantID typeArgs = stream.read <LocalConstantID>();
 				return new CallConstructor(reg, context.GetGlobalID(cls), context.GetGlobalID(typeArgs));
@@ -160,42 +169,42 @@ namespace Nom
 			case OpCode::CreateClosure: {
 				LocalConstantID lambda = stream.read <LocalConstantID>();
 				LocalConstantID typeArgs = stream.read <LocalConstantID>();
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new CreateClosure(reg, context.GetGlobalID(lambda), context.GetGlobalID(typeArgs));
 			}
 			case OpCode::ConstructStruct: {
 				LocalConstantID structure = stream.read <LocalConstantID>();
 				LocalConstantID typeArgs = stream.read <LocalConstantID>();
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new ConstructStructInstruction(reg, context.GetGlobalID(structure), context.GetGlobalID(typeArgs));
 			}
 			case OpCode::Cast: {
-				RegIndex reg = stream.read<RegIndex>();
-				RegIndex value = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
+				RegIndex value = stream.read<BinRegIndex>();
 				LocalConstantID type = stream.read<LocalConstantID>();
 				return new CastInstruction(reg, value, context.GetGlobalID(type));
 			}
 			case OpCode::WriteField: {
-				RegIndex receiver = stream.read<RegIndex>();
-				RegIndex value = stream.read<RegIndex>();
+				RegIndex receiver = stream.read<BinRegIndex>();
+				RegIndex value = stream.read<BinRegIndex>();
 				LocalConstantID fieldName = stream.read<LocalConstantID>();
 				LocalConstantID receiverType = stream.read<LocalConstantID>();
 				return new WriteFieldInstruction(receiver, value, context.GetGlobalID(fieldName), context.GetGlobalID(receiverType));
 			}
 			case OpCode::ReadField: {
-				RegIndex reg = stream.read<RegIndex>();
-				RegIndex receiver = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
+				RegIndex receiver = stream.read<BinRegIndex>();
 				LocalConstantID fieldName = stream.read<LocalConstantID>();
 				LocalConstantID receiverType = stream.read<LocalConstantID>();
 				return new ReadFieldInstruction(reg, receiver, context.GetGlobalID(fieldName), context.GetGlobalID(receiverType));
 			}
 			case OpCode::PhiNode: {
 				int incoming = stream.read<int>();
-				PhiNode* pn = new PhiNode(incoming);
-				RegIndex regcount = stream.read<RegIndex>();
+				PhiNode* pn = new PhiNode(static_cast<unsigned int>(incoming));
+				RegIndex regcount = stream.read<BinRegIndex>();
 				while (regcount > 0)
 				{
-					RegIndex reg = stream.read<RegIndex>();
+					RegIndex reg = stream.read<BinRegIndex>();
 					LocalConstantID typeID = stream.read<LocalConstantID>();
 					pn->AddRegisterEntry(reg, context.GetGlobalID(typeID));
 					regcount--;
@@ -203,43 +212,43 @@ namespace Nom
 				return pn;
 			}
 			case OpCode::Branch: {
-				int target = stream.read<int>();
+				unsigned int target = stream.read<unsigned int>();
 				BranchInstruction* bi = new BranchInstruction(target);
-				RegIndex incount = stream.read<RegIndex>();
+				RegIndex incount = stream.read<BinRegIndex>();
 				while (incount > 0)
 				{
-					RegIndex to = stream.read<RegIndex>();
-					RegIndex from = stream.read<RegIndex>();
+					RegIndex to = stream.read<BinRegIndex>();
+					RegIndex from = stream.read<BinRegIndex>();
 					bi->AddIncoming(to, from);
 					incount--;
 				}
 				return bi;
 			}
 			case OpCode::CondBranch: {
-				RegIndex condition = stream.read<RegIndex>();
-				int thenTarget = stream.read<int>();
-				int elseTarget = stream.read<int>();
+				RegIndex condition = stream.read<BinRegIndex>();
+				unsigned int thenTarget = stream.read<unsigned int>();
+				unsigned int elseTarget = stream.read<unsigned int>();
 				CondBranchInstruction* cbi = new CondBranchInstruction(condition, thenTarget, elseTarget);
-				RegIndex thencount = stream.read<RegIndex>();
-				RegIndex elsecount = stream.read<RegIndex>();
+				RegIndex thencount = stream.read<BinRegIndex>();
+				RegIndex elsecount = stream.read<BinRegIndex>();
 				while (thencount > 0)
 				{
-					RegIndex to = stream.read<RegIndex>();
-					RegIndex from = stream.read<RegIndex>();
+					RegIndex to = stream.read<BinRegIndex>();
+					RegIndex from = stream.read<BinRegIndex>();
 					cbi->AddThenIncoming(to, from);
 					thencount--;
 				}
 				while (elsecount > 0)
 				{
-					RegIndex to = stream.read<RegIndex>();
-					RegIndex from = stream.read<RegIndex>();
+					RegIndex to = stream.read<BinRegIndex>();
+					RegIndex from = stream.read<BinRegIndex>();
 					cbi->AddElseIncoming(to, from);
 					elsecount--;
 				}
 				return cbi;
 			}
 			case OpCode::Error: {
-				RegIndex reg = stream.read<RegIndex>();
+				RegIndex reg = stream.read<BinRegIndex>();
 				return new ErrorInstruction(reg);
 			}
 			default: {
@@ -303,7 +312,6 @@ namespace Nom
 				break;
 			case BytecodeTopElementType::CTIntersection:
 				throw new std::exception();
-				break;
 			case BytecodeTopElementType::CTBottom:
 				ReadBottomTypeConstant();
 				break;
@@ -315,7 +323,7 @@ namespace Nom
 				break;
 			default:
 				auto str = std::string("Invalid byte: ");
-				unsigned char c = (unsigned char)stream.read_char();
+				char c = static_cast<char>(stream.read_char());
 				str.push_back(c);
 				cout << str << "\n";
 				throw str;
@@ -403,7 +411,7 @@ namespace Nom
 		}
 
 		NomLambda* BytecodeReader::ReadLambda(NomClassLoaded* cls) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Lambda) {
+			if (stream.read_char() != static_cast<unsigned char>(BytecodeInternalElementType::Lambda)) {
 				throw "Expected lambda, but did not encounter lambda marker";
 			}
 			ConstantID lambdaID = context.GetGlobalID(stream.read<LocalConstantID>());
@@ -412,7 +420,7 @@ namespace Nom
 			ConstantID typeParameters = context.GetGlobalID(stream.read<LocalConstantID>());
 			ConstantID argTypes = context.GetGlobalID(stream.read<LocalConstantID>());
 			ConstantID returnType = context.GetGlobalID(stream.read<LocalConstantID>());
-			RegIndex regcount = stream.read<RegIndex>();
+			RegIndex regcount = stream.read<BinRegIndex>();
 			NomLambda* lambda = cls->AddLambda(lambdaID, regcount, closureTypeParameters, closureArguments, typeParameters, argTypes, returnType);
 			size_t fieldCount = stream.read<size_t>();
 			while (fieldCount > 0)
@@ -436,13 +444,13 @@ namespace Nom
 		}
 
 		NomRecord* BytecodeReader::ReadStruct(NomClassLoaded* cls) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Record) {
+			if (stream.read_char() != static_cast<unsigned char>(BytecodeInternalElementType::Record)) {
 				throw "Expected struct, but did not encounter struct marker";
 			}
 			ConstantID structID = context.GetGlobalID(stream.read<LocalConstantID>());
 			ConstantID closureTypeParameters = context.GetGlobalID(stream.read<LocalConstantID>());
-			RegIndex regcount = stream.read<RegIndex>();
-			RegIndex endargregcount = stream.read<RegIndex>();
+			RegIndex regcount = stream.read<BinRegIndex>();
+			RegIndex endargregcount = stream.read<BinRegIndex>();
 			LocalConstantID typeListID = stream.read<LocalConstantID>();
 			ConstantID initializerArgTypes = context.GetGlobalID(typeListID);
 			NomRecord* structure = cls->AddStruct(structID, closureTypeParameters, regcount, endargregcount, initializerArgTypes);
@@ -452,7 +460,7 @@ namespace Nom
 				ConstantID fieldName = context.GetGlobalID(stream.read<LocalConstantID>());
 				ConstantID fieldType = context.GetGlobalID(stream.read<LocalConstantID>());
 				bool isReadOnly = stream.read_char() != 0;
-				RegIndex valueRegister = stream.read<RegIndex>();
+				RegIndex valueRegister = stream.read<BinRegIndex>();
 				int32_t instructionCount = stream.read<int32_t>();
 				while (instructionCount > 0)
 				{
@@ -476,7 +484,7 @@ namespace Nom
 		}
 
 		NomRecordMethod* BytecodeReader::ReadStructMethod(NomRecord* structure) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Method) {
+			if (stream.read_char() != static_cast<unsigned char>(BytecodeInternalElementType::Method)) {
 				throw "Expected method, but did not encounter method marker";
 			}
 			ConstantID name = context.GetGlobalID(stream.read<LocalConstantID>());
@@ -484,8 +492,8 @@ namespace Nom
 			ConstantID returnType = context.GetGlobalID(stream.read<LocalConstantID>());
 			ConstantID argTypes = context.GetGlobalID(stream.read<LocalConstantID>());
 			std::string namestr = NomConstants::GetString(name)->GetText()->ToStdString();
-			bool isFinal = (bool)stream.read<char>();
-			RegIndex regcount = stream.read<RegIndex>();
+			bool isFinal = static_cast<bool>(stream.read<char>());
+			RegIndex regcount = stream.read<BinRegIndex>();
 			std::string qname = "STRUCT_" + to_string(structure->StructID) + "." + namestr;
 			NomRecordMethod* meth = structure->AddMethod(namestr, qname, typeParameters, returnType, argTypes, regcount);
 			uint64_t instructionCount = stream.read<uint64_t>();
@@ -502,7 +510,7 @@ namespace Nom
 		}
 
 		NomMethod* BytecodeReader::ReadMethod(NomInterfaceLoaded* iface) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Method) {
+			if (stream.read_char() != static_cast<unsigned char>(BytecodeInternalElementType::Method)) {
 				throw "Expected method, but did not encounter method marker";
 			}
 			ConstantID name = context.GetGlobalID(stream.read<LocalConstantID>());
@@ -510,8 +518,8 @@ namespace Nom
 			ConstantID returnType = context.GetGlobalID(stream.read<LocalConstantID>());
 			ConstantID argTypes = context.GetGlobalID(stream.read<LocalConstantID>());
 			std::string namestr = NomConstants::GetString(name)->GetText()->ToStdString();
-			bool isFinal = (bool)stream.read<char>();
-			RegIndex regcount = stream.read<RegIndex>();
+			bool isFinal = static_cast<bool>(stream.read<char>());
+			RegIndex regcount = stream.read<BinRegIndex>();
 			NomMethodLoaded* meth = iface->AddMethod(namestr, iface->GetName()->ToStdString() + "." + namestr, typeParameters, returnType, argTypes, regcount, isFinal);
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
@@ -527,7 +535,7 @@ namespace Nom
 		}
 
 		NomStaticMethod* BytecodeReader::ReadStaticMethod(NomClassLoaded* cls) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::StaticMethod) {
+			if (stream.read_char() != static_cast<unsigned char>(BytecodeInternalElementType::StaticMethod)) {
 				throw "Expected static method, but did not encounter static method marker";
 			}
 			ConstantID name = context.GetGlobalID(stream.read<LocalConstantID>());
@@ -535,7 +543,7 @@ namespace Nom
 			ConstantID returnType = context.GetGlobalID(stream.read<LocalConstantID>());
 			ConstantID argTypes = context.GetGlobalID(stream.read<LocalConstantID>());
 			std::string namestr = NomConstants::GetString(name)->GetText()->ToStdString();
-			RegIndex regcount = stream.read<RegIndex>();
+			RegIndex regcount = stream.read<BinRegIndex>();
 			std::string qnamestr = cls->GetName()->ToStdString() + "." + namestr;
 			NomStaticMethodLoaded* meth = cls->AddStaticMethod(namestr, qnamestr, typeargs, returnType, argTypes, regcount);
 			uint64_t instructionCount = stream.read<uint64_t>();
@@ -552,11 +560,11 @@ namespace Nom
 		}
 
 		NomConstructor* BytecodeReader::ReadConstructor(NomClassLoaded* cls) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Constructor) {
+			if (stream.read_char() != static_cast<unsigned char>(BytecodeInternalElementType::Constructor)) {
 				throw "Expected constructor, but did not encounter constructor marker";
 			}
 			ConstantID argTypes = context.GetGlobalID(stream.read<LocalConstantID>());
-			RegIndex regcount = stream.read<RegIndex>();
+			RegIndex regcount = stream.read<BinRegIndex>();
 			NomConstructorLoaded* cons = cls->AddConstructor(argTypes, regcount);
 			uint64_t preinstructionCount = stream.read<uint64_t>();
 			uint64_t superargcount = stream.read<uint64_t>();
@@ -571,7 +579,7 @@ namespace Nom
 				preinstructionCount--;
 			}
 			while (superargcount > 0) {
-				cons->AddSuperConstructorArgReg(stream.read<RegIndex>());
+				cons->AddSuperConstructorArgReg(stream.read<BinRegIndex>());
 				superargcount--;
 			}
 			while (instructionCount > 0) {
@@ -587,7 +595,7 @@ namespace Nom
 		}
 
 		NomTypedField* BytecodeReader::ReadField(NomClassLoaded* cls) {
-			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Field) {
+			if (stream.read_char() != static_cast<unsigned char>(BytecodeInternalElementType::Field)) {
 				throw "Expected constructor, but did not encounter constructor marker";
 			}
 			ConstantID name = context.GetGlobalID(stream.read<LocalConstantID>());
@@ -606,9 +614,9 @@ namespace Nom
 			}
 			if (peek)
 			{
-				return (BytecodeTopElementType)peekval;
+				return static_cast<BytecodeTopElementType>(peekval);
 			}
-			return (BytecodeTopElementType)(stream.read_char());
+			return static_cast<BytecodeTopElementType>(stream.read_char());
 		}
 
 		ConstantID BytecodeReader::ReadStringConstant() {
@@ -703,7 +711,7 @@ namespace Nom
 			}
 			stream.read_char();
 			LocalConstantID lcid = stream.read<LocalConstantID>();
-			return context.AddTypeVar(lcid, stream.read<int32_t>());
+			return context.AddTypeVar(lcid, stream.read<uint32_t>());
 		}
 
 		ConstantID BytecodeReader::ReadTypeParametersConstant() {

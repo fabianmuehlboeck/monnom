@@ -22,7 +22,7 @@ namespace Nom
 			NomStaticMethod()
 			{}
 		public:
-			virtual ~NomStaticMethod()
+			virtual ~NomStaticMethod() override
 			{}
 
 			virtual llvm::FunctionType* GetLLVMFunctionType(const NomSubstitutionContext* context = nullptr) const override;
@@ -37,7 +37,7 @@ namespace Nom
 			mutable NomTypeRef returnTypeBuf;
 		public:
 			const NomClass* const Class;
-			NomStaticMethodLoaded(const std::string& name, const NomClass* parent, const std::string& qname, const ConstantID returnType, const ConstantID typeArgs, const ConstantID arguments, const int regcount, bool declOnly = false);
+			NomStaticMethodLoaded(const std::string& _name, const NomClass* _parent, const std::string& _qname, const ConstantID _returnType, const ConstantID _typeArgs, const ConstantID _arguments, const RegIndex _regcount, bool _declOnly = false);
 			virtual ~NomStaticMethodLoaded() override = default;
 
 

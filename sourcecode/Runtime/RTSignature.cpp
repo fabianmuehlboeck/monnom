@@ -5,12 +5,16 @@
 #include "NomCallable.h"
 #include "NomTypeVar.h"
 #include <iostream>
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "NomTypeParameter.h"
 #include "RTCast.h"
 #include "RTSubtyping.h"
 #include "CallingConvConf.h"
+#include "PWSignature.h"
+#include "PWVMPtr.h"
 
 using namespace llvm;
 using namespace std;
@@ -23,7 +27,7 @@ namespace Nom
 		}
 		RTSignature& RTSignature::Instance()
 		{
-			static RTSignature rts; return rts;
+			[[clang::no_destroy]] static RTSignature rts; return rts;
 		}
 		llvm::StructType* RTSignature::GetLLVMType()
 		{
@@ -32,14 +36,14 @@ namespace Nom
 			if (once)
 			{
 				once = false;
-				sigt->setBody(arrtype(TYPETYPE, 0), POINTERTYPE, TYPETYPE, inttype(32), inttype(32), arrtype(TYPETYPE, 0));
+				sigt->setBody(arrtype(TYPETYPE, 0), POINTERTYPE.AsLLVMType(), TYPETYPE.AsLLVMType(), inttype(32), inttype(32), arrtype(TYPETYPE, 0));
 			}
 			return sigt;
 		}
 
 		llvm::StructType* RTSignature::GetLLVMType(size_t argCount)
 		{
-			return StructType::get(arrtype(TYPETYPE, 0), POINTERTYPE, TYPETYPE, inttype(32), inttype(32), arrtype(TYPETYPE, argCount));
+			return StructType::get(arrtype(TYPETYPE, 0), POINTERTYPE.AsLLVMType(), TYPETYPE.AsLLVMType(), inttype(32), inttype(32), arrtype(TYPETYPE, argCount));
 		}
 		llvm::StructType* RTSignature::GetLLVMType(size_t typeArgCount, size_t argCount)
 		{
@@ -48,32 +52,32 @@ namespace Nom
 
 		llvm::Value* RTSignature::GenerateReadReturnType(NomBuilder& builder, llvm::Value* signatureRef)
 		{
-			return MakeLoad(builder, signatureRef, GetLLVMType()->getPointerTo(), MakeInt32(RTSignatureFields::ReturnType), "returnType");
+			return PWSignature(signatureRef).ReadReturnType(builder);
 		}
 
 		llvm::Value* RTSignature::GenerateReadTypeParamCount(NomBuilder& builder, llvm::Value* signatureRef)
 		{
-			return MakeLoad(builder, signatureRef, GetLLVMType()->getPointerTo(), MakeInt32(RTSignatureFields::TypeParamCount), "typeParamCount");
+			return PWSignature(signatureRef).ReadTypeParamCount(builder);
 		}
 
 		llvm::Value* RTSignature::GenerateReadParamCount(NomBuilder& builder, llvm::Value* signatureRef)
 		{
-			return MakeLoad(builder, signatureRef, GetLLVMType()->getPointerTo(), MakeInt32(RTSignatureFields::ParamCount), "paramCount");
+			return PWSignature(signatureRef).ReadParamCount(builder);
 		}
 
 		llvm::Value* RTSignature::GenerateReadLLVMFunctionType(NomBuilder& builder, llvm::Value* signatureRef)
 		{
-			return MakeLoad(builder, signatureRef, GetLLVMType()->getPointerTo(), MakeInt32(RTSignatureFields::LLVMFunctionType), "llvmFunctionType");
+			return PWSignature(signatureRef).ReadLLVMFunctionType(builder);
 		}
 
 		llvm::Value* RTSignature::GenerateReadTypeParameter(NomBuilder& builder, llvm::Value* signatureRef, llvm::Value* index)
 		{
-			return MakeLoad(builder, signatureRef, GetLLVMType()->getPointerTo(), { MakeInt32(RTSignatureFields::TypeParameters), builder->CreateSub(MakeInt32(-1), index) }, "typeParam");
+			return PWSignature(signatureRef).ReadTypeParameter(builder, index);
 		}
 
 		llvm::Value* RTSignature::GenerateReadParameter(NomBuilder& builder, llvm::Value* signatureRef, llvm::Value* index)
 		{
-			return MakeLoad(builder, signatureRef, GetLLVMType()->getPointerTo(), { MakeInt32(RTSignatureFields::ParameterTypes),index }, "paramType");
+			return PWSignature(signatureRef).ReadParameter(builder, index);
 		}
 
 		llvm::Constant* RTSignature::CreateGlobalConstant(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::Twine name, const NomCallable* method)
@@ -96,7 +100,7 @@ namespace Nom
 			}
 
 			GlobalVariable* gvar = new GlobalVariable(mod, GetLLVMType(typeArgCount, argCount), true, linkage, nullptr, name);
-			auto mainHead = ConstantStruct::get(GetLLVMType(argCount), ConstantArray::get(arrtype(TYPETYPE, 0), {}), GetLLVMPointer(method->GetLLVMFunctionType()), method->GetReturnType(nullptr)->GetLLVMElement(mod), MakeInt32((uint32_t)typeArgCount), MakeInt32((uint32_t)argCount), ConstantArray::get(arrtype(TYPETYPE, argCount), ArrayRef<Constant*>(argBuf, argCount)));
+			auto mainHead = ConstantStruct::get(GetLLVMType(argCount), ConstantArray::get(arrtype(TYPETYPE, 0), {}), GetLLVMPointer(method->GetLLVMFunctionType()), method->GetReturnType(nullptr)->GetLLVMElement(mod), MakeInt32(typeArgCount).wrapped, MakeInt32(argCount).wrapped, ConstantArray::get(arrtype(TYPETYPE, argCount), ArrayRef<Constant*>(argBuf, argCount)));
 			gvar->setInitializer(ConstantStruct::get(GetLLVMType(typeArgCount, argCount), ConstantArray::get(arrtype(TYPETYPE, typeArgCount), ArrayRef<Constant*>(typeArgBuf, typeArgCount)), mainHead));
 			return ConstantExpr::getPointerCast(ConstantExpr::getGetElementPtr(GetLLVMType(typeArgCount, argCount), gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1) })), GetLLVMType()->getPointerTo());
 		}
@@ -151,7 +155,7 @@ namespace Nom
 			auto TPcountPHI = builder->CreatePHI(leftTPCount->getType(), 2, "tpcounter");
 			auto TPpessimisticPHI = builder->CreatePHI(inttype(1), 2, "pessimisticTP");
 			TPcountPHI->addIncoming(leftTPCount, startBlock);
-			TPpessimisticPHI->addIncoming(MakeInt(1, (uint64_t)1), startBlock);
+			TPpessimisticPHI->addIncoming(MakeUInt(1, 1), startBlock);
 			builder->CreateCondBr(builder->CreateICmpEQ(TPcountPHI, ConstantInt::get(TPcountPHI->getType(), 0)), checkParametersBlock, checkNextTypeParameterBlock);
 
 			builder->SetInsertPoint(checkNextTypeParameterBlock);
@@ -182,7 +186,7 @@ namespace Nom
 			PsubtCheckSwitch->addCase(ConstantInt::get(inttype(2), 1), checkParametersOptBlock);
 
 			builder->SetInsertPoint(checkParametersOptBlock);
-			PpessimisticPHI->addIncoming(MakeInt(1, (uint64_t)0), checkParametersOptBlock);
+			PpessimisticPHI->addIncoming(MakeUInt(1, 0), checkParametersOptBlock);
 			PcountPHI->addIncoming(ppos, checkParametersOptBlock);
 			builder->CreateBr(checkParametersBlock);
 
@@ -195,13 +199,13 @@ namespace Nom
 			returnTypeCheckSwitch->addCase(ConstantInt::get(inttype(2), 1), optimisticReturnMatchBlock);
 
 			builder->SetInsertPoint(pessimisticReturnMatchBlock);
-			builder->CreateRet(builder->CreateAdd(builder->CreateMul(builder->CreateZExt(PpessimisticPHI, inttype(2)), MakeInt(2, (uint64_t)2)), builder->CreateZExt(PpessimisticPHI, inttype(2))));
+			builder->CreateRet(builder->CreateAdd(builder->CreateMul(builder->CreateZExt(PpessimisticPHI, inttype(2)), MakeUInt(2, 2)), builder->CreateZExt(PpessimisticPHI, inttype(2))));
 
 			builder->SetInsertPoint(optimisticReturnMatchBlock);
 			builder->CreateRet(ConstantInt::get(inttype(2), 1));
 
 			builder->SetInsertPoint(failBlock);
-			builder->CreateRet(MakeInt(2, (uint64_t)0));
+			builder->CreateRet(MakeUInt(2, 0));
 
 			llvm::raw_os_ostream out(std::cout);
 			if (verifyFunction(*fun, &out))

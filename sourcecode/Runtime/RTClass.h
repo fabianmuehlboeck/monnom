@@ -4,10 +4,12 @@
 #include <unordered_map>
 #include "Defs.h"
 #include "NomString.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ADT/StringRef.h"
+POPDIAGSUPPRESSION
 #include "ARTRep.h"
 #include "NomBuilder.h"
 

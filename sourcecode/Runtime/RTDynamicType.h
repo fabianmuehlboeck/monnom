@@ -1,6 +1,8 @@
 #pragma once
 #include "ARTRep.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Constants.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {

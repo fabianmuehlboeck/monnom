@@ -12,9 +12,6 @@ namespace Nom
 		NomSignature::NomSignature(const std::vector<NomTypeParameterRef>&& typeArguments, const std::vector<NomTypeRef>&& argTypes, const NomTypeRef returnType) : ReturnType(returnType), ArgumentTypes(argTypes), TypeArguments(typeArguments)
 		{
 		}
-		NomSignature::~NomSignature()
-		{
-		}
 		NomSignature NomSignature::Substitute(const NomSubstitutionContext *context) const
 		{
 			std::vector<NomTypeRef> ntr;

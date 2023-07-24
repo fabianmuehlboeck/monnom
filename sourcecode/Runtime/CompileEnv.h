@@ -1,11 +1,13 @@
 #pragma once
 
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Function.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/IRBuilder.h"
+POPDIAGSUPPRESSION
 #include "Defs.h"
 #include "NomValue.h"
 #include "NomTypeVarValue.h"
@@ -14,11 +16,13 @@
 #include <cstddef>
 #include <stack>
 #include "NomBuilder.h"
+#include "PWTypeArr.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
+		class PWDispatchPair;
 		class NomMemberContext;
 		class PhiNode;
 		class NomLambdaBody;
@@ -42,27 +46,27 @@ namespace Nom
 			const NomMemberContext* Context;
 			virtual NomValue& operator[] (const RegIndex index) = 0;
 
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) = 0;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) = 0;
 
-			virtual NomValue GetArgument(int i) = 0;
+			virtual NomValue GetArgument(size_t i) = 0;
 
 			virtual void PushArgument(NomValue arg) = 0;
 
-			virtual void PushDispatchPair(llvm::Value* dpair) = 0;
-			virtual llvm::Value* PopDispatchPair() = 0;
+			virtual void PushDispatchPair(PWDispatchPair dpair) = 0;
+			virtual PWDispatchPair PopDispatchPair() = 0;
 
 			virtual void ClearArguments() = 0;
 
-			virtual int GetArgCount() = 0;
+			virtual size_t GetArgCount() = 0;
 
-			virtual PhiNode* GetPhiNode(int index) = 0;
+			virtual PhiNode* GetPhiNode(size_t index) = 0;
 
 			virtual bool GetInConstructor() = 0;
 
 			virtual size_t GetLocalTypeArgumentCount() = 0;
 			virtual size_t GetEnvTypeArgumentCount() = 0;
-			virtual llvm::Value* GetLocalTypeArgumentArray(NomBuilder& builder) = 0;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) = 0;
+			virtual PWTypeArr GetLocalTypeArgumentArray(NomBuilder& builder) = 0;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) = 0;
 		};
 		class ACompileEnv : public CompileEnv
 		{
@@ -78,7 +82,7 @@ namespace Nom
 		public:
 			virtual NomValue& operator[] (const RegIndex index) override
 			{
-				if (index < 0 || index >= regcount)
+				if (index >= regcount)
 				{
 					throw "Invalid Register index!";
 				}
@@ -93,21 +97,21 @@ namespace Nom
 
 			virtual ~ACompileEnv() override;
 
-			virtual NomValue GetArgument(int i) override;
+			virtual NomValue GetArgument(size_t i) override;
 
 			virtual void PushArgument(NomValue arg) override;
-			virtual void PushDispatchPair(llvm::Value* dpair) override;
-			virtual llvm::Value* PopDispatchPair() override;
+			virtual void PushDispatchPair(PWDispatchPair dpair) override;
+			virtual PWDispatchPair PopDispatchPair() override;
 
 
 			virtual void ClearArguments() override;
 
-			virtual int GetArgCount() override;
+			virtual size_t GetArgCount() override;
 
-			virtual PhiNode* GetPhiNode(int index) override;
+			virtual PhiNode* GetPhiNode(size_t index) override;
 
 			virtual size_t GetLocalTypeArgumentCount() override;
-			virtual llvm::Value* GetLocalTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetLocalTypeArgumentArray(NomBuilder& builder) override;
 		};
 		/// <summary>
 		/// An abstract compilation environment for functions with a full signatures
@@ -145,11 +149,11 @@ namespace Nom
 		public:
 			const NomMethod* const Method;
 			InstanceMethodCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomClassTypeRef thisType, const NomMethod* method);
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 
 			// Inherited via CompileEnv
 			virtual size_t GetEnvTypeArgumentCount() override;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override { return false; }
 		};
 
@@ -158,9 +162,9 @@ namespace Nom
 		public:
 			const NomStaticMethod* const Method;
 			StaticMethodCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomStaticMethod* method);
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override { return false; }
 		};
 
@@ -171,9 +175,9 @@ namespace Nom
 		public:
 			const NomConstructor* const Method;
 			ConstructorCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomClassTypeRef thisType, const NomConstructor* method);
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override;
 			virtual void SetPastInitialSetup();
 		};
@@ -183,9 +187,9 @@ namespace Nom
 		public:
 			const NomLambdaBody* const Lambda;
 			LambdaCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomLambdaBody* lambda);
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override { return false; }
 		};
 
@@ -195,9 +199,9 @@ namespace Nom
 		public:
 			const NomRecordMethod* const Method;
 			StructMethodCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomRecordMethod* method);
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override { return false; }
 		};
 
@@ -208,9 +212,9 @@ namespace Nom
 		public:
 			const NomRecord* const Record;
 			StructInstantiationCompileEnv(RegIndex regcount, llvm::Function* function, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomRecord* structure, RegIndex endargregcount);
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override;
 			virtual void SetPastInitialSetup();
 		};
@@ -221,10 +225,10 @@ namespace Nom
 		public:
 			SimpleClassCompileEnv(llvm::Function* function, const NomMemberContext* context, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomTypeRef thisType);
 			// Inherited via CompileEnv
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override { return false; }
 		};
 
@@ -234,50 +238,50 @@ namespace Nom
 			const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs;
 			const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs;
 			llvm::Function* const function;
-			const int regularArgsBegin;
-			const int funValueArgCount;
-			llvm::Value* const instanceTypeArrPtr;
+			const size_t regularArgsBegin;
+			const size_t funValueArgCount;
+			llvm::Value* instanceTypeArrPtr;
 		public:
-			CastedValueCompileEnv(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, int regular_args_begin, int funValueArgCount, llvm::Value* instanceTypeArrPtr);
+			CastedValueCompileEnv(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, size_t regular_args_begin, size_t funValueArgCount, llvm::Value* instanceTypeArrPtr);
 
 			// Inherited via CompileEnv
 			virtual NomValue& operator[](const RegIndex index) override;
 
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
 
-			virtual NomValue GetArgument(int i) override;
+			virtual NomValue GetArgument(size_t i) override;
 
 			virtual void PushArgument(NomValue arg) override;
 
 			virtual void ClearArguments() override;
 
-			virtual int GetArgCount() override;
+			virtual size_t GetArgCount() override;
 
-			virtual PhiNode* GetPhiNode(int index) override;
+			virtual PhiNode* GetPhiNode(size_t index) override;
 
 			virtual size_t GetLocalTypeArgumentCount() override;
 
 			virtual size_t GetEnvTypeArgumentCount() override;
 
-			virtual llvm::Value* GetLocalTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetLocalTypeArgumentArray(NomBuilder& builder) override;
 
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 
 			virtual bool GetInConstructor() override { return false; }
 
 			// Inherited via CompileEnv
-			virtual void PushDispatchPair(llvm::Value* dpair) override;
+			virtual void PushDispatchPair(PWDispatchPair dpair) override;
 
-			virtual llvm::Value* PopDispatchPair() override;
+			virtual PWDispatchPair PopDispatchPair() override;
 
 		};
 
 		class CastedValueCompileEnvIndirect : public CastedValueCompileEnv
 		{
 		public:
-			CastedValueCompileEnvIndirect(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, int regular_args_begin, int funValueArgCount, llvm::Value* instanceTypeArrPtr);
-			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
-			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			CastedValueCompileEnvIndirect(const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> instanceTypeArgs, llvm::Function* fun, size_t regular_args_begin, size_t funValueArgCount, llvm::Value* instanceTypeArrPtr);
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, size_t i) override;
+			virtual PWTypeArr GetEnvTypeArgumentArray(NomBuilder& builder) override;
 		};
 	}
 }

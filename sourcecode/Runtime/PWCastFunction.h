@@ -8,7 +8,7 @@ namespace Nom
 		class PWCastFunction : public PWrapper
 		{
 		public:
-			PWCastFunction(llvm::Value* wrapped) : PWrapper(wrapped)
+			PWCastFunction(llvm::Value* _wrapped) : PWrapper(_wrapped)
 			{
 
 			}

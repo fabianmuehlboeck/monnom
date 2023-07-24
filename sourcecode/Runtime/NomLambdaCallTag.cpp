@@ -9,13 +9,13 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomLambdaCallTag::NomLambdaCallTag(int typeArgCount, int argCount) : typeArgCount(typeArgCount), argCount(argCount)
+		NomLambdaCallTag::NomLambdaCallTag(size_t _typeArgCount, size_t _argCount) : typeArgCount(_typeArgCount), argCount(_argCount)
 		{
 		}
-		const NomLambdaCallTag* NomLambdaCallTag::GetCallTag(int typeArgCount, int argCount)
+		const NomLambdaCallTag* NomLambdaCallTag::GetCallTag(size_t typeArgCount, size_t argCount)
 		{
-			static unordered_map<size_t, NomLambdaCallTag*> callTags;
-			size_t key = (((size_t)typeArgCount) << 32) + (size_t)argCount;
+			[[clang::no_destroy]] static unordered_map<size_t, NomLambdaCallTag*> callTags;
+			size_t key = ((typeArgCount) << 32) + argCount;
 			auto findResult = callTags.find(key);
 			if (findResult == callTags.end())
 			{
@@ -28,13 +28,13 @@ namespace Nom
 		NomLambdaCallTag::~NomLambdaCallTag()
 		{
 		}
-		llvm::Constant* NomLambdaCallTag::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Constant* NomLambdaCallTag::createLLVMElement(llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			return findLLVMElement(mod);
 		}
-		llvm::Constant* NomLambdaCallTag::findLLVMElement(llvm::Module& mod) const
+		llvm::Constant* NomLambdaCallTag::findLLVMElement([[maybe_unused]] llvm::Module& mod) const
 		{
-			size_t key = (((size_t)typeArgCount) << 32) + (size_t)argCount;
+			size_t key = ((typeArgCount) << 32) + argCount;
 			key = key << 3;
 			key++;
 			return ConstantExpr::getIntToPtr(MakeInt<size_t>(key), POINTERTYPE);

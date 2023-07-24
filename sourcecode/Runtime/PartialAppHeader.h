@@ -1,5 +1,7 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
+POPDIAGSUPPRESSION
 
 namespace Nom
 {

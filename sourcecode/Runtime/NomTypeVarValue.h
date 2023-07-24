@@ -1,6 +1,9 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Value.h"
+POPDIAGSUPPRESSION
 #include "NomTypeDecls.h"
+#include "PWType.h"
 
 namespace Nom
 {
@@ -14,8 +17,7 @@ namespace Nom
 			NomTypeVarRef var;
 		public:
 			NomTypeVarValue() : val(nullptr), var(nullptr) {}
-			NomTypeVarValue(llvm::Value *val, NomTypeVarRef var) : val(val), var(var) {}
-			~NomTypeVarValue() {}
+			NomTypeVarValue(llvm::Value *value, NomTypeVarRef varref) : val(value), var(varref) {}
 
 			llvm::Value *operator*() const
 			{
@@ -36,6 +38,7 @@ namespace Nom
 			NomTypeRef LowerBound() const;
 			operator llvm::Value*() const { return val; }
 			operator NomTypeVarRef() const { return var; }
+			operator PWType() const { return val; }
 		};
 	}
 }

@@ -1,4 +1,8 @@
 #pragma once
+PUSHDIAGSUPPRESSION
+#include "llvm/IR/Type.h"
+#include "llvm/ADT/SmallVector.h"
+POPDIAGSUPPRESSION
 #include "Defs.h"
 #include "NomString.h"
 #include "NomAlloc.h"
@@ -6,8 +10,6 @@
 #include <vector>
 #include "ObjectHeader.h"
 #include "Context.h"
-#include "llvm/IR/Type.h"
-#include "llvm/ADT/SmallVector.h"
 #include <map>
 #include "ClassTypeList.h"
 #include "TypeList.h"
@@ -40,7 +42,7 @@ namespace Nom
 			virtual ~NomConstant() = default;
 
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) = 0;
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) = 0;
 		};
 
 		class NomClass;
@@ -59,9 +61,6 @@ namespace llvm
 {
 	class GlobalVariable;
 }
-
-extern const Nom::Runtime::NomClass * const _NomStringClassNC;
-extern const Nom::Runtime::RTClass * const _RTStringClassRTC;
 
 namespace Nom
 {
@@ -98,7 +97,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override {}
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override {}
 		};
 
 		class NomClassConstant : public NomConstant
@@ -121,7 +120,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				result.push_back(Library);
 				result.push_back(Name);
@@ -148,7 +147,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				result.push_back(Library);
 				result.push_back(Name);
@@ -169,12 +168,12 @@ namespace Nom
 			NomTypeParameterConstant(Nom::Runtime::ParameterVariance variance, ConstantID lowerBound, ConstantID upperBound) : /*NomConstant(NomConstantType::CTTypeParameter),*/ Variance(variance), LowerBound(lowerBound), UpperBound(upperBound)
 			{
 			}
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 			{
 				result.push_back(LowerBound);
 				result.push_back(UpperBound);
 			}
-		//	virtual ~NomTypeParameterConstant() override = default;
+			virtual ~NomTypeParameterConstant() {}
 		};
 
 		class NomLambdaConstant : public NomConstant
@@ -194,7 +193,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				//Filled when going through parent class's dependencies
 			}
@@ -217,7 +216,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				//Filled when going through parent class's dependencies
 			}
@@ -242,7 +241,7 @@ namespace Nom
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				result.push_back(SuperClass);
 				result.push_back(Arguments);
@@ -259,7 +258,7 @@ namespace Nom
 			NomSuperInterfacesConstant(NomSuperInterfacesConstant&) = delete;
 			NomSuperInterfacesConstant(const NomSuperInterfacesConstant&) = delete;
 			NomSuperInterfacesConstant(NomSuperInterfacesConstant&&) = delete;
-			NomSuperInterfacesConstant(const llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4> &entries) : NomConstant(NomConstantType::CTSuperInterfaces), entries(entries)
+			NomSuperInterfacesConstant(const llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4> &entryPairs) : NomConstant(NomConstantType::CTSuperInterfaces), entries(entryPairs)
 			{
 			}
 			virtual ~NomSuperInterfacesConstant() override = default;
@@ -268,7 +267,7 @@ namespace Nom
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				for (auto pair : entries)
 				{
@@ -288,9 +287,9 @@ namespace Nom
 			NomTypeListConstant(NomTypeListConstant&) = delete;
 			NomTypeListConstant(const NomTypeListConstant&) = delete;
 			NomTypeListConstant(NomTypeListConstant&&) = delete;
-			NomTypeListConstant(const llvm::ArrayRef<ConstantID> types) : NomConstant(NomConstantType::CTTypeList)
+			NomTypeListConstant(const llvm::ArrayRef<ConstantID> elements) : NomConstant(NomConstantType::CTTypeList)
 			{
-				for (auto tid : types)
+				for (auto tid : elements)
 				{
 					this->types.push_back(tid);
 				}
@@ -302,7 +301,7 @@ namespace Nom
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				for (auto type : types)
 				{
@@ -320,9 +319,9 @@ namespace Nom
 			NomTypeParametersConstant(NomTypeParametersConstant&) = delete;
 			NomTypeParametersConstant(const NomTypeParametersConstant&) = delete;
 			NomTypeParametersConstant(NomTypeParametersConstant&&) = delete;
-			NomTypeParametersConstant(const llvm::ArrayRef<NomTypeParameterConstant*> typeParams) : NomConstant(NomConstantType::CTTypeParameters)
+			NomTypeParametersConstant(const llvm::ArrayRef<NomTypeParameterConstant*> params) : NomConstant(NomConstantType::CTTypeParameters)
 			{
-				for (auto tp : typeParams)
+				for (auto tp : params)
 				{
 					this->typeParams.push_back(tp);
 				}
@@ -333,7 +332,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				for (auto param : typeParams)
 				{
@@ -341,22 +340,6 @@ namespace Nom
 				}
 			}
 		};
-
-		//class NomClassTypeListConstant : public NomConstant
-		//{
-		//private:
-		//	const llvm::SmallVector<ConstantID, 8> types;
-		//public:
-
-		//	NomClassTypeListConstant(NomClassTypeListConstant&) = delete;
-		//	NomClassTypeListConstant(const NomClassTypeListConstant&) = delete;
-		//	NomClassTypeListConstant(NomClassTypeListConstant&&) = delete;
-		//	NomClassTypeListConstant(const llvm::SmallVector<ConstantID, 8> &types) : NomConstant(NomConstantType::CTTypeList), types(types)
-		//	{
-
-		//	}
-		//	ClassTypeList GetClassTypeList();
-		//};
 
 		class NomClassTypeConstant : public NomConstant
 		{
@@ -369,7 +352,7 @@ namespace Nom
 			NomClassTypeConstant(NomClassTypeConstant&) = delete;
 			NomClassTypeConstant(const NomClassTypeConstant&) = delete;
 			NomClassTypeConstant(NomClassTypeConstant&&) = delete;
-			NomClassTypeConstant(const ConstantID cls, const ConstantID args) : NomConstant(NomConstantType::CTClassType), cls(cls), args(args)
+			NomClassTypeConstant(const ConstantID clss, const ConstantID arguments) : NomConstant(NomConstantType::CTClassType), cls(clss), args(arguments)
 			{
 
 			}
@@ -379,7 +362,7 @@ namespace Nom
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				result.push_back(cls);
 				result.push_back(args);
@@ -389,13 +372,13 @@ namespace Nom
 		class NomTypeVarConstant : public NomConstant
 		{
 		private:
-			const int index;
+			const size_t index;
 		public:
 			NomTypeVarConstant(NomTypeVarConstant&) = delete;
 			NomTypeVarConstant(const NomTypeVarConstant&) = delete;
 			NomTypeVarConstant(NomTypeVarConstant&&) = delete;
 
-			NomTypeVarConstant(const int index) : NomConstant(NomConstantType::CTTypeVar), index(index)
+			NomTypeVarConstant(const size_t varIndex) : NomConstant(NomConstantType::CTTypeVar), index(varIndex)
 			{
 
 			}
@@ -405,7 +388,7 @@ namespace Nom
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 			}
 		};
@@ -420,7 +403,7 @@ namespace Nom
 			NomMaybeTypeConstant(const NomMaybeTypeConstant&) = delete;
 			NomMaybeTypeConstant(NomMaybeTypeConstant&&) = delete;
 
-			NomMaybeTypeConstant(const ConstantID ptype) : NomConstant(NomConstantType::CTMaybe), ptype(ptype)
+			NomMaybeTypeConstant(const ConstantID potentialType) : NomConstant(NomConstantType::CTMaybe), ptype(potentialType)
 			{
 
 			}
@@ -431,7 +414,7 @@ namespace Nom
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
 
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override;
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override;
 
 		};
 
@@ -449,7 +432,7 @@ namespace Nom
 			virtual ~NomDynamicTypeConstant() override = default;
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 			}
 		};
@@ -468,7 +451,7 @@ namespace Nom
 			virtual ~NomBottomConstant() override = default;
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 			}
 		};
@@ -486,7 +469,7 @@ namespace Nom
 			NomMethodConstant(NomMethodConstant&) = delete;
 			NomMethodConstant(const NomMethodConstant&) = delete;
 			NomMethodConstant(NomMethodConstant&&) = delete;
-			NomMethodConstant(const ConstantID cls, const ConstantID methodname, const ConstantID typeArgs, const ConstantID argTypes) : NomConstant(NomConstantType::CTMethod), classConstant(cls), methodName(methodname), typeArgs(typeArgs), argTypes(argTypes)
+			NomMethodConstant(const ConstantID cls, const ConstantID methodname, const ConstantID typeArguments, const ConstantID argumentTypes) : NomConstant(NomConstantType::CTMethod), classConstant(cls), methodName(methodname), typeArgs(typeArguments), argTypes(argumentTypes)
 			{
 
 			}
@@ -495,7 +478,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				result.push_back(classConstant);
 				result.push_back(methodName);
@@ -525,7 +508,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				result.push_back(ClassConstant);
 				result.push_back(MethodName);
@@ -554,7 +537,7 @@ namespace Nom
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
-			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			virtual void FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
 			{
 				result.push_back(ClassConstant);
 				result.push_back(TypeArgs);
@@ -590,7 +573,7 @@ namespace Nom
 			ConstantID AddClassType(LocalConstantID lid, const LocalConstantID cls, const LocalConstantID typeArgs);
 			ConstantID AddBottomType(LocalConstantID lid);
 			ConstantID AddDynamicType(LocalConstantID lid);
-			ConstantID AddTypeVar(LocalConstantID lid, int index);
+			ConstantID AddTypeVar(LocalConstantID lid, size_t index);
 			ConstantID AddTypeParameters(LocalConstantID lid, llvm::ArrayRef<NomTypeParameterConstant*> parameters);
 			ConstantID AddConstructor(LocalConstantID lid, const LocalConstantID cls, const LocalConstantID typeArgs, const LocalConstantID argTypes);
 			ConstantID AddMaybeType(LocalConstantID lid, const LocalConstantID ptype);
@@ -600,8 +583,8 @@ namespace Nom
 		{
 		private:
 			static std::vector<NomConstant*>& constants() {
-				static std::vector<NomConstant*> constants(1); return constants;
-			};
+				[[clang::no_destroy]] static std::vector<NomConstant*> constants(1); return constants;
+			}
 			NomConstants() {}
 			NomConstants(NomConstants&) = delete;
 			NomConstants(const NomConstants&) = delete;
@@ -624,20 +607,6 @@ namespace Nom
 			static NomStaticMethodConstant* GetStaticMethod(const ConstantID constant);
 			static NomConstructorConstant* GetConstructor(const ConstantID constant);
 			static NomTypeListConstant* GetTypeList(const ConstantID constant);
-			//static NomClassTypeListConstant * GetClassTypeList(const ConstantID constant)
-			//{
-			//	if (constant == 0)
-			//	{
-			//		static NomClassTypeListConstant defaultConst{ llvm::SmallVector<ConstantID, 8>() };
-			//		return &defaultConst;
-			//	}
-			//	NomConstant *cnstnt = constants()[constant];
-			//	if (cnstnt->Type != NomConstantType::CTClassTypeList)
-			//	{
-			//		throw new std::exception();
-			//	}
-			//	return (NomClassTypeListConstant *)cnstnt;
-			//}
 			static NomClassTypeConstant* GetClassType(const ConstantID constant);
 			static NomSuperClassConstant* GetSuperClass(const ConstantID constant);
 			static NomSuperInterfacesConstant* GetSuperInterfaces(const ConstantID constant);
@@ -660,16 +629,7 @@ namespace Nom
 			static ConstantID AddBottomType(ConstantID cid = 0);
 			static ConstantID AddDynamicType(ConstantID cid = 0);
 			static ConstantID AddMaybeType(const ConstantID ptype, ConstantID cid = 0);
-			static ConstantID AddTypeVariable(int index, ConstantID cid = 0);
-			//static ConstantID AddTypeParameter(ParameterVariance variance, const ConstantID lowerBound, const ConstantID upperBound, ConstantID cid = 0)
-			//{
-			//	if (cid == 0)
-			//	{
-			//		cid = GetConstantID();
-			//	}
-			//	constants()[cid] = (new NomTypeParameterConstant(variance, lowerBound, upperBound));
-			//	return cid;
-			//}
+			static ConstantID AddTypeVariable(size_t index, ConstantID cid = 0);
 			static ConstantID AddTypeParameters(llvm::ArrayRef<NomTypeParameterConstant*> typeParameters, ConstantID cid = 0);
 			static ConstantID AddSuperClass(const ConstantID cls, const ConstantID args, ConstantID cid = 0);
 			static ConstantID AddSuperInterfaces(const llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4> & entries, ConstantID cid = 0);

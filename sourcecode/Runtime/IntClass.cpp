@@ -10,37 +10,27 @@
 #include <iostream>
 #include "NomMethodTableEntry.h"
 #include "StringClass.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/DynamicLibrary.h"
+POPDIAGSUPPRESSION
 #include "NomClassType.h"
 #include "IComparableInterface.h"
-
-//Nom::Runtime::NomIntClass *_NomIntClass = Nom::Runtime::NomIntClass::GetInstance();
-//const Nom::Runtime::RTIntClass _RTIntClass;
-//const Nom::Runtime::NomIntClass * const _NomIntClassRef = &_NomIntClass;
-//const Nom::Runtime::RTIntClass * const _RTIntClassRef = &_RTIntClass;
-//const Nom::Runtime::NomClass * const _NomIntClassNC = &_NomIntClass;
-//const Nom::Runtime::RTClass * const _RTIntClassRTC = &_RTIntClass;
-
 
 namespace Nom
 {
 	namespace Runtime
 	{
-		NomIntClass::NomIntClass() : NomInterface("Int_0"), NomClassInternal(new NomString("Int_0"))
+		NomIntClass::NomIntClass() : NomInterface(), NomClassInternal(new NomString("Int_0"))
 		{
 			this->SetDirectTypeParameters();
 			this->SetSuperClass();
 
-			
-			
-
-
-			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Int_ToString_1", (void*)&LIB_NOM_Int_ToString_1);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Int_ToString_1", reinterpret_cast<void*>(& LIB_NOM_Int_ToString_1));
 		}
 
 
 		NomIntClass* NomIntClass::GetInstance() {
-			static NomIntClass nic;
+			[[clang::no_destroy]] static NomIntClass nic;
 			static bool once = true;
 			if (once)
 			{
@@ -71,8 +61,6 @@ namespace Nom
 				compare->SetArgumentTypes(TypeList(intTypeArr,1));
 				compare->SetReturnType(nic.GetType());
 				nic.AddMethod(compare);
-
-				//nic.PreprocessInheritance();
 			}
 			return &nic;
 		}
@@ -86,13 +74,6 @@ namespace Nom
 			NomStringClass::GetInstance()->GetLLVMElement(mod);
 			return NomClass::createLLVMElement(mod, linkage);
 		}
-
-		//RTIntClass::RTIntClass() : RTClass(0, 0)
-		//{
-		//	SuperTypes.push_back(&_RTObjectClassType);
-		//	methodtable = (void **)nalloc(sizeof(void *) * 1);
-		//	methodtable[0] = (void *)LIB_NOM_Int_ToString_1;
-		//}
 	}
 }
 extern "C" DLLEXPORT const void* LIB_NOM_Int_ToString_1(const int64_t value)
@@ -103,7 +84,7 @@ extern "C" DLLEXPORT const void* LIB_NOM_Int_ToString_1(const int64_t value)
 	return nomstring->GetStringObject();
 }
 
-extern "C" DLLEXPORT const int64_t LIB_NOM_Int_Compare_1(const int64_t value, const int64_t other)
+extern "C" DLLEXPORT int64_t LIB_NOM_Int_Compare_1(const int64_t value, const int64_t other)
 {
 	if (value == other)
 	{

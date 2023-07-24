@@ -11,23 +11,23 @@ namespace Nom
 		class PWLambda : public PWStructVal
 		{
 		public:
-			PWLambda(llvm::Value* wrapped) : PWStructVal(wrapped)
+			PWLambda(llvm::Value* _wrapped) : PWStructVal(_wrapped)
 			{
 
 			}
-			llvm::Value* ReadField(NomBuilder& builder, int32_t fieldIndex);
-			llvm::Value* WriteField(NomBuilder& builder, int32_t fieldIndex, llvm::Value* value);
+			llvm::Value* ReadField(NomBuilder& builder, size_t fieldIndex);
+			llvm::Value* WriteField(NomBuilder& builder, size_t fieldIndex, llvm::Value* value);
 		};
 
 		class PWLambdaPrecise : public PWLambda
 		{
 		public : 
 			const NomLambda* const lambda;
-			PWLambdaPrecise(llvm::Value* wrapped, const NomLambda* lambda) : PWLambda(wrapped), lambda(lambda)
+			PWLambdaPrecise(llvm::Value* _wrapped, const NomLambda* _lambda) : PWLambda(_wrapped), lambda(_lambda)
 			{
 
 			}
-			llvm::Value* ReadLambdaField(NomBuilder& builder, int32_t fieldIndex);
+			llvm::Value* ReadLambdaField(NomBuilder& builder, size_t fieldIndex);
 
 		};
 	}

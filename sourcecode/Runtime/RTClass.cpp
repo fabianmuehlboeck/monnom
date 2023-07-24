@@ -9,6 +9,8 @@
 #include "RTInterface.h"
 #include "IMT.h"
 #include "RTCompileConfig.h"
+#include "PWClass.h"
+#include "PWSuperInstance.h"
 
 using namespace llvm;
 using namespace std;
@@ -103,15 +105,15 @@ namespace Nom
 
 		llvm::Value* RTClass::GenerateReadFieldCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return MakeInvariantLoad(builder, builder->CreatePointerCast(descriptorPtr, GetLLVMType()->getPointerTo()), MakeInt32(RTClassFields::FieldCount), "FieldCount", AtomicOrdering::NotAtomic);
+			return PWClass(descriptorPtr).ReadFieldCount(builder);
 		}
 		llvm::Value* RTClass::GenerateReadSuperInstanceCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return RTInterface::GenerateReadSuperInstanceCount(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
+			return PWClass(descriptorPtr).GetInterface(builder).ReadSuperInstanceCount(builder);
 		}
 		llvm::Value* RTClass::GenerateReadSuperInstances(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return RTInterface::GenerateReadSuperInstances(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
+			return PWClass(descriptorPtr).GetInterface(builder).ReadSuperInstances(builder);
 		}
 		llvm::Constant* RTClass::GetInterfaceReference(llvm::Constant* clsVtablePtr)
 		{
@@ -119,11 +121,11 @@ namespace Nom
 		}
 		llvm::Value* RTClass::GetInterfaceReference(NomBuilder &builder, llvm::Value* clsVtablePtr)
 		{
-			return builder->CreateGEP(builder->CreatePointerCast(clsVtablePtr, GetLLVMPointerType()), llvm::ArrayRef<Value*>({ MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
+			return PWClass(clsVtablePtr).GetInterface(builder);
 		}
 		llvm::Value* RTClass::GenerateReadTypeArgCount(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
-			return RTInterface::GenerateReadTypeArgCount(builder, builder->CreateGEP(descriptorPtr, { MakeInt32(0), MakeInt32(RTClassFields::RTInterface) }));
+			return PWClass(descriptorPtr).GetInterface(builder).ReadTypeArgCount(builder);
 		}
 	}
 }

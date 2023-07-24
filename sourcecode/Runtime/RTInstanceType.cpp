@@ -16,7 +16,7 @@ namespace Nom
 			static llvm::StructType* type = llvm::StructType::create("NOM_RTT_InstanceType", RTTypeHead::GetLLVMType(), RTInterface::GetLLVMType()->getPointerTo(), TYPETYPE->getPointerTo());
 			return type;
 		}
-		void RTInstanceType::CreateInitialization(NomBuilder& builder, llvm::Module& mod, llvm::Value* ptr, llvm::Value* hash, llvm::Value* nomtypeptr, llvm::Value* rtclassdesc, llvm::Value* ptrToTypeArgs)
+		void RTInstanceType::CreateInitialization(NomBuilder& builder, [[maybe_unused]] llvm::Module& mod, llvm::Value* ptr, llvm::Value* hash, llvm::Value* nomtypeptr, llvm::Value* rtclassdesc, llvm::Value* ptrToTypeArgs)
 		{
 			PWInstanceType(ptr).InitializeInstanceType(builder, hash, nomtypeptr, rtclassdesc, ptrToTypeArgs);
 		}

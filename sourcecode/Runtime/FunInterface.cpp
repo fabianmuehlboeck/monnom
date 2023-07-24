@@ -5,12 +5,8 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		FunInterface::FunInterface(std::string &name) : NomInterface(name), NomInterfaceInternal(new NomString(name))
-			//NomInterface(NomConstants::AddString(NomString("Fun")), typeParameters, 0, nullptr)
+		FunInterface::FunInterface(std::string &name) : NomInterface(), NomInterfaceInternal(new NomString(name))
 		{
-			//llvm::ArrayRef<NomInstantiationRef<NomInterface>>()
-			//NomMethod* invoke = new NomMethod(this, "Invoke", "Fun.Invoke", returnType, argTypes, 0, 0, false, true);
-			//Methods.push_back(invoke);
 			this->SetSuperInterfaces();
 		}
 		FunInterface::~FunInterface()
@@ -18,7 +14,7 @@ namespace Nom
 		}
 		FunInterface* FunInterface::GetFun(size_t argcount)
 		{
-			static std::unordered_map<int, FunInterface*> instances;
+			[[clang::no_destroy]] static std::unordered_map<size_t, FunInterface*> instances;
 			auto instance = instances.find(argcount);
 			if (instance != instances.end())
 			{
@@ -27,8 +23,8 @@ namespace Nom
 			std::string name = "Fun_" + std::to_string(argcount + 1);
 			auto fun = new FunInterface(name);
 			instances[argcount] = fun;
-			NomTypeParameterRef* tpbuf = (NomTypeParameterRef*)(nmalloc(sizeof(NomTypeParameterRef) * (argcount + 1)));
-			NomTypeRef* argtbuf = (NomTypeRef*)(nmalloc(sizeof(NomTypeRef) * (argcount )));
+			NomTypeParameterRef* tpbuf = makenmalloc(NomTypeParameterRef, (argcount + 1));
+			NomTypeRef* argtbuf = makenmalloc(NomTypeRef, (argcount ));
 
 			for (decltype(argcount) i = 0; i < argcount; i++)
 			{
@@ -44,7 +40,6 @@ namespace Nom
 			method->SetReturnType(tpbuf[argcount]->GetVariable());
 			fun->AddMethod(method);
 
-			//fun->PreprocessInheritance();
 			return fun;
 		}
 	}

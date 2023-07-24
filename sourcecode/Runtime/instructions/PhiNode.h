@@ -2,12 +2,14 @@
 
 #include "../Context.h"
 #include "../NomInstruction.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+POPDIAGSUPPRESSION
 #include <vector>
 #include <tuple>
 
@@ -26,7 +28,7 @@ namespace Nom
 			{
 
 			}
-			~PhiNode()
+			~PhiNode() override
 			{
 			}
 
@@ -38,7 +40,7 @@ namespace Nom
 			void Initialize(NomBuilder &builder, llvm::Function * fun, CompileEnv* env);
 
 			// Inherited via NomInstruction
-			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;
 
 			llvm::BasicBlock *getBlock() { return myBlock; }
 

@@ -1,7 +1,9 @@
 #pragma once
 #include "RTDictionary.h"
 #include "AvailableExternally.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/SmallVector.h"
+POPDIAGSUPPRESSION
 #include "NomType.h"
 namespace Nom
 {

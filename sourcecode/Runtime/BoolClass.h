@@ -18,8 +18,8 @@ namespace Nom
 		private:
 			NomBoolObjects();
 		public:
-			static NomBoolObjects* GetInstance() { static NomBoolObjects obj; return &obj; }
-			~NomBoolObjects() {}
+			static NomBoolObjects* GetInstance() { [[clang::no_destroy]] static NomBoolObjects obj; return &obj; }
+			~NomBoolObjects() override {}
 
 			static llvm::Constant* GetTrue(llvm::Module& mod);
 			static llvm::Constant* GetFalse(llvm::Module& mod);
@@ -32,7 +32,6 @@ namespace Nom
 			// Inherited via AvailableExternally
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual llvm::Constant* findLLVMElement(llvm::Module& mod) const override;
-			virtual llvm::Type* GetLLVMElementType(llvm::Module& mod) const override;
 		};
 
 	}

@@ -10,7 +10,7 @@ namespace Nom
 		public:
 			ReturnVoidInstruction();
 			virtual ~ReturnVoidInstruction() override;
-			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
+			virtual void Compile(NomBuilder &builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomInstruction
 			virtual void Print(bool resolve = false) override;
@@ -19,4 +19,3 @@ namespace Nom
 		};
 	}
 }
-	

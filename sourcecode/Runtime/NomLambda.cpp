@@ -1,15 +1,17 @@
+#include <iostream>
+PUSHDIAGSUPPRESSION
+#include "llvm/IR/Verifier.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/Support/raw_os_ostream.h"
+POPDIAGSUPPRESSION
 #include "NomLambda.h"
 #include "Defs.h"
 #include "RTLambda.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "NomType.h"
 #include "CompileEnv.h"
 #include "LambdaHeader.h"
 #include "NomDynamicType.h"
 #include "NomLambda.h"
-#include "llvm/IR/Verifier.h"
-#include <iostream>
-#include "llvm/Support/raw_os_ostream.h"
 #include "NomConstants.h"
 #include "RTSignature.h"
 #include "NomPartialApplication.h"
@@ -34,11 +36,11 @@ namespace Nom
 	{
 		vector<NomLambda*>& NomLambda::preprocessQueue()
 		{
-			static vector<NomLambda*> ppq; return ppq;
+			[[clang::no_destroy]] static vector<NomLambda*> ppq; return ppq;
 		}
-		NomLambda::NomLambda(ConstantID id, const NomMemberContext* parent, const RegIndex regcount, ConstantID closureTypeParams, ConstantID closureArguments, ConstantID typeParams, ConstantID argTypes, ConstantID returnType) : NomCallableLoaded("RT_NOM_Lambda_" + to_string(id), parent, "RT_NOM_Lambda_" + to_string(id), 0, closureTypeParams, closureArguments, false, false), ID(id), Body(this, regcount, typeParams, argTypes, returnType)
+		NomLambda::NomLambda(ConstantID _id, const NomMemberContext* _parent, const RegIndex _regcount, ConstantID _closureTypeParams, ConstantID _closureArguments, ConstantID _typeParams, ConstantID _argTypes, ConstantID _returnType) : NomCallableLoaded("RT_NOM_Lambda_" + to_string(_id), _parent, "RT_NOM_Lambda_" + to_string(_id), 0, _closureTypeParams, _closureArguments, false, false), ID(_id), Body(this, _regcount, _typeParams, _argTypes, _returnType)
 		{
-			NomConstants::GetLambda(id)->SetLambda(this);
+			NomConstants::GetLambda(_id)->SetLambda(this);
 			preprocessQueue().push_back(this);
 		}
 		void NomLambda::ProcessPreprocessQueue()
@@ -128,18 +130,18 @@ namespace Nom
 			std::string name = "RT_NOM_Lambda_" + to_string(ID);
 			return mod.getFunction(name);
 		}
-		const NomField* NomLambda::GetField(NomStringRef name) const
+		const NomField* NomLambda::GetField(NomStringRef _name) const
 		{
 			for (auto field : Fields)
 			{
-				if (NomStringEquality()(field->GetName(), name))
+				if (NomStringEquality()(field->GetName(), _name))
 				{
 					return field;
 				}
 			}
 			throw new std::exception();
 		}
-		NomTypeRef NomLambda::GetReturnType(const NomSubstitutionContext* context) const
+		NomTypeRef NomLambda::GetReturnType([[maybe_unused]] const NomSubstitutionContext* context) const
 		{
 			return &NomDynamicType::Instance();
 		}
@@ -207,13 +209,13 @@ namespace Nom
 		}
 		const llvm::ArrayRef<NomTypeParameterRef> NomLambdaBody::GetDirectTypeParameters() const
 		{
-			return llvm::ArrayRef<NomTypeParameterRef>((NomTypeParameterRef*)this, (size_t)0);
+			return llvm::ArrayRef<NomTypeParameterRef>(static_cast<NomTypeParameterRef*>(nullptr), static_cast<size_t>(0));
 		}
 		size_t NomLambdaBody::GetDirectTypeParametersCount() const
 		{
 			return 0;
 		}
-		NomTypeParameterRef NomLambdaBody::GetLocalTypeParameter(int index) const
+		NomTypeParameterRef NomLambdaBody::GetLocalTypeParameter([[maybe_unused]] size_t index) const
 		{
 			throw new std::exception();
 		}
@@ -229,12 +231,12 @@ namespace Nom
 		{
 			return llvm::ArrayRef<NomTypeParameterRef>();
 		}
-		NomClosureField* NomLambda::AddField(const ConstantID name, const ConstantID type) {
-			NomClosureField* field = new NomClosureField(this, name, type, Fields.size());
+		NomClosureField* NomLambda::AddField(const ConstantID _name, const ConstantID _type) {
+			NomClosureField* field = new NomClosureField(this, _name, _type, Fields.size());
 			Fields.push_back(field);
 			return field;
 		}
-		NomLambdaBody::NomLambdaBody(NomLambda* parent, const RegIndex regcount, ConstantID typeParams, ConstantID argTypes, ConstantID returnType) :NomCallableLoaded("", parent, "", regcount, typeParams, argTypes, false, false), Parent(parent),/* ArgTypes(argTypes),*/ ReturnType(returnType)
+		NomLambdaBody::NomLambdaBody(NomLambda* _parent, const RegIndex _regcount, ConstantID _typeParams, ConstantID _argTypes, ConstantID _returnType) :NomCallableLoaded("", _parent, "", _regcount, _typeParams, _argTypes, false, false), Parent(_parent),/* ArgTypes(argTypes),*/ ReturnType(_returnType)
 		{
 		}
 
@@ -284,7 +286,7 @@ namespace Nom
 
 			builder->SetInsertPoint(matchBlock);
 			NomSubstitutionContextMemberContext nscmc(this);
-			auto argpos = 1;
+			size_t argpos = 1;
 			for (auto& arg : this->GetArgumentTypes(&nscmc))
 			{
 				auto val = (*env)[argpos];
@@ -332,5 +334,5 @@ namespace Nom
 		{
 			return NomConstants::GetType(context, ReturnType);
 		}
-}
+	}
 }

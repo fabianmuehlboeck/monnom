@@ -14,7 +14,6 @@ namespace Nom
 			FSNamespace::directory_entry dir;
 		public:
 			Directory(Path path);
-			~Directory();
 
 			bool Exists()
 			{

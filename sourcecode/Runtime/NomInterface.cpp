@@ -1,3 +1,7 @@
+PUSHDIAGSUPPRESSION
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "NomInterface.h"
 #include "NomConstants.h"
 #include "NomJIT.h"
@@ -13,8 +17,6 @@
 #include "NomTypeVar.h"
 #include "RTInterfaceTableEntry.h"
 #include "RTInterface.h"
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/IR/Verifier.h"
 #include "CallingConvConf.h"
 #include "NomModule.h"
 #include <set>
@@ -34,7 +36,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		const llvm::SmallVector<NomClassTypeRef, 16> NomInterface::GetSuperNameds(llvm::ArrayRef<NomTypeRef> args) const
+		const llvm::SmallVector<NomClassTypeRef, 16> NomInterface::GetSuperNameds() const
 		{
 			llvm::SmallVector<NomClassTypeRef, 16> ret;
 			for (auto nomref : GetSuperInterfaces())
@@ -176,16 +178,17 @@ namespace Nom
 					constantQueue.push(dep);
 					seenIDs.insert(dep);
 				}
-				switch (constant->Type)
+				if (constant->Type == NomConstantType::CTClass)
 				{
-				case NomConstantType::CTClass:
-					((NomClassConstant*)constant)->EnsureClassLoaded(mod);
-					break;
-				case NomConstantType::CTInterface:
-					((NomInterfaceConstant*)constant)->EnsureInterfaceLoaded(mod);
-					break;
-				default:
-					break; //other kind of constant; ignore
+					(static_cast<NomClassConstant*>(constant))->EnsureClassLoaded(mod);
+				}
+				else if (constant->Type == NomConstantType::CTInterface)
+				{
+					(static_cast<NomInterfaceConstant*>(constant))->EnsureInterfaceLoaded(mod);
+				}
+				else
+				{
+					//other kind of constant; ignore
 				}
 			}
 		}
@@ -199,13 +202,13 @@ namespace Nom
 				dynamic_cast<NomCallableLoaded*>(method)->PushDependencies(set);
 			}
 		}
-		llvm::Constant* NomInterface::GetMethodTable(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Constant* NomInterface::GetMethodTable(llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			auto mtablesize = MethodTable.size();
 			llvm::Constant** methodArr = makealloca(llvm::Constant*, mtablesize);
 			for (auto mte : MethodTable)
 			{
-				methodArr[mtablesize - 1 - mte->Offset] = llvm::ConstantExpr::getPointerCast(mte->CallableVersion->GetLLVMElement(mod), POINTERTYPE);
+				methodArr[mtablesize - 1 - static_cast<size_t>(mte->Offset)] = llvm::ConstantExpr::getPointerCast(mte->CallableVersion->GetLLVMElement(mod), POINTERTYPE);
 			}
 			return llvm::ConstantArray::get(GetMethodTableType(false), llvm::ArrayRef<llvm::Constant*>(methodArr, MethodTable.size()));
 		}
@@ -214,14 +217,14 @@ namespace Nom
 			return arrtype(POINTERTYPE, generic ? 0 : MethodTable.size());
 		}
 
-		int NomInterface::GetSuperClassCount() const
+		size_t NomInterface::GetSuperClassCount() const
 		{
 			return 0;
 		}
-		llvm::Constant* NomInterface::GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const
+		llvm::Constant* NomInterface::GetSuperInstances(llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const
 		{
-			auto instantiations = GetInstantiations();
-			auto instaCount = instantiations.size();
+			auto _instantiations = GetInstantiations();
+			auto instaCount = _instantiations.size();
 			auto entryArr = makealloca(Constant*, instaCount + 1);
 			auto fieldArr = makealloca(Constant*, instaCount + 2);
 			auto typeArr = makealloca(Type*, instaCount + 2);
@@ -231,7 +234,7 @@ namespace Nom
 			entryArr++;
 			fieldArr++;
 			typeArr++;
-			for (auto& instantiation : instantiations)
+			for (auto& instantiation : _instantiations)
 			{
 				if (instantiation.first->IsInterface())
 				{
@@ -267,7 +270,7 @@ namespace Nom
 			while (pos > 0)
 			{
 				pos--;
-				auto instantiation = instantiations[orderedInstas[pos]];
+				auto instantiation = _instantiations[orderedInstas[pos]];
 				size_t instasize = instantiation.size();
 				entryArr[pos] = ConstantStruct::get(SuperInstanceEntryType(),
 					ConstantExpr::getPointerCast(orderedInstas[pos]->GetLLVMElement(mod), RTInterface::GetLLVMType()->getPointerTo()),
@@ -285,47 +288,6 @@ namespace Nom
 			return ConstantStruct::get(stetype, ArrayRef<Constant*>(fieldArr, instaCount + 2));
 		}
 
-		//llvm::Constant* NomInterface::GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const
-		//{
-		//	llvm::Twine t = "NOM_ST_";
-		//	llvm::SmallVector<char, 64> buf;
-		//	llvm::StringRef nameref = t.concat(this->GetName()->ToStdString()).toStringRef(buf);
-		//	llvm::GlobalVariable* ret = mod.getGlobalVariable(nameref, false);
-		//	if (ret == nullptr)
-		//	{
-		//		ret = new llvm::GlobalVariable(mod, GetSuperInstancesType(false), true, linkage, nullptr, nameref);
-		//		llvm::Constant** entries = makealloca(llvm::Constant*, instantiations.size() + 1);
-		//		auto selfInterface = mod.getNamedAlias("NOM_ALIAS_" + this->GetName()->ToStdString());
-		//		{
-		//			size_t instasize = GetTypeParametersCount();
-		//			llvm::GlobalVariable* instaArgs = new GlobalVariable(mod, arrtype(TYPETYPE, instasize), true, linkage, nullptr);
-		//			entries[0] = ConstantStruct::get(SuperInstanceEntryType(), selfInterface, ConstantExpr::getGetElementPtr(arrtype(TYPETYPE, instasize), instaArgs, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(instasize) })));
-		//			llvm::Constant** instaArgBuf = makealloca(llvm::Constant*, instasize);
-		//			auto allVars = GetAllTypeVariables();
-		//			for (size_t i = 0; i < instasize; i++)
-		//			{
-		//				instaArgBuf[instasize - (i + 1)] = allVars[i]->GetLLVMElement(mod);
-		//			}
-		//			instaArgs->setInitializer(ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize)));
-		//		}
-		//		size_t entrynum = 1;
-		//		for (auto& instantiation : instantiations)
-		//		{
-		//			size_t instasize = instantiation.second.size();
-		//			llvm::GlobalVariable* instaArgs = new GlobalVariable(mod, arrtype(TYPETYPE, instasize), true, linkage, nullptr, "NOM_ARGS_" + nameref.str() + "_" + std::to_string(entrynum));
-		//			entries[entrynum] = ConstantStruct::get(SuperInstanceEntryType(), ConstantExpr::getPointerCast(instantiation.first->GetLLVMElement(mod), RTInterface::GetLLVMType()->getPointerTo()), ConstantExpr::getGetElementPtr(arrtype(TYPETYPE, instasize), instaArgs, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(instasize) }))); //insta->GetLLVMElement(mod);
-		//			entrynum++;
-		//			llvm::Constant** instaArgBuf = makealloca(llvm::Constant*, instasize);
-		//			for (size_t i = 0; i < instasize; i++)
-		//			{
-		//				instaArgBuf[instasize - (i + 1)] = instantiation.second[i]->GetLLVMElement(mod);
-		//			}
-		//			instaArgs->setInitializer(ConstantArray::get(arrtype(TYPETYPE, instasize), ArrayRef<Constant*>(instaArgBuf, instasize)));
-		//		}
-		//		ret->setInitializer(llvm::ConstantArray::get(GetSuperInstancesType(false), llvm::ArrayRef<llvm::Constant*>(entries, entrynum)));
-		//	}
-		//	return ret;
-		//}
 		llvm::ArrayType* NomInterface::GetSuperInstancesType(bool generic) const
 		{
 			return arrtype(SuperInstanceEntryType(), (generic ? 0 : (instantiations.size() + 1)));
@@ -382,9 +344,9 @@ namespace Nom
 			static InterfaceID id = 0; return ++id;
 		}
 
-		NomInterface::NomInterface(const std::string& name) : id(idcounter())
+		NomInterface::NomInterface() : id(idcounter())
 		{
-			bgc_register_root(((char*)&(this->runtimeInstantiations)), ((char*)&(this->runtimeInstantiations)) + sizeof(RuntimeInstantiationDictionary));
+			bgc_register_root((reinterpret_cast<char*>(& (this->runtimeInstantiations))), (reinterpret_cast<char*>(& (this->runtimeInstantiations))) + sizeof(RuntimeInstantiationDictionary));
 		}
 
 		bool NomInterface::GetHasRawInvoke() const
@@ -428,13 +390,13 @@ namespace Nom
 			throw new std::exception();
 		}
 
-		NomInterfaceLoaded::NomInterfaceLoaded(const ConstantID name, ConstantID typeArgs, const ConstantID superInterfaces, const NomMemberContext* parent) : NomInterface(NomConstants::GetString(name)->GetText()->ToStdString()), NomNamedLoaded(name, typeArgs, parent), /*NomMemberContextLoaded(parent, typeArgs),*/ superInterfaces(superInterfaces)
+		NomInterfaceLoaded::NomInterfaceLoaded(const ConstantID _name, ConstantID _typeArgs, const ConstantID _superInterfaces, const NomMemberContext* _parent) : NomInterface(), NomNamedLoaded(_name, _typeArgs, _parent), superInterfaces(_superInterfaces)
 		{
-			NomInterface::Register(NomConstants::GetString(name)->GetText(), this);
+			NomInterface::Register(NomConstants::GetString(_name)->GetText(), this);
 		}
 
-		NomMethodLoaded* NomInterfaceLoaded::AddMethod(const std::string& name, const std::string& qname, const ConstantID typeParameters, const ConstantID returnType, const ConstantID argumentTypes, const RegIndex regcount, bool isFinal) {
-			NomMethodLoaded* meth = new NomMethodLoaded(this, name, qname, returnType, argumentTypes, regcount, typeParameters, isFinal);
+		NomMethodLoaded* NomInterfaceLoaded::AddMethod(const std::string& _name, const std::string& _qname, const ConstantID _typeParameters, const ConstantID _returnType, const ConstantID _argumentTypes, const RegIndex _regcount, bool _isFinal) {
+			NomMethodLoaded* meth = new NomMethodLoaded(this, _name, _qname, _returnType, _argumentTypes, _regcount, _typeParameters, _isFinal);
 			NomInterface::AddMethod(meth);
 			return meth;
 		}
@@ -465,7 +427,7 @@ namespace Nom
 				NomTypeRef* types = nullptr;
 				if (instantiation.TypeArgs.size() > 0)
 				{
-					types = (NomTypeRef*)gcalloc_uncollectable(sizeof(NomTypeRef) * instantiation.TypeArgs.size());
+					types = makegcalloc_uncollectable(NomTypeRef, instantiation.TypeArgs.size());
 					for (size_t i = instantiation.TypeArgs.size(); i > 0;)
 					{
 						i--;
@@ -493,8 +455,8 @@ namespace Nom
 					else
 					{
 						decltype(context->GetTypeArgumentCount()) contextCount = context->GetTypeArgumentCount();
-						auto targArr = (NomTypeRef*)gcalloc(sizeof(NomTypeRef) * (contextCount + typeArgs.size()));
-						int i = 0;
+						auto targArr = makegcalloc(NomTypeRef, (contextCount + typeArgs.size()));
+						size_t i = 0;
 						while (i < contextCount)
 						{
 							targArr[i] = context->GetTypeVariable(i);
@@ -522,7 +484,7 @@ namespace Nom
 			static llvm::StructType* type = llvm::StructType::get(RTInterface::GetLLVMType()->getPointerTo(), TYPETYPE->getPointerTo());
 			return type;
 		}
-		NomInterfaceInternal::NomInterfaceInternal(NomStringRef name, const NomMemberContext* parent) : NomInterface(name->ToStdString()), NomNamedInternal(name, parent)
+		NomInterfaceInternal::NomInterfaceInternal(NomStringRef name, const NomMemberContext* parent) : NomInterface(), NomNamedInternal(name, parent)
 		{
 			NomInterface::Register(name, this);
 		}
@@ -547,12 +509,12 @@ namespace Nom
 			{
 				return superInterfaces;
 			}
-			NomInstantiationRef<NomInterface>* arr = (NomInstantiationRef<NomInterface>*)gcalloc(sizeof(NomInstantiationRef<NomInterface>) * superInterfaces.size());
+			NomInstantiationRef<NomInterface>* arr = makegcalloc(NomInstantiationRef<NomInterface>, superInterfaces.size());
 			size_t pos = 0;
 			for (auto ir : superInterfaces)
 			{
 				size_t tcount = ir.TypeArgs.size();
-				NomTypeRef* tarr = (NomTypeRef*)gcalloc(sizeof(NomTypeRef) * tcount);
+				NomTypeRef* tarr = makegcalloc(NomTypeRef, tcount);
 				for (size_t i = 0; i < tcount; i++)
 				{
 					tarr[i] = ir.TypeArgs[i]->SubstituteSubtyping(context);
@@ -562,22 +524,22 @@ namespace Nom
 			}
 			return llvm::ArrayRef<NomInstantiationRef<NomInterface>>(arr, pos);
 		}
-		void NomInterfaceInternal::SetSuperInterfaces(llvm::ArrayRef<NomInstantiationRef<NomInterface>> superInterfaces)
+		void NomInterfaceInternal::SetSuperInterfaces(llvm::ArrayRef<NomInstantiationRef<NomInterface>> _superInterfaces)
 		{
-			if (this->superInterfaces.data() != nullptr || superInterfaces.data() == nullptr)
+			if (this->superInterfaces.data() != nullptr || (_superInterfaces.data() == nullptr && _superInterfaces.size()>0))
 			{
 				throw new std::exception();
 			}
-			this->superInterfaces = superInterfaces;
+			this->superInterfaces = _superInterfaces;
 		}
 		void NomInterfaceInternal::SetSuperInterfaces()
 		{
-			SetSuperInterfaces(llvm::ArrayRef<NomInstantiationRef<NomInterface>>(reinterpret_cast<NomInstantiationRef<NomInterface>*>(this), (size_t)0));
+			SetSuperInterfaces(llvm::ArrayRef<NomInstantiationRef<NomInterface>>(static_cast<NomInstantiationRef<NomInterface>*>(nullptr), static_cast<size_t>(0)));
 		}
-		void NomInterfaceInternal::GetClassDependencies(llvm::SmallVector<const NomClassInternal*, 4>& results) const
+		void NomInterfaceInternal::GetClassDependencies([[maybe_unused]] llvm::SmallVector<const NomClassInternal*, 4>& results) const
 		{
 		}
-		void NomInterfaceInternal::GetInterfaceDependencies(llvm::SmallVector<const NomInterfaceInternal*, 4>& results) const
+		void NomInterfaceInternal::GetInterfaceDependencies([[maybe_unused]] llvm::SmallVector<const NomInterfaceInternal*, 4>& results) const
 		{
 		}
 		llvm::FunctionType* NomInterface::GetGetUniqueInstantiationFunctionType()
@@ -648,13 +610,6 @@ namespace Nom
 				Value* typeArgsPtrArg = argsIter;
 				argsIter++;
 				Value* checkValue = argsIter;
-				//argsIter++;
-				//Value* argsarr[3];
-				//argsarr[0] = argsIter;
-				//argsIter++;
-				//argsarr[1] = argsIter;
-				//argsIter++;
-				//argsarr[2] = argsIter;
 
 				for (auto& crtp : crtPairs)
 				{
@@ -687,7 +642,7 @@ namespace Nom
 
 			return fun;
 		}
-		llvm::Constant* NomInterface::GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
+		llvm::Constant* NomInterface::GetCastFunction([[maybe_unused]] llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			return ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 		}
@@ -701,7 +656,7 @@ namespace Nom
 using namespace Nom::Runtime;
 extern "C" DLLEXPORT void* RT_NOM_GetUniqueInstantiation(NomInterface * iface, void* rtinterface, void** typearr, size_t * hasharr, int arrsize)
 {
-	static void* (*createNewClassTypeFun)(void*, void*, void**, int, size_t, void*) = (void* (*)(void*, void*, void**, int, size_t, void*))((intptr_t)NomJIT::Instance().getSymbolAddress("RT_NOM_InstantiateClassType"));
+	static void* (*createNewClassTypeFun)(void*, void*, void**, int, size_t, void*) = reinterpret_cast<void* (*)(void*, void*, void**, int, size_t, void*)>(NomJIT::Instance().getSymbolAddress("RT_NOM_InstantiateClassType"));
 	static NomRTHashArrHash RTArrHash;
 	size_t arrhash = RTArrHash(hasharr, arrsize);
 	std::tuple<void**, int, size_t> key = make_tuple(typearr, arrsize, arrhash);

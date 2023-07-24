@@ -32,7 +32,7 @@ namespace Nom
 		{
 			Metadata** args = makealloca(Metadata*, blocks.size() + 1);
 			args[0] = MDString::get(LLVMCONTEXT, "branch_weights");
-			for (int i = 0; i < blocks.size(); i++)
+			for (size_t i = 0; i < blocks.size(); i++)
 			{
 				size_t weight = 10;
 				BasicBlock* curBlock = blocks[i];
@@ -66,7 +66,7 @@ namespace Nom
 		{
 			Metadata** args = makealloca(Metadata*, weights.size() + 1);
 			args[0] = MDString::get(LLVMCONTEXT, "branch_weights");
-			for (int i = 0; i < weights.size(); i++)
+			for (size_t i = 0; i < weights.size(); i++)
 			{
 				args[i + 1] = ConstantAsMetadata::get(MakeUInt(64, weights[i]));
 			}

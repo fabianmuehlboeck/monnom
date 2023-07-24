@@ -17,8 +17,8 @@ namespace Nom
 		struct BoehmAllocator {
 			friend struct rebind;
 			typedef T value_type;
-			BoehmAllocator() throw() = default;
-			BoehmAllocator(const BoehmAllocator &) throw() = default;
+			BoehmAllocator() noexcept = default;
+			BoehmAllocator(const BoehmAllocator &) noexcept = default;
 			template <class U> constexpr BoehmAllocator(const BoehmAllocator<U>&) noexcept {}
 			T* allocate(std::size_t n) {
 				if (n > std::size_t(-1) / sizeof(T)) throw std::bad_alloc();

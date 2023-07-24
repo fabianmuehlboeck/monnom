@@ -33,7 +33,7 @@ namespace Nom
 	namespace Runtime
 	{
 
-		NomTypedField::NomTypedField(NomClass* cls, const ConstantID name, const ConstantID type, Visibility visibility, bool readonly, bool isvolatile) : Name(name), Type(type), Class(cls), visibility(visibility), readonly(readonly), isvolatile(isvolatile)
+		NomTypedField::NomTypedField(NomClass* _cls, const ConstantID _name, const ConstantID _type, Visibility _visibility, bool _readonly, bool _isvolatile) : Name(_name), Type(_type), Class(_cls), visibility(_visibility), readonly(_readonly), isvolatile(_isvolatile)
 		{
 		}
 
@@ -66,12 +66,12 @@ namespace Nom
 			return NomConstants::GetString(Name)->GetText();
 		}
 
-		NomValue NomTypedField::GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const
+		NomValue NomTypedField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver) const
 		{
 			auto recinst = Class->GetInstantiation(receiver.GetNomType());
 			if (recinst != nullptr)
 			{
-				llvm::Value* retval = ObjectHeader::ReadField(builder, receiver, this->Index, this->Class->GetHasRawInvoke());
+				llvm::Value* retval = PWObject(receiver).ReadField(builder, PWCInt32(this->Index, false) , this->Class->GetHasRawInvoke());
 				if (this->GetType()->IsSubtype(NomIntClass::GetInstance()->GetType(), false))
 				{
 					retval = builder->CreatePtrToInt(retval, INTTYPE);
@@ -108,18 +108,19 @@ namespace Nom
 				{
 					value = EnsurePacked(builder, value);
 				}
-				ObjectHeader::WriteField(builder, receiver, this->Index, value, this->Class->GetHasRawInvoke());
+				ObjectHeader::WriteField(builder, receiver, PWCInt32(this->Index,false), value, this->Class->GetHasRawInvoke());
 				return;
 
 			}
 			throw new std::exception();
 		}
 
-		void NomTypedField::SetIndex(int index) const
+		void NomTypedField::SetIndex(size_t index) const
 		{
-			if (Index < 0)
+			if (!IndexSet)
 			{
 				Index = index;
+				IndexSet = true;
 			}
 			else
 			{
@@ -129,12 +130,12 @@ namespace Nom
 
 		NomDictField* NomDictField::GetInstance(NomStringRef name)
 		{
-			static std::unordered_map<const NomString*, NomDictField, NomStringHash, NomStringEquality> fields;
-			auto ret = fields.find(name);
+			[[clang::no_destroy]] static std::unordered_map<const NomString*, NomDictField, NomStringHash, NomStringEquality> fields;
+			decltype(fields)::iterator ret = fields.find(name);
 			if (ret == fields.end())
 			{
 				fields.emplace(name, NomDictField(name));
-				ret = fields.find(name);
+				return &(*fields.find(name)).second;
 			}
 			return &(*ret).second;
 		}
@@ -155,11 +156,10 @@ namespace Nom
 			std::string key = GetName()->ToStdString();
 			return NomValue(builder->CreatePointerCast(ObjectHeader::CreateDictionaryLoad(builder, env, receiver, MakeInt(NomNameRepository::Instance().GetNameID(key))), REFTYPE, key), NomType::DynamicRef);
 		}
-		void NomDictField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
+		void NomDictField::GenerateWrite(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver, NomValue value) const
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
-			//BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "DictWriteOut", fun);
 
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
@@ -169,34 +169,8 @@ namespace Nom
 			{
 				builder->SetInsertPoint(refValueBlock);
 				auto vtableVar = RefValueHeader::GenerateReadVTablePointer(builder, receiver);
-				//BasicBlock* realVtableBlock = nullptr, * pureLambdaBlock = nullptr, * pureStructBlock = nullptr, * purePartialAppBlock = nullptr;
-				//Value* vtableVar = nullptr;
-				//RefValueHeader::GenerateRefValueKindSwitch(builder, receiver, &vtableVar, &realVtableBlock, &pureLambdaBlock, &pureStructBlock, &purePartialAppBlock);
-
-				//if (realVtableBlock != nullptr)
-				//{
-				//	builder->SetInsertPoint(realVtableBlock);
 				auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtableVar);
 				builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver,  EnsurePacked(builder, value) })->setCallingConv(NOMCC);
-				//	builder->CreateBr(outBlock);
-				//}
-
-				//if (pureLambdaBlock != nullptr)
-				//{
-				//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Lambdas have no dictionary fields to write to!", pureLambdaBlock);
-				//}
-				//if (pureStructBlock != nullptr)
-				//{
-				//	builder->SetInsertPoint(pureStructBlock);
-				//	auto vtable = vtableVar;
-				//	auto fieldStoreFun = RTVTable::GenerateReadWriteFieldFunction(builder, vtable);
-				//	builder->CreateCall(GetFieldWriteFunctionType(), fieldStoreFun, { MakeInt<DICTKEYTYPE>(NomNameRepository::Instance().GetNameID(this->Name->ToStdString())), receiver, EnsurePacked(builder, value) })->setCallingConv(NOMCC);
-				//	builder->CreateBr(outBlock);
-				//}
-				//if (purePartialAppBlock != nullptr)
-				//{
-				//	RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Partial Applications have no dictionary fields to write to!", purePartialAppBlock);
-				//}
 				refValueBlock = builder->GetInsertBlock();
 
 			}
@@ -227,7 +201,7 @@ namespace Nom
 		}
 
 
-		NomClosureField::NomClosureField(NomLambda* lambda, const ConstantID name, const ConstantID type, const int index) : Name(name), Type(type), Lambda(lambda), Index(index)
+		NomClosureField::NomClosureField(NomLambda* lambda, const ConstantID name, const ConstantID type, const size_t index) : Name(name), Type(type), Lambda(lambda), Index(index)
 		{
 		}
 		NomClosureField::~NomClosureField()
@@ -242,15 +216,15 @@ namespace Nom
 		{
 			return NomConstants::GetString(Name)->GetText();
 		}
-		NomValue NomClosureField::GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const
+		NomValue NomClosureField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver) const
 		{
 			return NomValue(PWLambdaPrecise(receiver, Lambda).ReadLambdaField(builder, Index), GetType());
 		}
-		void NomClosureField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
+		void NomClosureField::GenerateWrite([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] NomValue receiver, [[maybe_unused]] NomValue value) const
 		{
 			throw new std::exception();
 		}
-		NomRecordField::NomRecordField(NomRecord* structure, const ConstantID name, const ConstantID type, bool isReadOnly, const int index, RegIndex valueRegister) : readonly(isReadOnly), Name(name), Type(type), Structure(structure), Index(index), ValueRegister(valueRegister)
+		NomRecordField::NomRecordField(NomRecord* _structure, const ConstantID _name, const ConstantID _type, bool _isReadOnly, const size_t _index, RegIndex _valueRegister) : readonly(_isReadOnly), Name(_name), Type(_type), Structure(_structure), Index(_index), ValueRegister(_valueRegister)
 		{
 		}
 		NomRecordField::~NomRecordField()
@@ -265,9 +239,9 @@ namespace Nom
 		{
 			return NomConstants::GetString(Name)->GetText();
 		}
-		NomValue NomRecordField::GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const
+		NomValue NomRecordField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver) const
 		{
-			llvm::Value* retval = RecordHeader::GenerateReadField(builder, receiver, Index, this->Structure->GetHasRawInvoke()); //loadinst;
+			llvm::Value* retval = RecordHeader::GenerateReadField(builder, receiver, PWCInt32(Index, false), this->Structure->GetHasRawInvoke()); //loadinst;
 			return NomValue(retval, GetType());
 		}
 		void NomRecordField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
@@ -279,9 +253,9 @@ namespace Nom
 			value = EnsurePacked(builder, value);
 			if (!env->GetInConstructor())
 			{
-				RecordHeader::GenerateWriteWrittenTag(builder, receiver, Index, Structure->Fields.size());
+				RecordHeader::GenerateWriteWrittenTag(builder, receiver, PWCInt32(Index, false), Structure->Fields.size());
 			}
-			RecordHeader::GenerateWriteField(builder, receiver, Index, value, Structure->Fields.size());
+			RecordHeader::GenerateWriteField(builder, receiver, PWCInt32(Index, false), value, Structure->Fields.size());
 			return;
 		}
 	}

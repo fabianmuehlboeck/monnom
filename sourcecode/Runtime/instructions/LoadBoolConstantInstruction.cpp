@@ -14,7 +14,7 @@ namespace Nom
 		{
 
 		}
-		void LoadBoolConstantInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void LoadBoolConstantInstruction::Compile([[maybe_unused]] NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			if (Value)
 			{
@@ -25,7 +25,7 @@ namespace Nom
 				RegisterValue(env, NomValue(NomBoolObjects::GetFalse(*env->Module), NomBoolClass::GetInstance()->GetType(), false));
 			}
 		}
-		void LoadBoolConstantInstruction::Print(bool resolve)
+		void LoadBoolConstantInstruction::Print([[maybe_unused]] bool resolve)
 		{
 
 			cout << "LoadBool ";
@@ -33,7 +33,7 @@ namespace Nom
 			cout << " -> #" << std::dec << WriteRegister;
 			cout << "\n";
 		}
-		void LoadBoolConstantInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void LoadBoolConstantInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 	}

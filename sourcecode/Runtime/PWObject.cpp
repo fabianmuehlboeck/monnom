@@ -16,41 +16,29 @@ namespace Nom
 		{
 			return ObjectHeader::GetLLVMType();
 		}
-		llvm::Value* PWObject::ReadField(NomBuilder &builder, int index, bool targetHasRawInvoke)
+		llvm::Type* PWObject::GetWrappedLLVMType()
 		{
-			return MakeLoad(builder, REFTYPE, builder->CreateGEP(GetLLVMType(), wrapped, {MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::Fields), MakeInt<int32_t>((index + ((targetHasRawInvoke && (NomLambdaOptimizationLevel > 0)) ? 1 : 0)))}));
+			return NLLVMPointer(GetLLVMType());
 		}
-		llvm::Value* PWObject::ReadField(NomBuilder &builder, llvm::Value* index, bool targetHasRawInvoke)
+		llvm::Value* PWObject::ReadField(NomBuilder &builder, PWInt32 index, bool targetHasRawInvoke)
 		{
-			return MakeLoad(builder, REFTYPE, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::Fields), builder->CreateAdd(index, MakeInt32(((targetHasRawInvoke && (NomLambdaOptimizationLevel > 0)) ? 1 : 0))) }));
+			return MakeLoad(builder, REFTYPE, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(ObjectHeaderFields::Fields), ((targetHasRawInvoke && (NomLambdaOptimizationLevel > 0)) ? index.Add1(builder) : index)}));
 		}
-		void PWObject::WriteField(NomBuilder &builder, int index, llvm::Value *value, bool targetHasRawInvoke)
+		void PWObject::WriteField(NomBuilder &builder, PWInt32 index, llvm::Value* value, bool targetHasRawInvoke)
 		{
-			MakeStore(builder, value, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::Fields), MakeInt<int32_t>((index + ((targetHasRawInvoke && (NomLambdaOptimizationLevel > 0)) ? 1 : 0))) }));
-		}
-		void PWObject::WriteField(NomBuilder &builder, llvm::Value* index, llvm::Value* value, bool targetHasRawInvoke)
-		{
-			MakeStore(builder, value, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::Fields), builder->CreateAdd(index, MakeInt32(((targetHasRawInvoke && (NomLambdaOptimizationLevel > 0)) ? 1 : 0))) }));
+			MakeStore(builder, value, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(ObjectHeaderFields::Fields), ((targetHasRawInvoke && (NomLambdaOptimizationLevel > 0)) ? index.Add1(builder) : index) }));
 		}
 		PWTypeArr PWObject::PointerToTypeArguments(NomBuilder& builder)
 		{
 			return builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(ObjectHeaderFields::TypeArgs), MakeInt32(0) });
 		}
-		PWType PWObject::ReadTypeArgument(NomBuilder& builder, int32_t index)
+		PWType PWObject::ReadTypeArgument(NomBuilder& builder, PWInt32 index)
 		{
-			return PWType(MakeInvariantLoad(builder, GetLLVMType(), wrapped, { MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::TypeArgs), MakeInt<int32_t>((-1) - index) }));
+			return PWType(MakeInvariantLoad(builder, GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(ObjectHeaderFields::TypeArgs), index.Neg(builder).Sub1(builder) }));
 		}
-		PWType PWObject::ReadTypeArgument(NomBuilder& builder, llvm::Value* index)
+		void PWObject::WriteTypeArgument(NomBuilder& builder, PWInt32 index, PWType tp)
 		{
-			return PWType(MakeInvariantLoad(builder, GetLLVMType(), wrapped, { MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::TypeArgs), builder->CreateSub(MakeInt<int32_t>(-1),index) }));
-		}
-		void PWObject::WriteTypeArgument(NomBuilder& builder, int32_t index, PWType tp)
-		{
-			MakeInvariantStore(builder, tp, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::TypeArgs), MakeInt<int32_t>((-1) - index) }), AtomicOrdering::Unordered);
-		}
-		void PWObject::WriteTypeArgument(NomBuilder& builder, llvm::Value* index, PWType tp)
-		{
-			MakeInvariantStore(builder, tp, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt<int32_t>(0), MakeInt<int32_t>((unsigned char)ObjectHeaderFields::TypeArgs), builder->CreateSub(MakeInt<int32_t>(-1), index) }), AtomicOrdering::Unordered);
+			MakeInvariantStore(builder, tp, builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(ObjectHeaderFields::TypeArgs), index.Neg(builder).Sub1(builder) }), AtomicOrdering::Unordered);
 		}
 	}
 }

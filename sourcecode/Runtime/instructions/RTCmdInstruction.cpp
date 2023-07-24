@@ -3,7 +3,9 @@
 #include "../NomConstants.h"
 #include "../Runtime.h"
 #include "../CompileHelpers.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/DynamicLibrary.h"
+POPDIAGSUPPRESSION
 #include "../DLLExport.h"
 #include "../RTConfig.h"
 
@@ -28,13 +30,13 @@ namespace Nom
 		{
 		}
 
-		void RTCmdInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void RTCmdInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			static bool once = true;
 			if (once)
 			{
 				once = false;
-				llvm::sys::DynamicLibrary::AddSymbol("RT_NOM_SetDebugLevel", (void*) &RT_NOM_SetDebugLevel);
+				llvm::sys::DynamicLibrary::AddSymbol("RT_NOM_SetDebugLevel", reinterpret_cast<void*>(& RT_NOM_SetDebugLevel));
 			}
 			auto cmd = NomConstants::GetString(cmdConstant)->GetText()->ToStdString();
 			if (cmd.substr(0,14)=="SetDebugLevel ")

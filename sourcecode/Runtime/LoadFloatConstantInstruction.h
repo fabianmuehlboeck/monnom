@@ -10,8 +10,8 @@ namespace Nom
 		public:
 			const double Value;
 			LoadFloatConstantInstruction(const double value, const RegIndex reg);
-			virtual ~LoadFloatConstantInstruction();
-			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			virtual ~LoadFloatConstantInstruction() override;
+			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

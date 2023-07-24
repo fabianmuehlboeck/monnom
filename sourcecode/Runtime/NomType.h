@@ -1,8 +1,9 @@
 #pragma once
-
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Type.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Constants.h"
+POPDIAGSUPPRESSION
 #include "Context.h"
 #include "Defs.h"
 #include "CompileEnv.h"
@@ -48,15 +49,13 @@ namespace Nom
 			static NomTypeRef NothingRef;
 			static NomTypeRef DynamicRef;
 			NomType();
-			virtual ~NomType();
+			virtual ~NomType() override;
 
-			/*bool IsSubtype(NomTypeRef other) const
-			{
-				return GetRTType().IsSubtype(other->GetRTType());
-			}*/
+			NomType(const NomType&) = default;
+			NomType(NomType&&) = default;
 
 			virtual bool ContainsVariables() const = 0;
-			virtual bool ContainsVariableIndex(int index) const = 0;
+			virtual bool ContainsVariableIndex(size_t index) const = 0;
 			virtual llvm::Value * GenerateRTInstantiation(NomBuilder &builder, CompileEnv* env) const = 0;
 
 			virtual size_t GetHashCode() const = 0;
@@ -97,7 +96,7 @@ namespace Nom
 
 			virtual TypeKind GetKind() const = 0;
 
-			virtual intptr_t GetRTElement() const = 0;
+			virtual uintptr_t GetRTElement() const = 0;
 			virtual NomClassTypeRef GetClassInstantiation(const NomNamed *named) const = 0;
 		};
 

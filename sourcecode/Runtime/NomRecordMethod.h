@@ -11,7 +11,6 @@ namespace Nom
 		{
 		public:
 			const NomRecord* Container;
-			//ConstantID ArgumentTypes;
 			ConstantID ReturnType;
 
 			NomRecordMethod(const NomRecord* container, std::string& name, std::string& qname, ConstantID typeParameters, ConstantID returnType, ConstantID argTypes, RegIndex regcount);
@@ -19,8 +18,6 @@ namespace Nom
 			// Inherited via NomCallable
 			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual NomTypeRef GetReturnType(const NomSubstitutionContext* context) const override;
-			//virtual TypeList GetArgumentTypes(const NomSubstitutionContext* context) const override;
-			//virtual int GetArgumentCount() const override;
 			virtual llvm::FunctionType* GetLLVMFunctionType(const NomSubstitutionContext* context = nullptr) const override;
 
 			// Inherited via NomCallableLoaded

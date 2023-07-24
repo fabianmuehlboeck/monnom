@@ -7,7 +7,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		NomTypeParameterLoaded::NomTypeParameterLoaded(const NomMemberContext* parent, int index, ConstantID upperBound, ConstantID lowerBound) : NomTypeParameter(parent,index), upperBoundID(upperBound), lowerBoundID(lowerBound)
+		NomTypeParameterLoaded::NomTypeParameterLoaded(const NomMemberContext* _parent, size_t _index, ConstantID _upperBound, ConstantID _lowerBound) : NomTypeParameter(_parent,_index), upperBoundID(_upperBound), lowerBoundID(_lowerBound)
 		{
 		}
 		NomTypeRef NomTypeParameterLoaded::GetUpperBound() const
@@ -42,7 +42,7 @@ namespace Nom
 			}
 			return lowerBound;
 		}
-		int NomTypeParameter::GetIndex() const {
+		size_t NomTypeParameter::GetIndex() const {
 			if (parent == nullptr) { return index; }
 			else { return index + parent->GetTypeParametersStart(); }
 		}

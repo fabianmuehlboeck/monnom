@@ -18,8 +18,6 @@ namespace Nom
 			NomSignature();
 			NomSignature(const std::vector<NomTypeParameterRef>&& typeArgs, const std::vector<NomTypeRef>&& argTypes, const NomTypeRef returnType);
 
-			~NomSignature();
-
 			NomSignature Substitute(const NomSubstitutionContext* context) const;
 
 			bool SatisfiesArguments(const NomSignature& other, bool optimistic = false) const;

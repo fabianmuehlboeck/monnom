@@ -10,8 +10,10 @@
 #include "NomNameRepository.h"
 #include "CompileHelpers.h"
 #include <iostream>
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 
 using namespace std;
 using namespace llvm;
@@ -21,37 +23,37 @@ namespace Nom
 	{
 		struct RCTTupleHash
 		{
-			std::size_t operator()(std::tuple<const std::string*, int, int>& s) const noexcept
+			std::size_t operator()(std::tuple<const std::string*, size_t, size_t>& s) const noexcept
 			{
 				return std::hash<std::string>()(*std::get<0>(s)) + (std::get<1>(s) * 93739 + std::get<2>(s)) * 45569;
 			}
-			std::size_t operator()(const std::tuple<const std::string*, int, int>& s) const noexcept
+			std::size_t operator()(const std::tuple<const std::string*, size_t, size_t>& s) const noexcept
 			{
 				return std::hash<std::string>()(*std::get<0>(s)) + (std::get<1>(s) * 93739 + std::get<2>(s)) * 45569;
 			}
 		};
 		struct RCTTupleEq
 		{
-			bool operator()(std::tuple<const std::string*, int, int>& lhs, std::tuple<const std::string*, int, int>& rhs) const noexcept
+			bool operator()(std::tuple<const std::string*, size_t, size_t>& lhs, std::tuple<const std::string*, size_t, size_t>& rhs) const noexcept
 			{
 				return std::equal_to<std::string>()(*std::get<0>(lhs), *std::get<0>(rhs)) && std::get<1>(lhs) == std::get<1>(rhs) && std::get<2>(lhs) == std::get<2>(rhs);
 			}
-			bool operator()(const std::tuple<const std::string*, int, int>& lhs, std::tuple<const std::string*, int, int>& rhs) const noexcept
+			bool operator()(const std::tuple<const std::string*, size_t, size_t>& lhs, std::tuple<const std::string*, size_t, size_t>& rhs) const noexcept
 			{
 				return std::equal_to<std::string>()(*std::get<0>(lhs), *std::get<0>(rhs)) && std::get<1>(lhs) == std::get<1>(rhs) && std::get<2>(lhs) == std::get<2>(rhs);
 			}
 		};
-		NomRecordCallTag::NomRecordCallTag(const std::string &name, int typeargcount, int argcount) : name(name), typeargcount(typeargcount), argcount(argcount)
+		NomRecordCallTag::NomRecordCallTag(const std::string &_name, size_t _typeargcount, size_t _argcount) : name(_name), typeargcount(_typeargcount), argcount(_argcount)
 		{
 		}
-		const NomRecordCallTag* NomRecordCallTag::GetCallTag(const std::string& name, int typeargcount, int argcount)
+		const NomRecordCallTag* NomRecordCallTag::GetCallTag(const std::string& _name, size_t _typeargcount, size_t _argcount)
 		{
-			static unordered_map<std::string, NomRecordCallTag*> callTags;
-			std::string key = name + "/" + std::to_string(typeargcount) + "/" + std::to_string(argcount);
+			[[clang::no_destroy]] static unordered_map<std::string, NomRecordCallTag*> callTags;
+			std::string key = _name + "/" + std::to_string(_typeargcount) + "/" + std::to_string(_argcount);
 			auto findResult = callTags.find(key);
 			if (findResult == callTags.end())
 			{
-				auto newrct = new NomRecordCallTag(name, typeargcount, argcount);
+				auto newrct = new NomRecordCallTag(_name, _typeargcount, _argcount);
 				callTags[key] = newrct;
 			}
 			return callTags[key];

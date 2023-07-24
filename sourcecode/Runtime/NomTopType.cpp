@@ -3,7 +3,9 @@
 #include "NomTopType.h"
 #include "NomTypeVar.h"
 #include "RTTypeHead.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/GlobalVariable.h"
+POPDIAGSUPPRESSION
 #include "CompileHelpers.h"
 #include "NomMaybeType.h"
 #include "CallingConvConf.h"
@@ -23,51 +25,51 @@ namespace Nom
 		{
 		}
 
-		bool NomTopType::IsSubtype(NomTypeRef other, bool optimistic) const
+		bool NomTopType::IsSubtype([[maybe_unused]] NomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSupertype(this, optimistic);
 		}
-		bool NomTopType::IsSubtype(NomBottomTypeRef other, bool optimistic) const
+		bool NomTopType::IsSubtype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return false;
 		}
-		bool NomTopType::IsSubtype(NomClassTypeRef other, bool optimistic) const
+		bool NomTopType::IsSubtype([[maybe_unused]] NomClassTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return false;
 		}
-		bool NomTopType::IsSubtype(NomTopTypeRef other, bool optimistic) const
+		bool NomTopType::IsSubtype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomTopType::IsSubtype(NomTypeVarRef other, bool optimistic) const
+		bool NomTopType::IsSubtype([[maybe_unused]] NomTypeVarRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSupertype(this, optimistic);
 		}
-		bool NomTopType::IsSupertype(NomTypeRef other, bool optimistic) const
+		bool NomTopType::IsSupertype([[maybe_unused]] NomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return other->IsSubtype(this, optimistic);
 		}
-		bool NomTopType::IsSupertype(NomBottomTypeRef other, bool optimistic) const
+		bool NomTopType::IsSupertype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomTopType::IsSupertype(NomClassTypeRef other, bool optimistic) const
+		bool NomTopType::IsSupertype([[maybe_unused]] NomClassTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomTopType::IsSupertype(NomTopTypeRef other, bool optimistic) const
+		bool NomTopType::IsSupertype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomTopType::IsSupertype(NomTypeVarRef other, bool optimistic) const
+		bool NomTopType::IsSupertype([[maybe_unused]] NomTypeVarRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		NomTypeRef NomTopType::SubstituteSubtyping(const NomSubstitutionContext* context) const
+		NomTypeRef NomTopType::SubstituteSubtyping([[maybe_unused]] const NomSubstitutionContext* context) const
 		{
 			return this;
 		}
-		llvm::Value* NomTopType::GenerateRTInstantiation(NomBuilder& builder, CompileEnv* env) const
+		llvm::Value* NomTopType::GenerateRTInstantiation([[maybe_unused]] NomBuilder& builder, CompileEnv* env) const
 		{
 			return NomTopType::GetLLVMElement(*(env->Module));
 		}
@@ -97,39 +99,39 @@ namespace Nom
 		{
 			return mod.getGlobalVariable("RT_NOM_TopType");
 		}
-		intptr_t NomTopType::GetRTElement() const
+		uintptr_t NomTopType::GetRTElement() const
 		{
 			return 0; //TODO: implement
 		}
-		NomClassTypeRef NomTopType::GetClassInstantiation(const NomNamed* named) const
+		NomClassTypeRef NomTopType::GetClassInstantiation([[maybe_unused]] const NomNamed* named) const
 		{
 			throw new std::exception();
 		}
-		bool NomTopType::IsDisjoint(NomTypeRef other) const
+		bool NomTopType::IsDisjoint([[maybe_unused]] NomTypeRef other) const
 		{
 			return other->IsDisjoint(this);
 		}
-		bool NomTopType::IsDisjoint(NomBottomTypeRef other) const
+		bool NomTopType::IsDisjoint([[maybe_unused]] NomBottomTypeRef other) const
 		{
 			return true;
 		}
-		bool NomTopType::IsDisjoint(NomClassTypeRef other) const
+		bool NomTopType::IsDisjoint([[maybe_unused]] NomClassTypeRef other) const
 		{
 			return false;
 		}
-		bool NomTopType::IsDisjoint(NomTopTypeRef other) const
+		bool NomTopType::IsDisjoint([[maybe_unused]] NomTopTypeRef other) const
 		{
 			return false;
 		}
-		bool NomTopType::IsDisjoint(NomTypeVarRef other) const
+		bool NomTopType::IsDisjoint([[maybe_unused]] NomTypeVarRef other) const
 		{
 			return false;
 		}
-		bool NomTopType::IsSubtype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomTopType::IsSubtype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomTopType::IsSupertype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomTopType::IsSupertype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
@@ -142,15 +144,15 @@ namespace Nom
 			return true;
 		}
 
-		bool NomTopType::IsSubtype(NomMaybeTypeRef other, bool optimistic) const
+		bool NomTopType::IsSubtype([[maybe_unused]] NomMaybeTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return false;
 		}
-		bool NomTopType::IsSupertype(NomMaybeTypeRef other, bool optimistic) const
+		bool NomTopType::IsSupertype([[maybe_unused]] NomMaybeTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
-		bool NomTopType::IsDisjoint(NomMaybeTypeRef other) const
+		bool NomTopType::IsDisjoint([[maybe_unused]] NomMaybeTypeRef other) const
 		{
 			return false;
 		}
@@ -158,7 +160,7 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
-		bool NomTopType::ContainsVariableIndex(int index) const
+		bool NomTopType::ContainsVariableIndex([[maybe_unused]] size_t index) const
 		{
 			return false;
 		}

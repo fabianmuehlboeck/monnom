@@ -16,8 +16,8 @@ namespace Nom
 	{
 		struct RTTypeArrHash
 		{
-			constexpr size_t operator()(const std::tuple<void**, int, size_t>& _Keyval) const noexcept {
-				return std::get<2>(_Keyval);
+			constexpr size_t operator()(const std::tuple<void**, int, size_t>& _keyval) const noexcept {
+				return std::get<2>(_keyval);
 			}
 		};
 		struct RTTypeArrEquals
@@ -55,16 +55,16 @@ namespace Nom
 			mutable std::unordered_map<const NomInterface*, TypeList> instantiations;
 
 			static std::unordered_map<NomStringRef, NomInterface*, NomStringHash, NomStringEquality>& interfaces() {
-				static std::unordered_map<NomStringRef, NomInterface*, NomStringHash, NomStringEquality> instance; return instance;
+				[[clang::no_destroy]] static std::unordered_map<NomStringRef, NomInterface*, NomStringHash, NomStringEquality> instance; return instance;
 			}
 		protected:
 			mutable bool preprocessed = false;
 			mutable bool compiled = false;
-			NomInterface(const std::string& name);
+			NomInterface();
 
 			mutable llvm::ArrayType* methodTableType = nullptr;
 			mutable llvm::StructType* classDescriptorType = nullptr;
-			std::map<InterfaceID, int32_t> InterfaceTableEntries;
+			std::map<InterfaceID, size_t> InterfaceTableEntries;
 
 			const std::unordered_map<const NomInterface*, TypeList>& GetInstantiations() { return instantiations; }
 
@@ -120,14 +120,14 @@ namespace Nom
 				return false;
 			}
 			virtual void PreprocessInheritance() const;
-			virtual void CompileLLVM(llvm::Module* mod) const {}
+			virtual void CompileLLVM([[maybe_unused]] llvm::Module* mod) const {}
 
 			void AddMethod(NomMethod* method)
 			{
 				Methods.push_back(method);
 			}
 
-			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds(llvm::ArrayRef<NomTypeRef> args) const override;
+			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds() const override;
 			virtual const llvm::ArrayRef<NomInstantiationRef<NomInterface>> GetSuperInterfaces(const NomSubstitutionContext *context=nullptr) const = 0;
 			void AddInstantiation(const NomInstantiationRef<NomInterface> instantiation) const;
 			const std::unordered_map<const NomInterface*, TypeList>& GetInstantiations() const;
@@ -137,7 +137,7 @@ namespace Nom
 			virtual llvm::Constant* GetMethodTable(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			virtual llvm::ArrayType* GetMethodTableType(bool generic = true) const;
 
-			virtual int GetSuperClassCount() const override;
+			virtual size_t GetSuperClassCount() const override;
 
 			virtual llvm::Constant* GetSuperInstances(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::GlobalVariable* gvar, llvm::StructType* stetype) const;
 			virtual llvm::ArrayType* GetSuperInstancesType(bool generic = true) const;
@@ -182,7 +182,7 @@ namespace Nom
 		{
 		private:
 			mutable bool addedOnce = false;
-			llvm::ArrayRef<NomInstantiationRef<NomInterface>> superInterfaces = llvm::ArrayRef<NomInstantiationRef<NomInterface>>((NomInstantiationRef<NomInterface> *)nullptr,(size_t)0);
+			llvm::ArrayRef<NomInstantiationRef<NomInterface>> superInterfaces = llvm::ArrayRef<NomInstantiationRef<NomInterface>>(static_cast<NomInstantiationRef<NomInterface> *>(nullptr), static_cast<size_t>(0));
 		protected:
 			NomInterfaceInternal(NomStringRef name,  const NomMemberContext* parent=nullptr);
 			virtual void ResolveDependencies(NomModule* mod) const override;
@@ -215,3 +215,4 @@ namespace Nom
 	}
 }
 
+extern "C" DLLEXPORT void* RT_NOM_GetUniqueInstantiation(Nom::Runtime::NomInterface * iface, void* rtinterface, void** typearr, size_t * hasharr, int arrsize);

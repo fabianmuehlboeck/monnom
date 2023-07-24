@@ -39,6 +39,19 @@
 #include "PWPtr.h"
 #include "PWTypeVar.h"
 #include "PWSuperInstance.h"
+#include "PWClass.h"
+#include "PWVTable.h"
+#include "PWInterface.h"
+#include "PWRefValue.h"
+#include "PWInt.h"
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wswitch-enum"
+#elif defined(__GNU__)
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#elif defined(_MSC_VER)
+
+#endif
 
 using namespace llvm;
 using namespace std;
@@ -52,30 +65,31 @@ namespace Nom
 			return ft;
 		}
 
-		llvm::Value* GenerateEnvSubstitutions(NomBuilder& builder, CompileEnv* env, BasicBlock** outBlocks, int outBlockCount, NomTypeRef type = nullptr)
+		static llvm::Value* GenerateEnvSubstitutions(NomBuilder& builder, CompileEnv* env, BasicBlock** outBlocks, int outBlockCount, NomTypeRef type = nullptr)
 		{
 			auto targcount = env->GetEnvTypeArgumentCount() + env->GetLocalTypeArgumentCount();
 			if (targcount > 0 && (type == nullptr || type->ContainsVariables()))
 			{
 				if (env->GetLocalTypeArgumentCount() > 0)
 				{
-					PWTypeArr targarr = PWTypeArr::Alloca(builder, targcount, "targarr");
-					RTSubstStackValue rtss = RTSubstStackValue(builder, targarr.SubArr(builder, targcount), nullptr, MakeInt32(targcount), targarr);
-					for (int32_t i = 0; i < targcount; i++)
+					PWTypeArr targarr = PWTypeArr::Alloca(builder, PWInt32(targcount, false), "targarr");
+					for (decltype(targcount) i = 0; i < targcount; i++)
 					{
 						if (type == nullptr || type->ContainsVariableIndex(i))
 						{
 							targarr.Get(builder, targcount - (i + 1)).InvariantStore(builder, PWType(env->GetTypeArgument(builder, i)));
 						}
 					}
-					rtss.MakeTypeListInvariant(builder);
+					targarr.MakeInvariant(builder);
+					auto rtss = PWSubstStack::Alloca(builder, nullptr, targarr);
 					BasicBlock* currentBlock = builder->GetInsertBlock();
 
 					for (int i = 0; i < outBlockCount; i++)
 					{
 						BasicBlock* newOutBlock = BasicBlock::Create(LLVMCONTEXT, "outReleaseSubstStack", currentBlock->getParent());
 						builder->SetInsertPoint(newOutBlock);
-						rtss.MakeRelease(builder);
+						rtss.Release(builder);
+						targarr.Release(builder);
 						builder->CreateBr(outBlocks[i]);
 
 						outBlocks[i] = newOutBlock;
@@ -86,14 +100,14 @@ namespace Nom
 				}
 				else
 				{
-					RTSubstStackValue rtss = RTSubstStackValue(builder, env->GetEnvTypeArgumentArray(builder));
+					auto rtss = PWSubstStack::Alloca(builder, nullptr, env->GetEnvTypeArgumentArray(builder));
 					BasicBlock* currentBlock = builder->GetInsertBlock();
 
 					for (int i = 0; i < outBlockCount; i++)
 					{
 						BasicBlock* newOutBlock = BasicBlock::Create(LLVMCONTEXT, "outReleaseSubstStack", currentBlock->getParent());
 						builder->SetInsertPoint(newOutBlock);
-						rtss.MakeRelease(builder);
+						rtss.Release(builder);
 						builder->CreateBr(outBlocks[i]);
 
 						outBlocks[i] = newOutBlock;
@@ -134,10 +148,10 @@ namespace Nom
 				builder->CreateCall(GetIncMonotonicCastsFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
 
-			int refWeight = 100;
-			int intWeight = 40;
-			int floatWeight = 30;
-			int boolWeight = 20;
+			uint64_t refWeight = 100;
+			uint64_t intWeight = 40;
+			uint64_t floatWeight = 30;
+			uint64_t boolWeight = 20;
 
 			if (type->IsSubtype(NomIntClass::GetInstance()->GetType(), true))
 			{
@@ -161,7 +175,7 @@ namespace Nom
 				intWeight = 1;
 			}
 
-			int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr, refWeight, intWeight, floatWeight, boolWeight);
+			unsigned int valueCases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, &intBlock, &floatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr, refWeight, intWeight, floatWeight, boolWeight);
 
 			SmallVector<tuple<BasicBlock*, Value*, Value*>, 8> targsInObjectSources;
 			Value* vtableVar = nullptr;
@@ -182,7 +196,7 @@ namespace Nom
 					if (type->Arguments.size() != 0)
 					{
 						auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
-						int argpos = 0;
+						size_t argpos = 0;
 						for (auto& arg : type->Arguments)
 						{
 							BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "next", fun);
@@ -212,27 +226,26 @@ namespace Nom
 						typeArgsPHI = builder->CreatePHI(NLLVMPointer(SuperInstanceEntryType()), 2, "matchingEntry");
 						auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
 						auto origTypeArgs = ObjectHeader::GeneratePointerToTypeArguments(builder, value);
-						PWSuperInstance(typeArgsPHI).
-						auto typeArgs = MakeInvariantLoad(builder, , typeArgsPHI, MakeInt32(SuperInstanceEntryFields::TypeArgs), "typeArgs", AtomicOrdering::NotAtomic);
+						auto typeArgs = PWSuperInstance(typeArgsPHI).GetTypeArgs(builder, AtomicOrdering::NotAtomic);
 						auto typeEqFun = RTTypeEq::Instance(false).GetLLVMElement(*fun->getParent());
 						RTSubstStackValue rssv = RTSubstStackValue(builder, origTypeArgs);
-						BasicBlock* outBlock[2];
-						rssv.MakeReleaseBlocks(builder, outBlocks[0], &outBlock[0], outBlocks[1], &outBlock[1]);
-						int pos = 0;
+						BasicBlock* _outBlock[2];
+						rssv.MakeReleaseBlocks(builder, outBlocks[0], &_outBlock[0], outBlocks[1], &_outBlock[1]);
+						size_t pos = 0;
+						llvm::Value* matches = MakeUInt(1, 1);
 						for (auto& arg : type->Arguments)
 						{
-							auto targ = MakeInvariantLoad(builder, builder->CreateGEP(typeArgs, MakeInt32(-(pos + 1))), "typeArg", AtomicOrdering::NotAtomic);
-							auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ, rssv, arg->GetLLVMElement(*fun->getParent()), substStack });
+							auto targ = typeArgs.InvariantLoadElemAt(builder, pos, "typeArg");
+							auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ.wrapped, rssv, arg->GetLLVMElement(*fun->getParent()), substStack });
 							isTypeEq->setCallingConv(NOMCC);
 							CreateExpect(builder, isTypeEq, MakeUInt(1, 1));
 
-							BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "nextArg", fun);
+							matches = builder->CreateAnd(matches, isTypeEq, "typeArgsMatch");
 
-							builder->CreateCondBr(isTypeEq, nextBlock, outBlock[1], GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(nextBlock);
+							//BasicBlock* nextBlock = BasicBlock::Create(LLVMCONTEXT, "nextArg", fun);
+							pos++;
 						}
-						builder->CreateBr(outBlock[0]);
+						builder->CreateCondBr(matches, _outBlock[0], _outBlock[1], GetLikelyFirstBranchMetadata());
 
 						builder->SetInsertPoint(classBlock);
 					}
@@ -242,49 +255,40 @@ namespace Nom
 					}
 					if (type->Named->IsInterface())
 					{
-						auto clsptr = RTClass::GetInterfaceReference(builder, vtableVar);
-						auto supercount = RTInterface::GenerateReadSuperInterfaceCount(builder, clsptr);
-						auto supers = RTInterface::GenerateReadSuperInterfaces(builder, clsptr);
-						BasicBlock* loopHeadBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$head", fun);
-						BasicBlock* loopBodyBlock = BasicBlock::Create(LLVMCONTEXT, "findInterfaceMatch$body", fun);
-						auto origBlock = builder->GetInsertBlock();
-						builder->CreateBr(loopHeadBlock);
+						auto cls = PWClass::FromVTable(vtableVar);
+						auto iface = cls.GetInterface(builder);
+						auto supercount = iface.ReadSuperInterfaceCount(builder).Resize<32>(builder);
+						auto supers = iface.ReadSuperInterfaces(builder).WithSize(supercount);
 
-						builder->SetInsertPoint(loopHeadBlock);
-						auto posPHI = builder->CreatePHI(supercount->getType(), 2, "superIndex");
-						posPHI->addIncoming(MakeIntLike(supercount, 0), origBlock);
-
-						auto stillEntriesLeft = builder->CreateICmpULT(posPHI, supercount);
-						CreateExpect(builder, stillEntriesLeft, MakeUInt(1, 1));
-						builder->CreateCondBr(stillEntriesLeft, loopBodyBlock, outFalseBlock, GetLikelyFirstBranchMetadata());
-
-						builder->SetInsertPoint(loopBodyBlock);
-						auto entry = builder->CreateGEP(supers, posPHI);
-						auto superIface = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superInterface", AtomicOrdering::NotAtomic);
-						auto superMatch = CreatePointerEq(builder, superIface, type->Named->GetInterfaceDescriptor(*fun->getParent()));
-						posPHI->addIncoming(builder->CreateAdd(posPHI, MakeIntLike(posPHI, 1)), builder->GetInsertBlock());
-						builder->CreateCondBr(superMatch, foundMatchBlock, loopHeadBlock);
-						if (typeArgsPHI != nullptr)
-						{
-							typeArgsPHI->addIncoming(entry, builder->GetInsertBlock());
-						}
+						supers.IterateFromStart(builder, outFalseBlock, [fun, type, foundMatchBlock, typeArgsPHI](NomBuilder& nb, PWSuperInstance entry, [[maybe_unused]] PWInt32 pos) {
+							BasicBlock* continueBlock = BasicBlock::Create(nb->getContext(), "findInterfaceMatch$head", fun, nb->GetInsertBlock());
+							auto superIface = entry.GetInterface(nb, AtomicOrdering::NotAtomic);
+							auto superMatch = CreatePointerEq(nb, superIface, type->Named->GetInterfaceDescriptor(*fun->getParent()));
+							nb->CreateCondBr(superMatch, foundMatchBlock, continueBlock);
+							if (typeArgsPHI != nullptr)
+							{
+								typeArgsPHI->addIncoming(entry, nb->GetInsertBlock());
+							}
+							nb->SetInsertPoint(continueBlock);
+							}, false, "findInterfaceMatch$body");
 					}
 					else
 					{
-						auto clsptr = RTClass::GetInterfaceReference(builder, vtableVar);
-						auto supers = RTInterface::GenerateReadSuperInstances(builder, clsptr);
+						auto cls = PWClass::FromVTable(vtableVar);
+						auto iface = cls.GetInterface(builder);
+						auto supercount = iface.ReadSuperClassCount(builder).Resize<32>(builder);
+						auto supers = iface.ReadSuperInstances(builder).WithSize(supercount);
 						BasicBlock* checkSuperClassBlock = BasicBlock::Create(LLVMCONTEXT, "checkSuperClass", fun);
-						auto supercount = RTInterface::GenerateReadSuperClassCount(builder, clsptr);
 						auto superIndex = MakeIntLike(supercount, type->Named->GetSuperClassCount());
 						auto lessThan = builder->CreateICmpULT(superIndex, supercount);
 						CreateExpect(builder, lessThan, MakeUInt(1, 1));
 						builder->CreateCondBr(lessThan, checkSuperClassBlock, outFalseBlock, GetLikelyFirstBranchMetadata());
 
 						builder->SetInsertPoint(checkSuperClassBlock);
-						auto entry = builder->CreateGEP(supers, superIndex);
-						auto superClass = MakeInvariantLoad(builder, builder->CreateGEP(entry, { MakeInt32(0), MakeInt32(SuperInstanceEntryFields::Class) }), "superClass", AtomicOrdering::NotAtomic);
+						auto entry = supers.ElemAt(builder, superIndex, "superEntry");
+						auto superClass = entry.GetInterface(builder, AtomicOrdering::NotAtomic);
 						auto superMatch = CreatePointerEq(builder, superClass, type->Named->GetInterfaceDescriptor(*fun->getParent()));
-						CreateExpect(builder, lessThan, MakeUInt(1, 1));
+						CreateExpect(builder, superMatch, MakeUInt(1, 1));
 						builder->CreateCondBr(superMatch, foundMatchBlock, outFalseBlock, GetLikelyFirstBranchMetadata());
 						if (typeArgsPHI != nullptr)
 						{
@@ -321,7 +325,7 @@ namespace Nom
 				}
 				else
 				{
-					targsInObjectSources.push_back(make_tuple(intBlock, *value, (Value*)ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
+					targsInObjectSources.push_back(make_tuple(intBlock, *value, static_cast<Value*>(ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo()))));
 				}
 			}
 
@@ -338,7 +342,7 @@ namespace Nom
 				}
 				else
 				{
-					targsInObjectSources.push_back(make_tuple(floatBlock, *value, (Value*)ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
+					targsInObjectSources.push_back(make_tuple(floatBlock, *value, static_cast<Value*>(ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo()))));
 				}
 			}
 
@@ -355,7 +359,7 @@ namespace Nom
 				}
 				else
 				{
-					targsInObjectSources.push_back(make_tuple(primitiveIntBlock, *value, (Value*)ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
+					targsInObjectSources.push_back(make_tuple(primitiveIntBlock, *value, static_cast<Value*>(ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo()))));
 				}
 			}
 
@@ -372,7 +376,7 @@ namespace Nom
 				}
 				else
 				{
-					targsInObjectSources.push_back(make_tuple(primitiveFloatBlock, *value, (Value*)ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
+					targsInObjectSources.push_back(make_tuple(primitiveFloatBlock, *value, static_cast<Value*>(ConstantExpr::getPointerCast(NomFloatClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo()))));
 				}
 			}
 
@@ -389,11 +393,11 @@ namespace Nom
 				}
 				else
 				{
-					targsInObjectSources.push_back(make_tuple(primitiveBoolBlock, *value, (Value*)ConstantExpr::getPointerCast(NomBoolClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo())));
+					targsInObjectSources.push_back(make_tuple(primitiveBoolBlock, *value, static_cast<Value*>(ConstantExpr::getPointerCast(NomBoolClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo()))));
 				}
 			}
 
-			int nominalSubtypingCases = targsInObjectSources.size();
+			unsigned int nominalSubtypingCases = static_cast<unsigned int>(targsInObjectSources.size());
 			if (nominalSubtypingCases > 0)
 			{
 				BasicBlock* nominalSubtypingCheck = BasicBlock::Create(LLVMCONTEXT, "nominalSubtypingCheck", fun);
@@ -434,21 +438,21 @@ namespace Nom
 				//builder->CreateIntrinsic(Intrinsic::stackrestore, {}, { stackPtr });
 				auto instanceType = builder->CreateAlloca(RTInstanceType::GetLLVMType(), MakeInt32(1));
 				auto instanceTypeRef = builder->CreatePointerCast(instanceType, POINTERTYPE);
-				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), numtype(size_t)), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), numtype(size_t)), instanceTypeRef });
 				RTInstanceType::CreateInitialization(builder, *fun->getParent(), instanceType, MakeInt<size_t>(0), ConstantPointerNull::get(POINTERTYPE), ifacePtr, typeArgsPtr);
-				auto instanceInvariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), numtype(size_t)), instanceTypeRef });
+				auto instanceInvariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), numtype(size_t)), instanceTypeRef });
 				BasicBlock* outBlocks[2] = { outTrueBlock,outFalseBlock };
-				
+
 				auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
 				RTSubtyping::CreateInlineSubtypingCheck(builder, builder->CreatePointerCast(instanceType, TYPETYPE), nullptr, type, substStack, outBlocks[0], nullptr, outBlocks[1]);
 
 				builder->SetInsertPoint(outBlocks[0]->getTerminator());
-				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
-				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
 
 				builder->SetInsertPoint(outBlocks[1]->getTerminator());
-				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
-				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1)), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
 
 			}
 
@@ -456,7 +460,7 @@ namespace Nom
 			return value;
 		}
 
-		llvm::Value* RTCast::GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, NomValue& value, llvm::Value* type)
+		llvm::Value* RTCast::GenerateMonotonicCast(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue& value, llvm::Value* type)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -521,6 +525,7 @@ namespace Nom
 
 					builder->SetInsertPoint(checkNormalBlock);
 				}
+				LLVM_FALLTHROUGH;
 				//else, fall through (note, if class types don't fall through anymore, their case needs to be moved)
 			case TypeKind::TKClass:
 				//todo: optimize by drilling down to how far the statically known type and target type match, for now, fall through and do everything dynamically
@@ -552,7 +557,7 @@ namespace Nom
 					builder->CreateCondBr(nullcmp, outBlock, IsNotNullBlock, GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(IsNotNullBlock);
-					auto castresult = GenerateCast(builder, env, value, ((NomMaybeTypeRef)type)->PotentialType);
+					auto castresult = GenerateCast(builder, env, value, (static_cast<NomMaybeTypeRef>(type))->PotentialType);
 					BasicBlock* notNullBlock = builder->GetInsertBlock();
 					builder->CreateBr(outBlock);
 
@@ -582,7 +587,7 @@ namespace Nom
 					{
 						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
 					}
-					auto itype = (NomClassTypeRef)type;
+					auto itype = static_cast<NomClassTypeRef>(type);
 					auto monoCastResult = GenerateMonotonicCast(builder, env, value, itype);
 					//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { monoCastResult,MakeUInt(1,1) });
 					if (NomCastStats)
@@ -607,7 +612,7 @@ namespace Nom
 					{
 						castTimeStamp = builder->CreateCall(GetGetTimestampFunction(*fun->getParent()), {});
 					}
-					auto monoCastResult = GenerateMonotonicCast(builder, env, value, env->GetTypeArgument(builder, ((NomTypeVarRef)type)->GetIndex()));
+					auto monoCastResult = GenerateMonotonicCast(builder, env, value, env->GetTypeArgument(builder, (static_cast<NomTypeVarRef>(type))->GetIndex()));
 					//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { monoCastResult,MakeUInt(1,1) });
 					if (NomCastStats)
 					{

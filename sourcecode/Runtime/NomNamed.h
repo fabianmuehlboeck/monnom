@@ -2,8 +2,10 @@
 #include "TypeList.h"
 #include "ClassTypeList.h"
 #include "RTClass.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Module.h"
+POPDIAGSUPPRESSION
 #include "BoehmAllocator.h"
 #include "AvailableExternally.h"
 #include "NomMemberContext.h"
@@ -20,7 +22,7 @@ namespace Nom
 		private:
 			static std::unordered_map<NomStringRef, NomNamed*, NomStringHash, NomStringEquality>& namedTypes()
 			{
-				static std::unordered_map<NomStringRef, NomNamed*, NomStringHash, NomStringEquality> val; return val;
+				[[clang::no_destroy]] static std::unordered_map<NomStringRef, NomNamed*, NomStringHash, NomStringEquality> val; return val;
 			}
 			mutable std::unordered_map<llvm::ArrayRef<NomTypeRef>, NomClassTypeRef, NomTypeRefArrayRefHash, NomTypeRefArrayRefEquality, BoehmAllocator<std::pair<const llvm::ArrayRef<NomTypeRef>, NomClassTypeRef>>> instances;
 		protected:
@@ -43,9 +45,9 @@ namespace Nom
 
 			const std::string GetSymbolRep() const;
 
-			virtual int GetSuperClassCount() const = 0;
+			virtual size_t GetSuperClassCount() const = 0;
 
-			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds(llvm::ArrayRef<NomTypeRef> args) const = 0;
+			virtual const llvm::SmallVector<NomClassTypeRef, 16> GetSuperNameds() const = 0;
 			virtual NomClassTypeRef GetInstantiation(NomTypeRef type) const;
 			intptr_t GetRTElement() const;
 			virtual llvm::Constant* GetInterfaceDescriptor(llvm::Module& mod) const = 0;

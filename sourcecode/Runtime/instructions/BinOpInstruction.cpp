@@ -1,5 +1,7 @@
 #include "BinOpInstruction.h"
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/BasicBlock.h"
+POPDIAGSUPPRESSION
 #include "../Context.h"
 #include "../FloatClass.h"
 #include "../IntClass.h"
@@ -15,6 +17,14 @@
 #include "../RTOutput.h"
 #include "../Metadata.h"
 #include "../PWRefValue.h"
+
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wswitch-enum"
+#elif defined(__GNU__)
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#elif defined(_MSC_VER)
+
+#endif
 
 using namespace std;
 using namespace llvm;
@@ -58,7 +68,7 @@ namespace Nom
 		{
 		}
 
-		void BinOpInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
+		void BinOpInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			static auto boolType = NomBoolClass::GetInstance()->GetType();
 			if (this->Operation == BinaryOperation::RefEquals || this->Operation == BinaryOperation::Equals)
@@ -235,7 +245,10 @@ namespace Nom
 							if (!lefttype->IsDisjoint(NomFloatClass::GetInstance()->GetType()))
 							{
 								BasicBlock* boxedFloatBlock = BasicBlock::Create(LLVMCONTEXT, "leftBoxedFloat", env->Function);
-								auto leftIsFloat = CreatePointerEq(builder, leftvtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
+								if (leftIsFloat == nullptr)
+								{
+									leftIsFloat = CreatePointerEq(builder, leftvtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
+								}
 								auto rightIsInt = CreatePointerEq(builder, rightvtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
 								auto floatAndInt = builder->CreateAnd(leftIsFloat, rightIsInt);
 								CreateExpect(builder, floatAndInt, MakeIntLike(leftIsFloat, 1));
@@ -773,7 +786,7 @@ namespace Nom
 				}
 
 				BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut", fun);
-				PHINode* outPHI = nullptr;;
+				PHINode* outPHI = nullptr;
 				NomValue outValue;
 				if (cases > 1)
 				{
@@ -877,7 +890,7 @@ namespace Nom
 			}
 		}
 
-		void BinOpInstruction::Print(bool resolve)
+		void BinOpInstruction::Print([[maybe_unused]] bool resolve)
 		{
 			cout << "BinOp #";
 			cout << std::dec << Left;
@@ -887,11 +900,11 @@ namespace Nom
 			cout << "\n";
 		}
 
-		void BinOpInstruction::FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
+		void BinOpInstruction::FillConstantDependencies([[maybe_unused]] NOM_CONSTANT_DEPENCENCY_CONTAINER& result)
 		{
 		}
 
-		NomValue BinOpInstruction::CompileLeftInt(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
+		NomValue BinOpInstruction::CompileLeftInt(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left)
 		{
 			auto rightVal = (*env)[Right];
 
@@ -990,7 +1003,7 @@ namespace Nom
 			builder->SetInsertPoint(outBlock);
 			return outValue;
 		}
-		NomValue BinOpInstruction::CompileLeftFloat(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
+		NomValue BinOpInstruction::CompileLeftFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
 		{
 			auto rightVal = (*env)[Right];
 
@@ -1088,7 +1101,7 @@ namespace Nom
 			builder->SetInsertPoint(outBlock);
 			return outValue;
 		}
-		NomValue BinOpInstruction::CompileLeftBool(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
+		NomValue BinOpInstruction::CompileLeftBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
 		{
 			auto rightVal = (*env)[Right];
 
@@ -1165,11 +1178,11 @@ namespace Nom
 			builder->SetInsertPoint(outBlock);
 			return outValue;
 		}
-		NomValue BinOpInstruction::CompileLeftPointer(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
+		NomValue BinOpInstruction::CompileLeftPointer([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, [[maybe_unused]] llvm::Value* left)
 		{
 			return NomValue(GetLLVMRef(nullptr), NomType::Anything);
 		}
-		NomValue BinOpInstruction::CompileIntInt(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right)
+		NomValue BinOpInstruction::CompileIntInt(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
 		{
 			switch (Operation)
 			{
@@ -1202,7 +1215,7 @@ namespace Nom
 			}
 			}
 		}
-		NomValue BinOpInstruction::CompileFloatFloat(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right)
+		NomValue BinOpInstruction::CompileFloatFloat(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
 		{
 			switch (Operation)
 			{
@@ -1235,7 +1248,7 @@ namespace Nom
 			}
 			}
 		}
-		NomValue BinOpInstruction::CompileBoolBool(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right)
+		NomValue BinOpInstruction::CompileBoolBool(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
 		{
 			switch (Operation)
 			{

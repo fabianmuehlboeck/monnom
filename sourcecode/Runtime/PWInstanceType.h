@@ -1,18 +1,19 @@
 #pragma once
 #include "PWType.h"
 #include "NomBuilder.h"
+#include "PWTypeArr.h"
 namespace Nom
 {
 	namespace Runtime
 	{
 		class PWInterface;
-		class PWTypeArr;
 		class PWNomType;
 		class PWInstanceType : public PWType
 		{
 		public:
 			static llvm::Type* GetLLVMType();
-			PWInstanceType(llvm::Value* wrapped) : PWType(wrapped)
+			static llvm::Type* GetWrappedLLVMType();
+			PWInstanceType(llvm::Value* _wrapped) : PWType(_wrapped)
 			{
 
 			}

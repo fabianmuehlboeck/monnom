@@ -1,7 +1,9 @@
 #pragma once
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/ADT/ArrayRef.h"
+POPDIAGSUPPRESSION
 namespace Nom
 {
 	namespace Runtime

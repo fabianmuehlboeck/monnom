@@ -14,7 +14,7 @@ namespace Nom
 	namespace Runtime
 	{
 
-		NomModule::NomModule(NomProgram * program) : program(program)
+		NomModule::NomModule(NomProgram * _program) : program(_program)
 		{
 			AddInternalInterface(IEnumerableInterface::GetInstance());
 			AddInternalClass(NomObjectClass::GetInstance());

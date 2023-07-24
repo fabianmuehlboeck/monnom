@@ -13,7 +13,6 @@ namespace Nom
 			std::string Name;
 			VersionNumber RequiredVersion;
 			LibraryDependency(const std::string &name, const VersionNumber &requiredVersion);
-			~LibraryDependency();
 		};
 	}
 }

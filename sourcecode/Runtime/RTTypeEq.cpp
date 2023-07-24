@@ -10,8 +10,10 @@
 #include "RTMaybeType.h"
 #include "RTInterface.h"
 #include <iostream>
+PUSHDIAGSUPPRESSION
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/IR/Verifier.h"
+POPDIAGSUPPRESSION
 #include "RTCast.h"
 #include "RTSubtyping.h"
 #include "RTSubstStack.h"
@@ -21,21 +23,29 @@
 #include "NullClass.h"
 #include "Metadata.h"
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wswitch-enum"
+#elif defined(__GNU__)
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#elif defined(_MSC_VER)
+
+#endif
+
 using namespace llvm;
 using namespace std;
 namespace Nom
 {
 	namespace Runtime
 	{
-		RTTypeEq::RTTypeEq(bool optimistic) : optimistic(optimistic)
+		RTTypeEq::RTTypeEq(bool _optimistic) : optimistic(_optimistic)
 		{
 
 		}
-		RTTypeEq& RTTypeEq::Instance(bool optimistic)
+		RTTypeEq& RTTypeEq::Instance(bool _optimistic)
 		{
-			static RTTypeEq rtte_opt(true);
-			static RTTypeEq rtte_pess(false);
-			if (optimistic)
+			[[clang::no_destroy]] static RTTypeEq rtte_opt(true);
+			[[clang::no_destroy]] static RTTypeEq rtte_pess(false);
+			if (_optimistic)
 			{
 				return rtte_opt;
 			}
@@ -45,11 +55,11 @@ namespace Nom
 			}
 		}
 
-		llvm::FunctionType* RTTypeEq::GetLLVMFunctionType(bool optimistic)
+		llvm::FunctionType* RTTypeEq::GetLLVMFunctionType(bool _optimistic)
 		{
-			static FunctionType* ft = FunctionType::get(inttype(1), { TYPETYPE, RTSubtyping::TypeArgumentListStackType()->getPointerTo(), TYPETYPE , RTSubtyping::TypeArgumentListStackType()->getPointerTo() }, false);
-			static FunctionType* ftopt = FunctionType::get(inttype(2), { TYPETYPE, RTSubtyping::TypeArgumentListStackType()->getPointerTo(), TYPETYPE , RTSubtyping::TypeArgumentListStackType()->getPointerTo() }, false);
-			if (optimistic)
+			[[clang::no_destroy]] static FunctionType* ft = FunctionType::get(inttype(1), { TYPETYPE, NLLVMPointer(RTSubtyping::TypeArgumentListStackType()), TYPETYPE , NLLVMPointer(RTSubtyping::TypeArgumentListStackType()) }, false);
+			[[clang::no_destroy]] static FunctionType* ftopt = FunctionType::get(inttype(2), { TYPETYPE, NLLVMPointer(RTSubtyping::TypeArgumentListStackType()), TYPETYPE , NLLVMPointer(RTSubtyping::TypeArgumentListStackType()) }, false);
+			if (_optimistic)
 			{
 				return ftopt;
 			}
@@ -252,8 +262,8 @@ namespace Nom
 				builder->SetInsertPoint(argCheckLoopHead);
 				PHINode* ifaceArgPosPHI = builder->CreatePHI(ifaceArgPos->getType(), 2);
 				ifaceArgPosPHI->addIncoming(ifaceArgPos, argCheckBlock);
-				auto currentLeftArg = MakeLoad(builder, builder->CreateGEP(leftTypeArgsPHI, builder->CreateSub(MakeInt32(-1), ifaceArgPosPHI)));
-				auto currentRightArg = MakeLoad(builder, builder->CreateGEP(rightTypeArgsPHI, builder->CreateSub(MakeInt32(-1), ifaceArgPosPHI)));
+				auto currentLeftArg = MakeLoad(builder, TYPETYPE, builder->CreateGEP(arrtype(TYPETYPE,0), leftTypeArgsPHI, builder->CreateSub(MakeInt32(-1), ifaceArgPosPHI)));
+				auto currentRightArg = MakeLoad(builder, TYPETYPE, builder->CreateGEP(arrtype(TYPETYPE, 0), rightTypeArgsPHI, builder->CreateSub(MakeInt32(-1), ifaceArgPosPHI)));
 				auto argsEqual = builder->CreateCall(fun, { currentLeftArg, argCheckLeftSubsts, currentRightArg, argCheckRightSubsts });
 				argsEqual->setCallingConv(NOMCC);
 				if (optimistic)
@@ -316,9 +326,9 @@ namespace Nom
 			break;
 			case TypeKind::TKVariable:
 			{
-				auto rightTypeArgs = MakeInvariantLoad(builder, rightsubstitutions, MakeInt32(TypeArgumentListStackFields::Types));
-				auto rightTypeSubst = MakeInvariantLoad(builder, builder->CreateGEP(rightTypeArgs, MakeInt32(-(((NomTypeVarRef)rightType)->GetIndex() + 1))));
-				auto restRightSubsts = MakeInvariantLoad(builder, rightsubstitutions, MakeInt32(TypeArgumentListStackFields::Next));
+				auto rightTypeArgs = MakeInvariantLoad(builder, RTSubstStack::GetLLVMType(), rightsubstitutions, MakeInt32(TypeArgumentListStackFields::Types));
+				auto rightTypeSubst = MakeInvariantLoad(builder, TYPETYPE, builder->CreateGEP(arrtype(TYPETYPE, 0), rightTypeArgs, { MakeInt32(0), MakeInt32(-((static_cast<NomTypeVarRef>(rightType))->GetIndex() + 1)) }));
+				auto restRightSubsts = MakeInvariantLoad(builder, RTSubstStack::GetLLVMType(), rightsubstitutions, MakeInt32(TypeArgumentListStackFields::Next));
 				Function* typeEqFun = RTTypeEq::Instance(optimisticBlock != nullptr && optimisticBlock != pessimisticBlock).GetLLVMElement(*fun->getParent());
 				auto typeEqResult = builder->CreateCall(typeEqFun, { leftType, leftsubstitutions, rightTypeSubst, restRightSubsts });
 				typeEqResult->setCallingConv(NOMCC);
@@ -339,7 +349,7 @@ namespace Nom
 			{
 				Value* leftPHI = nullptr;
 				Value* leftSubstPHI = nullptr;
-				auto clsType = (NomClassTypeRef)rightType;
+				auto clsType = static_cast<NomClassTypeRef>(rightType);
 				BasicBlock* leftClassTypeBlock = nullptr, * leftInstanceTypeBlock = nullptr;
 				RTTypeHead::GenerateTypeKindSwitchRecurse(builder, leftType, leftsubstitutions, &leftPHI, &leftSubstPHI, &leftClassTypeBlock, &failBlock, &failBlock, &failBlock, &leftInstanceTypeBlock, (optimisticBlock == nullptr ? &failBlock : &optimisticBlock), &failBlock, failBlock);
 
@@ -383,13 +393,13 @@ namespace Nom
 					{
 						nextOptCheck = BasicBlock::Create(LLVMCONTEXT, "typeArgOpt" + std::to_string(argIndex), fun);
 					}
-					auto argLeft = MakeInvariantLoad(builder, builder->CreateGEP(typeArgsPHI, MakeInt32(-argIndex)));
+					auto argLeft = MakeInvariantLoad(builder, TYPETYPE, builder->CreateGEP(arrtype(TYPETYPE,0), typeArgsPHI, MakeInt32(-argIndex)));
 					CreateInlineTypeEqCheck(builder, argLeft, targ, leftSubstPHI, rightsubstitutions, nextCheck, optimisticBlock == pessimisticBlock ? nextCheck : nextOptCheck, failBlock);
 
 					if (curOptCheck != nullptr)
 					{
 						builder->SetInsertPoint(curOptCheck);
-						auto argLeft = MakeInvariantLoad(builder, builder->CreateGEP(typeArgsPHI, MakeInt32(-argIndex)));
+						argLeft = MakeInvariantLoad(builder, TYPETYPE, builder->CreateGEP(arrtype(TYPETYPE,0), typeArgsPHI, MakeInt32(-argIndex)));
 						CreateInlineTypeEqCheck(builder, argLeft, targ, leftSubstPHI, rightsubstitutions, nextOptCheck, nextOptCheck, failBlock);
 					}
 
@@ -418,9 +428,10 @@ namespace Nom
 				if (maybeBlock != nullptr)
 				{
 					builder->SetInsertPoint(maybeBlock);
-					RTTypeEq::CreateInlineTypeEqCheck(builder, leftPHI, ((NomMaybeTypeRef)rightType)->PotentialType, leftSubstPHI, rightsubstitutions, pessimisticBlock, optimisticBlock, failBlock);
+					RTTypeEq::CreateInlineTypeEqCheck(builder, leftPHI, (static_cast<NomMaybeTypeRef>(rightType))->PotentialType, leftSubstPHI, rightsubstitutions, pessimisticBlock, optimisticBlock, failBlock);
 				}
 			}
+			break;
 			default:
 				throw new std::exception();
 			}

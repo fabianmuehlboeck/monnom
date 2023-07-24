@@ -14,16 +14,16 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		static const std::string nomMaybeTypePrefix = "RT_NOM_MAYBETYPE_";
+		[[clang::no_destroy]] static const std::string nomMaybeTypePrefix = "RT_NOM_MAYBETYPE_";
 		NomMaybeType::NomMaybeType(NomTypeRef potentialType) : GloballyNamed(&nomMaybeTypePrefix), PotentialType(potentialType)
 		{
 		}
 		NomMaybeTypeRef NomMaybeType::GetMaybeType(NomTypeRef potentialType)
 		{
-			static std::unordered_map<NomTypeRef, NomMaybeTypeRef> instances;
+			[[clang::no_destroy]] static std::unordered_map<NomTypeRef, NomMaybeTypeRef> instances;
 			if (potentialType->GetKind() == TypeKind::TKMaybe)
 			{
-				return (NomMaybeTypeRef)potentialType;
+				return static_cast<NomMaybeTypeRef>(potentialType);
 			}
 			auto result = instances.find(potentialType);
 			if (result == instances.end())
@@ -42,7 +42,7 @@ namespace Nom
 			llvm::StructType* ttt = RTMaybeType::GetLLVMType();
 			llvm::GlobalVariable* gv = new llvm::GlobalVariable(mod, ttt, true, linkage, nullptr, GetGlobalName());
 			gv->setInitializer(RTMaybeType::GetConstant(mod, this));
-			return llvm::ConstantExpr::getGetElementPtr(ttt, gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(ttt, gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)) }));
 		}
 		llvm::Constant* NomMaybeType::findLLVMElement(llvm::Module& mod) const
 		{
@@ -52,7 +52,7 @@ namespace Nom
 			{
 				return var;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(RTMaybeType::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
+			return llvm::ConstantExpr::getGetElementPtr(RTMaybeType::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)) }));
 		}
 		bool NomMaybeType::ContainsVariables() const
 		{
@@ -79,11 +79,11 @@ namespace Nom
 		{
 			return other->IsSupertype(this, optimistic);
 		}
-		bool NomMaybeType::IsSubtype(NomBottomTypeRef other, bool optimistic) const
+		bool NomMaybeType::IsSubtype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return false;
 		}
-		bool NomMaybeType::IsSubtype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomMaybeType::IsSubtype([[maybe_unused]] NomDynamicTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
@@ -91,7 +91,7 @@ namespace Nom
 		{
 			return PotentialType->IsSubtype(other, optimistic)&&NomNullClass::GetInstance()->GetType()->IsSubtype(other);
 		}
-		bool NomMaybeType::IsSubtype(NomTopTypeRef other, bool optimistic) const
+		bool NomMaybeType::IsSubtype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
@@ -103,31 +103,31 @@ namespace Nom
 		{
 			return other->IsSubtype(this,optimistic);
 		}
-		bool NomMaybeType::IsSupertype(NomDynamicTypeRef other, bool optimistic) const
+		bool NomMaybeType::IsSupertype([[maybe_unused]] NomDynamicTypeRef other, bool optimistic) const
 		{
 			return optimistic;
 		}
-		bool NomMaybeType::IsSupertype(NomBottomTypeRef other, bool optimistic) const
+		bool NomMaybeType::IsSupertype([[maybe_unused]] NomBottomTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return true;
 		}
 		bool NomMaybeType::IsSupertype(NomClassTypeRef other, bool optimistic) const
 		{
-			return PotentialType->IsSupertype(other) || NomNullClass::GetInstance()->GetType()->IsSupertype(other);
+			return PotentialType->IsSupertype(other, optimistic) || NomNullClass::GetInstance()->GetType()->IsSupertype(other, optimistic);
 		}
-		bool NomMaybeType::IsSupertype(NomTopTypeRef other, bool optimistic) const
+		bool NomMaybeType::IsSupertype([[maybe_unused]] NomTopTypeRef other, [[maybe_unused]] bool optimistic) const
 		{
 			return false;
 		}
 		bool NomMaybeType::IsSupertype(NomTypeVarRef other, bool optimistic) const
 		{
-			return PotentialType->IsSupertype(other) || NomNullClass::GetInstance()->GetType()->IsSupertype(other);
+			return PotentialType->IsSupertype(other, optimistic) || NomNullClass::GetInstance()->GetType()->IsSupertype(other, optimistic);
 		}
 		bool NomMaybeType::IsDisjoint(NomTypeRef other) const
 		{
 			return other->IsDisjoint(this);
 		}
-		bool NomMaybeType::IsDisjoint(NomBottomTypeRef other) const
+		bool NomMaybeType::IsDisjoint([[maybe_unused]] NomBottomTypeRef other) const
 		{
 			return true;
 		}
@@ -135,7 +135,7 @@ namespace Nom
 		{
 			return PotentialType->IsDisjoint(other) && NomNullClass::GetInstance()->GetType()->IsDisjoint(other);
 		}
-		bool NomMaybeType::IsDisjoint(NomTopTypeRef other) const
+		bool NomMaybeType::IsDisjoint([[maybe_unused]] NomTopTypeRef other) const
 		{
 			return false;
 		}
@@ -167,16 +167,16 @@ namespace Nom
 		{
 			return TypeKind::TKMaybe;
 		}
-		intptr_t NomMaybeType::GetRTElement() const
+		uintptr_t NomMaybeType::GetRTElement() const
 		{
 			if (head.Entry() != nullptr)
 			{
-				return reinterpret_cast<intptr_t>(head.Entry());
+				return reinterpret_cast<uintptr_t>(head.Entry());
 			}
-			if (auto var = (intptr_t)(void*)NomJIT::Instance().lookup(GetGlobalName())->getValue())
+			if (auto var = NomJIT::Instance().lookup(GetGlobalName())->getValue())
 			{
-				intptr_t ret = (var)+RTMaybeType::HeadOffset();
-				head = RTTypeHead((void*)ret);
+				auto ret = (var)+RTMaybeType::HeadOffset();
+				head = RTTypeHead(reinterpret_cast<void*>(ret));
 				return ret;
 			}
 			auto mmod = GetMainModule();
@@ -184,11 +184,11 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			void* rtct = (nmalloc(RTMaybeType::SizeOf()));
+			void* rtct = reinterpret_cast<void*>(makenmalloc(RTMaybeType, 1));
 			auto initfun = GetCPPInitializerFunction();
-			return (intptr_t)initfun(rtct, (void*)this->PotentialType->GetRTElement(), this->GetHashCode(), this);
+			return reinterpret_cast<uintptr_t>(initfun(rtct, reinterpret_cast<void*>(this->PotentialType->GetRTElement()), this->GetHashCode(), this));
 		}
-		NomClassTypeRef NomMaybeType::GetClassInstantiation(const NomNamed* named) const
+		NomClassTypeRef NomMaybeType::GetClassInstantiation([[maybe_unused]] const NomNamed* named) const
 		{
 			throw new std::exception();
 		}
@@ -200,13 +200,13 @@ namespace Nom
 		{
 			return PotentialType->IsSupertype(other, optimistic);
 		}
-		bool NomMaybeType::IsDisjoint(NomMaybeTypeRef other) const
+		bool NomMaybeType::IsDisjoint([[maybe_unused]] NomMaybeTypeRef other) const
 		{
 			return false;
 		}
 		NomMaybeType::InitFunctionPointer NomMaybeType::GetCPPInitializerFunction()
 		{
-			return (InitFunctionPointer)((intptr_t)(void*)(NomJIT::Instance().lookup("RT_NOM_MaybeTypeInitializer")->getValue()));
+			return reinterpret_cast<InitFunctionPointer>(NomJIT::Instance().lookup("RT_NOM_MaybeTypeInitializer")->getValue());
 		}
 		llvm::Function* NomMaybeType::GetInitializerFunction(llvm::Module& mod)
 		{
@@ -226,12 +226,12 @@ namespace Nom
 				BasicBlock* mainBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 
 				builder->SetInsertPoint(mainBlock);
-				StoreInst* store = MakeStore(builder, mod, MakeInt((unsigned char)TypeKind::TKClass), builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Kind) }));
-				store = MakeStore(builder, mod, hash, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::Hash) }));
-				store = MakeStore(builder, mod, nomtype, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head), MakeInt32((unsigned char)RTTypeHeadFields::NomType) }));
-				store = MakeStore(builder, mod, ptypepointer, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::PotentialType) }));
+				MakeStore(builder, MakeInt((TypeKind::TKClass)), builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::Kind)) }));
+				MakeStore(builder, hash, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::Hash)) }));
+				MakeStore(builder, nomtype, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::NomType)) }));
+				MakeStore(builder, ptypepointer, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::PotentialType)) }));
 
-				builder->CreateRet(builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((unsigned char)RTMaybeTypeFields::Head) }));
+				builder->CreateRet(builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)) }));
 			}
 			return fun;
 		}
@@ -239,7 +239,7 @@ namespace Nom
 		{
 			return TypeReferenceType::Reference;
 		}
-		bool NomMaybeType::ContainsVariableIndex(int index) const
+		bool NomMaybeType::ContainsVariableIndex(size_t index) const
 		{
 			return PotentialType->ContainsVariableIndex(index);
 		}
@@ -248,7 +248,7 @@ namespace Nom
 
 using namespace Nom::Runtime;
 
-extern "C" intptr_t NOM_RTInstantiateMaybe(intptr_t ptype)
+extern "C" uintptr_t NOM_RTInstantiateMaybe(uintptr_t ptype)
 {
 	NomTypeRef tp = reinterpret_cast<NomTypeRef>(ptype);
 	return NomMaybeType::GetMaybeType(tp)->GetRTElement();

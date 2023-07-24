@@ -1,7 +1,7 @@
 #pragma once
-
+PUSHDIAGSUPPRESSION
 #include "llvm/IR/LLVMContext.h"
-
+POPDIAGSUPPRESSION
 namespace Nom
 {
 	namespace Runtime

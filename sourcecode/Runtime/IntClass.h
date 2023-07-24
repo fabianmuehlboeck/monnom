@@ -15,22 +15,8 @@ namespace Nom
 			virtual ~NomIntClass() override;
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 		};
-
-
-		//class RTIntClass : public RTClass
-		//{
-		//public:
-		//	RTIntClass();
-		//	~RTIntClass() {}
-		//};
 	}
 }
 
-//extern const Nom::Runtime::RTIntClass _RTIntClass;
-//extern const Nom::Runtime::NomIntClass _NomIntClass;
-//extern const Nom::Runtime::NomIntClass * const _NomIntClassRef;
-//extern const Nom::Runtime::RTIntClass * const _RTIntClassRef;
-//extern const Nom::Runtime::NomClass * const _NomIntClassNC;
-//extern const Nom::Runtime::RTClass * const _RTIntClassRTC;
-
 extern "C" DLLEXPORT const void * LIB_NOM_Int_ToString_1(int64_t value);
+extern "C" DLLEXPORT int64_t LIB_NOM_Int_Compare_1(const int64_t value, const int64_t other);
