@@ -37,9 +37,9 @@ namespace Nom
 	namespace Runtime
 	{
 
-		CompileEnv::CompileEnv(const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context) : contextName(_contextName), Module(_function == nullptr ? nullptr : _function->getParent()), Function(_function), Context(_context) {}
+		CompileEnv::CompileEnv([[maybe_unused]] NomBuilder& builder, const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context) : contextName(_contextName), Module(_function == nullptr ? nullptr : _function->getParent()), Function(_function), Context(_context) {}
 #pragma region ACompileEnv
-		ACompileEnv::ACompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<llvm::Value*> _typeArgValues) : CompileEnv(_contextName, _function, _context), regcount(_regcount), registers(new NomValue[static_cast<size_t>(_regcount)]), phiNodes(_phiNodes)
+		ACompileEnv::ACompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<llvm::Value*> _typeArgValues) : CompileEnv(builder, _contextName, _function, _context), regcount(_regcount), registers(new RTValuePtr[static_cast<size_t>(_regcount)]), phiNodes(_phiNodes)
 		{
 			if (_directTypeArgs.size() != _typeArgValues.size())
 			{
@@ -51,11 +51,11 @@ namespace Nom
 			}
 		}
 
-		ACompileEnv::ACompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, [[maybe_unused]] int _argument_offset, const std::vector<PhiNode*>* _phiNodes, [[maybe_unused]] const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, [[maybe_unused]] const TypeList _argtypes, [[maybe_unused]] NomTypeRef _thisType) : CompileEnv(_contextName, _function, _context), regcount(_regcount), registers(new NomValue[static_cast<size_t>(_regcount)]), phiNodes(_phiNodes)
+		ACompileEnv::ACompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, [[maybe_unused]] int _argument_offset, const std::vector<PhiNode*>* _phiNodes, [[maybe_unused]] const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, [[maybe_unused]] const TypeList _argtypes, [[maybe_unused]] NomTypeRef _thisType) : CompileEnv(builder, _contextName, _function, _context), regcount(_regcount), registers(new RTValuePtr[static_cast<size_t>(_regcount)]), phiNodes(_phiNodes)
 		{
 		}
-		ACompileEnv::ACompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType)
-			: ACompileEnv(_regcount, _contextName, _function, 0, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType) {}
+		ACompileEnv::ACompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType)
+			: ACompileEnv(builder, _regcount, _contextName, _function, 0, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType) {}
 
 		ACompileEnv::~ACompileEnv()
 		{
@@ -64,12 +64,12 @@ namespace Nom
 
 
 
-		NomValue ACompileEnv::GetArgument(size_t i)
+		RTValuePtr ACompileEnv::GetArgument(size_t i)
 		{
 			return Arguments[i];
 		}
 
-		void ACompileEnv::PushArgument(NomValue arg)
+		void ACompileEnv::PushArgument(RTValuePtr arg)
 		{
 			Arguments.push_back(arg);
 		}
@@ -121,10 +121,10 @@ namespace Nom
 #pragma endregion
 #pragma region AFullArityCompileEnv
 
-		AFullArityCompileEnv::AFullArityCompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<llvm::Value*> _typeArgValues) : ACompileEnv(_regcount, _contextName, _function, _context, _phiNodes, _directTypeArgs, _typeArgValues)
+		AFullArityCompileEnv::AFullArityCompileEnv(NomBuilder &builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<llvm::Value*> _typeArgValues) : ACompileEnv(builder, _regcount, _contextName, _function, _context, _phiNodes, _directTypeArgs, _typeArgValues)
 		{
 		}
-		AFullArityCompileEnv::AFullArityCompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, int _argument_offset, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : ACompileEnv(_regcount, _contextName, _function, _argument_offset, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
+		AFullArityCompileEnv::AFullArityCompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, int _argument_offset, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : ACompileEnv(builder, _regcount, _contextName, _function, _argument_offset, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
 		{
 			size_t argcount = 0;
 			RegIndex argindex = 0;
@@ -138,7 +138,7 @@ namespace Nom
 				}
 				if (argcount == 0 && _thisType != nullptr)
 				{
-					registers[argindex] = NomValue(&Arg, _thisType);
+					registers[argindex] = RTValue::GetValue(builder, &Arg, _thisType);
 					argindex++;
 				}
 				else if (argcount + (_thisType != nullptr ? 0 : 1) <= typeArgCount)
@@ -147,7 +147,7 @@ namespace Nom
 				}
 				else
 				{
-					registers[argindex] = NomValue(&Arg, _argtypes[static_cast<size_t>(argindex - (_thisType == nullptr ? 0 : 1))]);
+					registers[argindex] = RTValue::GetValue(builder, &Arg, _argtypes[static_cast<size_t>(argindex - (_thisType == nullptr ? 0 : 1))]);
 					argindex++;
 				}
 				argcount++;
@@ -157,7 +157,7 @@ namespace Nom
 				throw new std::exception();
 			}
 		}
-		AFullArityCompileEnv::AFullArityCompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : AFullArityCompileEnv(_regcount, _contextName, _function, 0, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
+		AFullArityCompileEnv::AFullArityCompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : AFullArityCompileEnv(builder, _regcount, _contextName, _function, 0, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
 		{
 		}
 		AFullArityCompileEnv::~AFullArityCompileEnv()
@@ -166,19 +166,19 @@ namespace Nom
 #pragma endregion
 #pragma region AVariableArityCompileEnv
 
-		NomValue& AVariableArityCompileEnv::operator[](const RegIndex index)
+		RTValuePtr& AVariableArityCompileEnv::operator[](const RegIndex index)
 		{
 			return ACompileEnv::operator[](index);
 		}
 
-		AVariableArityCompileEnv::AVariableArityCompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<llvm::Value*> _typeArgValues) : ACompileEnv(_regcount, _contextName, _function, _context, _phiNodes, _directTypeArgs, _typeArgValues)
+		AVariableArityCompileEnv::AVariableArityCompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const NomMemberContext* _context, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<llvm::Value*> _typeArgValues) : ACompileEnv(builder, _regcount, _contextName, _function, _context, _phiNodes, _directTypeArgs, _typeArgValues)
 		{
 		}
-		AVariableArityCompileEnv::AVariableArityCompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, int argument_offset, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : ACompileEnv(_regcount, _contextName, _function, argument_offset, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
+		AVariableArityCompileEnv::AVariableArityCompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, int argument_offset, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : ACompileEnv(builder, _regcount, _contextName, _function, argument_offset, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
 		{
 			auto argiter = _function->arg_begin();
 			argiter++;
-			registers[0] = NomValue(argiter, _thisType);
+			registers[0] = RTValue::GetValue(builder, argiter, _thisType);
 			argiter++;
 			size_t argpos = 0;
 			size_t valargpos = 0;
@@ -188,7 +188,7 @@ namespace Nom
 				{
 					if (argpos >= _directTypeArgs.size()&& valargpos<_argtypes.size())
 					{
-						registers[valargpos+1] = NomValue(argiter, _argtypes[valargpos]);
+						registers[valargpos+1] = RTValue::GetValue(builder, argiter, _argtypes[valargpos]);
 						valargpos++;
 					}
 					argiter++;
@@ -200,7 +200,7 @@ namespace Nom
 				argpos++;
 			}
 		}
-		AVariableArityCompileEnv::AVariableArityCompileEnv(const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : AVariableArityCompileEnv(_regcount, _contextName, _function, 0, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
+		AVariableArityCompileEnv::AVariableArityCompileEnv(NomBuilder& builder, const RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const NomMemberContext* _context, const TypeList _argtypes, NomTypeRef _thisType) : AVariableArityCompileEnv(builder, _regcount, _contextName, _function, 0, _phiNodes, _directTypeArgs, _context, _argtypes, _thisType)
 		{
 		}
 		AVariableArityCompileEnv::~AVariableArityCompileEnv()
@@ -208,7 +208,7 @@ namespace Nom
 		}
 #pragma endregion
 #pragma region InstanceMethodCompileEnv
-		InstanceMethodCompileEnv::InstanceMethodCompileEnv(RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, NomClassTypeRef _thisType, const NomMethod* _method) : AFullArityCompileEnv(_regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, _thisType), Method(_method)
+		InstanceMethodCompileEnv::InstanceMethodCompileEnv(NomBuilder& builder, RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, NomClassTypeRef _thisType, const NomMethod* _method) : AFullArityCompileEnv(builder, _regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, _thisType), Method(_method)
 		{
 		}
 
@@ -231,10 +231,14 @@ namespace Nom
 		{
 			return PWObject(registers[0]).PointerToTypeArguments(builder).SubArr(builder, MakeInt32(Method->GetContainer()->GetTypeParametersStart())).WithSize(GetEnvTypeArgumentCount(), false);
 		}
+		NomTypeRef InstanceMethodCompileEnv::GetReturnType()
+		{
+			return Method->GetReturnType();
+		}
 #pragma endregion
 
 #pragma region StaticMethodCompileEnv
-		StaticMethodCompileEnv::StaticMethodCompileEnv(RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomStaticMethod* _method) : AFullArityCompileEnv(_regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, nullptr), Method(_method)
+		StaticMethodCompileEnv::StaticMethodCompileEnv(NomBuilder& builder, RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomStaticMethod* _method) : AFullArityCompileEnv(builder, _regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, nullptr), Method(_method)
 		{
 		}
 
@@ -250,10 +254,14 @@ namespace Nom
 		{
 			return ConstantPointerNull::get(TYPETYPE->getPointerTo());
 		}
+		NomTypeRef StaticMethodCompileEnv::GetReturnType()
+		{
+			return Method->GetReturnType();
+		}
 #pragma endregion
 
 #pragma region ConstructorCompileEnv
-		ConstructorCompileEnv::ConstructorCompileEnv(RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, NomClassTypeRef _thisType, const NomConstructor* _method) : AFullArityCompileEnv(_regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, _thisType), Method(_method)
+		ConstructorCompileEnv::ConstructorCompileEnv(NomBuilder& builder, RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, NomClassTypeRef _thisType, const NomConstructor* _method) : AFullArityCompileEnv(builder, _regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, _thisType), Method(_method)
 		{
 		}
 
@@ -275,7 +283,7 @@ namespace Nom
 
 #pragma region LambdaCompileEnv
 
-		LambdaCompileEnv::LambdaCompileEnv(RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomLambdaBody* _lambda) : AVariableArityCompileEnv(_regcount, _contextName, _function, _phiNodes, _directTypeArgs, _lambda, _argtypes, &NomDynamicType::LambdaInstance()), Lambda(_lambda)
+		LambdaCompileEnv::LambdaCompileEnv(NomBuilder& builder, RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomLambdaBody* _lambda) : AVariableArityCompileEnv(builder, _regcount, _contextName, _function, _phiNodes, _directTypeArgs, _lambda, _argtypes, &NomDynamicType::LambdaInstance()), Lambda(_lambda)
 		{
 		}
 
@@ -300,9 +308,14 @@ namespace Nom
 			return PWLambda(registers[0]).PointerToTypeArguments(builder).WithSize(GetEnvTypeArgumentCount(), false);
 		}
 
+		NomTypeRef LambdaCompileEnv::GetReturnType()
+		{
+			return Lambda->GetReturnType(nullptr);
+		}
+
 #pragma endregion
 #pragma region NomRecord
-		StructMethodCompileEnv::StructMethodCompileEnv(RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomRecordMethod* _method) : AFullArityCompileEnv(_regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, &NomDynamicType::RecordInstance()), Method(_method)
+		StructMethodCompileEnv::StructMethodCompileEnv(NomBuilder& builder, RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, const std::vector<PhiNode*>* _phiNodes, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomRecordMethod* _method) : AFullArityCompileEnv(builder, _regcount, _contextName, _function, _phiNodes, _directTypeArgs, _method, _argtypes, &NomDynamicType::RecordInstance()), Method(_method)
 		{
 		}
 		NomTypeVarValue StructMethodCompileEnv::GetTypeArgument(NomBuilder& builder, size_t i)
@@ -324,9 +337,13 @@ namespace Nom
 		{
 			return PWRecord(registers[0]).PointerToTypeArguments(builder).WithSize(GetEnvTypeArgumentCount(), false);
 		}
+		NomTypeRef StructMethodCompileEnv::GetReturnType()
+		{
+			return this->Method->GetReturnType(nullptr);
+		}
 #pragma endregion
 #pragma region NomRecordInstantiation
-		StructInstantiationCompileEnv::StructInstantiationCompileEnv(RegIndex _regcount, llvm::Function* _function, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomRecord* _structure, RegIndex _endargregcount) : AFullArityCompileEnv(_regcount, *_structure->GetSymbolName(), _function, nullptr, _directTypeArgs, _structure, _argtypes, nullptr), Record(_structure)
+		StructInstantiationCompileEnv::StructInstantiationCompileEnv(NomBuilder& builder, RegIndex _regcount, llvm::Function* _function, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, const NomRecord* _structure, RegIndex _endargregcount) : AFullArityCompileEnv(builder, _regcount, *_structure->GetSymbolName(), _function, nullptr, _directTypeArgs, _structure, _argtypes, nullptr), Record(_structure)
 		{
 			RegIndex endArgBarrier = static_cast<RegIndex>(_argtypes.size()) - _endargregcount;
 			for (RegIndex i = static_cast<RegIndex>(_argtypes.size()); i > 0; i--)
@@ -371,7 +388,7 @@ namespace Nom
 		}
 #pragma endregion
 #pragma region SimpleClassCompileEnv
-		SimpleClassCompileEnv::SimpleClassCompileEnv(llvm::Function* _function, const NomMemberContext* _context, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, NomTypeRef _thisType) : ACompileEnv(static_cast<RegIndex>(_function->getFunctionType()->getNumParams()) - static_cast<RegIndex>(_directTypeArgs.size()), *_context->GetSymbolName(), _function, nullptr, _directTypeArgs, _context, _argtypes, _thisType)
+		SimpleClassCompileEnv::SimpleClassCompileEnv(NomBuilder& builder, llvm::Function* _function, const NomMemberContext* _context, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const TypeList _argtypes, NomTypeRef _thisType) : ACompileEnv(builder, static_cast<RegIndex>(_function->getFunctionType()->getNumParams()) - static_cast<RegIndex>(_directTypeArgs.size()), *_context->GetSymbolName(), _function, nullptr, _directTypeArgs, _context, _argtypes, _thisType)
 		{
 
 		}
@@ -397,11 +414,11 @@ namespace Nom
 		}
 #pragma endregion
 #pragma region CastedValueCompileEnv
-		CastedValueCompileEnv::CastedValueCompileEnv(const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> _instanceTypeArgs, llvm::Function* _fun, size_t _regular_args_begin, size_t _funValueArgCount, llvm::Value* _instanceTypeArrPtr)
-			: CompileEnv("", nullptr, nullptr), directTypeArgs(_directTypeArgs), instanceTypeArgs(_instanceTypeArgs), function(_fun), regularArgsBegin(_regular_args_begin), funValueArgCount(_funValueArgCount), instanceTypeArrPtr(_instanceTypeArrPtr)
+		CastedValueCompileEnv::CastedValueCompileEnv(NomBuilder& builder, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> _instanceTypeArgs, llvm::Function* _fun, size_t _regular_args_begin, size_t _funValueArgCount, llvm::Value* _instanceTypeArrPtr)
+			: CompileEnv(builder, "", nullptr, nullptr), directTypeArgs(_directTypeArgs), instanceTypeArgs(_instanceTypeArgs), function(_fun), regularArgsBegin(_regular_args_begin), funValueArgCount(_funValueArgCount), instanceTypeArrPtr(_instanceTypeArrPtr)
 		{
 		}
-		NomValue& CastedValueCompileEnv::operator[]([[maybe_unused]] const RegIndex index)
+		RTValuePtr& CastedValueCompileEnv::operator[]([[maybe_unused]] const RegIndex index)
 		{
 			throw new std::exception();
 		}
@@ -434,11 +451,11 @@ namespace Nom
 				return NomTypeVarValue(MakeInvariantLoad(builder, TYPETYPE, builder->CreateGEP(NLLVMPointer(TYPETYPE), instanceTypeArrPtr, llvm::ArrayRef<llvm::Value*>({ MakeInt32(-(i + 1))}))), new NomTypeVar(instanceTypeArgs[i]));
 			}
 		}
-		NomValue CastedValueCompileEnv::GetArgument([[maybe_unused]] size_t i)
+		RTValuePtr CastedValueCompileEnv::GetArgument([[maybe_unused]] size_t i)
 		{
 			throw new std::exception();
 		}
-		void CastedValueCompileEnv::PushArgument([[maybe_unused]] NomValue arg)
+		void CastedValueCompileEnv::PushArgument([[maybe_unused]] RTValuePtr arg)
 		{
 			throw new std::exception();
 		}
@@ -479,8 +496,8 @@ namespace Nom
 			throw new std::exception();
 		}
 #pragma endregion
-		CastedValueCompileEnvIndirect::CastedValueCompileEnvIndirect(const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> _instanceTypeArgs, llvm::Function* _fun, size_t _regular_args_begin, size_t _funValueArgCount, llvm::Value* _instanceTypeArrPtr)
-			: CastedValueCompileEnv(_directTypeArgs, _instanceTypeArgs, _fun, _regular_args_begin, _funValueArgCount, _instanceTypeArrPtr)
+		CastedValueCompileEnvIndirect::CastedValueCompileEnvIndirect(NomBuilder& builder, const llvm::ArrayRef<NomTypeParameterRef> _directTypeArgs, const llvm::ArrayRef<NomTypeParameterRef> _instanceTypeArgs, llvm::Function* _fun, size_t _regular_args_begin, size_t _funValueArgCount, llvm::Value* _instanceTypeArrPtr)
+			: CastedValueCompileEnv(builder, _directTypeArgs, _instanceTypeArgs, _fun, _regular_args_begin, _funValueArgCount, _instanceTypeArrPtr)
 		{
 		}
 		NomTypeVarValue CastedValueCompileEnvIndirect::GetTypeArgument(NomBuilder& builder, size_t i)

@@ -175,7 +175,7 @@ namespace Nom
 			{
 				selfType = Container->GetType();
 			}
-			InstanceMethodCompileEnv menv = InstanceMethodCompileEnv(regcount, name, fun, &phiNodes, this->GetDirectTypeParameters(), this->GetArgumentTypes(nullptr), selfType, this);
+			InstanceMethodCompileEnv menv = InstanceMethodCompileEnv(builder, regcount, name, fun, &phiNodes, this->GetDirectTypeParameters(), this->GetArgumentTypes(nullptr), selfType, this);
 			CompileEnv* env = &menv;
 
 

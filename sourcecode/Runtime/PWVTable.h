@@ -18,6 +18,7 @@ namespace Nom
 			{
 
 			}
+			PWBool CompareWith(NomBuilder& builder, PWVTable other) const;
 			llvm::Value* ReadHasRawInvoke(NomBuilder& builder) const;
 			llvm::Value* ReadMethodPointer(NomBuilder& builder, PWInt32 index) const;
 			PWInt8 ReadKind(NomBuilder& builder) const;

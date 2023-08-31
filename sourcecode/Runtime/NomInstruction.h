@@ -1,6 +1,5 @@
 #pragma once
 
-#include "CompileEnv.h"
 #include "Defs.h"
 #include "NomBuilder.h"
 
@@ -8,7 +7,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-
+        class CompileEnv;
 		enum class OpCode : unsigned char {
             Noop = 0,
             PhiNode = 1,

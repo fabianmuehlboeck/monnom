@@ -15,7 +15,7 @@ namespace Nom
 			CastInstruction(const RegIndex reg, const RegIndex value, const ConstantID type);
 			~CastInstruction() override;
 
-			static NomValue MakeCast(NomBuilder &builder, CompileEnv* env, NomValue val, NomTypeRef type);
+			static RTValuePtr MakeCast(NomBuilder &builder, CompileEnv* env, RTValuePtr val, NomTypeRef type);
 
 			// Inherited via NomValueInstruction
 			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;

@@ -278,7 +278,7 @@ namespace Nom
 			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { callTagMatch, MakeUInt(1, 1) });
 			builder->CreateCondBr(callTagMatch, matchBlock, mismatchBlock, GetLikelyFirstBranchMetadata());
 
-			LambdaCompileEnv lenv = LambdaCompileEnv(regcount, fun->getName(), fun, &phiNodes, GetDirectTypeParameters(), GetArgumentTypes(nullptr), this);
+			LambdaCompileEnv lenv = LambdaCompileEnv(builder, regcount, fun->getName(), fun, &phiNodes, GetDirectTypeParameters(), GetArgumentTypes(nullptr), this);
 
 			CompileEnv* env = &lenv;
 

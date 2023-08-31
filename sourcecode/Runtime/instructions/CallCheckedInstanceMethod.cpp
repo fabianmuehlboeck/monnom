@@ -94,7 +94,7 @@ namespace Nom
 			Type* argt;
 			for (size_t i = 0; i < ftype->getNumParams(); i++)
 			{
-				if (i>0 && i <= method.Elem->GetDirectTypeParametersCount())
+				if (i > 0 && i <= method.Elem->GetDirectTypeParametersCount())
 				{
 					continue;
 				}
@@ -142,7 +142,7 @@ namespace Nom
 				Function* fun = method.Elem->GetLLVMFunction(env->Module);
 				auto call = builder->CreateCall(fun, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() + 1));
 				call->setCallingConv(NOMCC);
-				RegisterValue(env, NomValue(call, method.Elem->GetReturnType(&nscl), true));
+				RegisterValue(env, RTValue::GetValue(builder, call, method.Elem->GetReturnType(&nscl), true));
 				return;
 			}
 
@@ -181,7 +181,7 @@ namespace Nom
 				auto call = builder->CreateCall(GetIMTFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, 2 + RTConfig_NumberOfVarargsArguments), "rawInvoke_" + method.Elem->GetContainer()->GetName()->ToStdString());
 				call->setCallingConv(NOMCC);
 				auto result = EnsurePackedUnpacked(builder, call, method.Elem->GetLLVMFunctionType()->getReturnType());
-				RegisterValue(env, NomValue(result, method.Elem->GetReturnType(&nscl), true));
+				RegisterValue(env, RTValue::GetValue(builder, result, method.Elem->GetReturnType(&nscl), true));
 			}
 			else if (method.Elem->GetContainer()->IsInterface())
 			{
@@ -232,7 +232,7 @@ namespace Nom
 				{
 					result = builder->CreateBitOrPointerCast(call, rettype);
 				}
-				RegisterValue(env, NomValue(result, method.Elem->GetReturnType(&nscl), true));
+				RegisterValue(env, RTValue::GetValue(builder, result, method.Elem->GetReturnType(&nscl), true));
 				if (invariantID != nullptr)
 				{
 					builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { invariantID, MakeInt<size_t>(GetNomJITDataLayout().getTypeAllocSize(POINTERTYPE) * argsArrSize), argarr[RTConfig_NumberOfVarargsArguments + 1] });
@@ -249,7 +249,7 @@ namespace Nom
 				auto call = builder->CreateCall(method.Elem->GetLLVMFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + 1));
 				call->setName("calling " + method.Elem->GetName());
 				call->setCallingConv(NOMCC);
-				RegisterValue(env, NomValue(call, method.Elem->GetReturnType(&nscl), true));
+				RegisterValue(env, RTValue::GetValue(builder, call, method.Elem->GetReturnType(&nscl), true));
 			}
 		}
 		void CallCheckedInstanceMethod::Print(bool resolve)

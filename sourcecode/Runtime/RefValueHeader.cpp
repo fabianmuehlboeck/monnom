@@ -25,6 +25,8 @@ POPDIAGSUPPRESSION
 #include "PWRefValue.h"
 #include "PWPtr.h"
 #include "PWObject.h"
+#include "PWFloat.h"
+#include "PWPacked.h"
 
 using namespace llvm;
 using namespace std;
@@ -64,12 +66,12 @@ namespace Nom
 			return mdn;
 		}
 
-		unsigned int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
+		unsigned int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, RTValuePtr value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
 		{
 			return GenerateRefOrPrimitiveValueSwitch(builder, value, refValueBlock, intBlock, floatBlock, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, refWeight, intWeight, floatWeight, boolWeight);
 		}
 
-		unsigned int RefValueHeader::GenerateNominalStructuralSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vTableVar, llvm::BasicBlock** nominalObjectBlockVar, llvm::BasicBlock** structuralValueBlockVar)
+		unsigned int RefValueHeader::GenerateNominalStructuralSwitch(NomBuilder& builder, RTValuePtr refValue, llvm::Value** vTableVar, llvm::BasicBlock** nominalObjectBlockVar, llvm::BasicBlock** structuralValueBlockVar)
 		{
 			if (vTableVar != nullptr && *vTableVar == nullptr)
 			{
@@ -135,7 +137,7 @@ namespace Nom
 			return 2;
 		}
 
-		unsigned int RefValueHeader::GenerateStructuralValueKindSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
+		unsigned int RefValueHeader::GenerateStructuralValueKindSwitch(NomBuilder& builder, RTValuePtr refValue, llvm::Value** vtableVar, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
 		{
 			auto fun = builder->GetInsertBlock()->getParent();
 			if (vtableVar != nullptr && *vtableVar == nullptr)
@@ -211,7 +213,7 @@ namespace Nom
 			return 3;
 		}
 
-		unsigned int RefValueHeader::GenerateRefValueKindSwitch(NomBuilder& builder, NomValue refValue, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
+		unsigned int RefValueHeader::GenerateRefValueKindSwitch(NomBuilder& builder, RTValuePtr refValue, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock)
 		{
 			BasicBlock* structuralObjectBlock = nullptr;
 			unsigned int ret = GenerateNominalStructuralSwitch(builder, refValue, vtableVar, nominalObjectBlock, &structuralObjectBlock);
@@ -223,7 +225,7 @@ namespace Nom
 			return 1;
 		}
 
-		void RefValueHeader::GenerateValueKindSwitch(NomBuilder& builder, NomValue value, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** structuralValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntValVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatValVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolValVar)
+		void RefValueHeader::GenerateValueKindSwitch(NomBuilder& builder, RTValuePtr value, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** structuralValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntValVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatValVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolValVar)
 		{
 			BasicBlock* refValueBlock = nullptr;
 			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, intBlock, floatBlock, unpackPrimitives, primitiveIntBlock, primitiveIntValVar, primitiveFloatBlock, primitiveFloatValVar, primitiveBoolBlock, primitiveBoolValVar);
@@ -234,7 +236,7 @@ namespace Nom
 				RefValueHeader::GenerateNominalStructuralSwitch(builder, value, vtableVar, nominalObjectBlock, structuralValueBlock);
 			}
 		}
-		void RefValueHeader::GenerateValueKindSwitch(NomBuilder& builder, NomValue value, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntValVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatValVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolValVar)
+		void RefValueHeader::GenerateValueKindSwitch(NomBuilder& builder, RTValuePtr value, llvm::Value** vtableVar, llvm::BasicBlock** nominalObjectBlock, llvm::BasicBlock** lambdaBlock, llvm::BasicBlock** recordBlock, llvm::BasicBlock** partialAppBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntValVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatValVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolValVar)
 		{
 			BasicBlock* refValueBlock = nullptr;
 			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, value, &refValueBlock, intBlock, floatBlock, unpackPrimitives, primitiveIntBlock, primitiveIntValVar, primitiveFloatBlock, primitiveFloatValVar, primitiveBoolBlock, primitiveBoolValVar);
@@ -246,8 +248,23 @@ namespace Nom
 			}
 		}
 
-		unsigned int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, NomValue value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
+		unsigned int RefValueHeader::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, RTValuePtr value, llvm::BasicBlock** refValueBlock, llvm::BasicBlock** intBlock, llvm::BasicBlock** floatBlock, bool unpackPrimitives, llvm::BasicBlock** primitiveIntBlock, llvm::Value** primitiveIntVar, llvm::BasicBlock** primitiveFloatBlock, llvm::Value** primitiveFloatVar, llvm::BasicBlock** primitiveBoolBlock, llvm::Value** primitiveBoolVar, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight)
 		{
+			if (unpackPrimitives)
+			{
+				return value->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+					[refValueBlock](NomBuilder& _b, [[maybe_unused]] RTPWValuePtr<PWRefValue> _v) { if (refValueBlock != nullptr) { *refValueBlock = _b->GetInsertBlock(); }},
+					[intBlock, primitiveIntVar](NomBuilder& _b, RTPWValuePtr<PWInt64> _v) { if (intBlock != nullptr) { *intBlock = _b->GetInsertBlock(); } if (primitiveIntVar != nullptr) { *primitiveIntVar = _v; }},
+					[floatBlock, primitiveFloatVar](NomBuilder& _b, RTPWValuePtr<PWFloat> _v) { if (floatBlock != nullptr) { *floatBlock = _b->GetInsertBlock(); } if (primitiveFloatVar != nullptr) { *primitiveFloatVar = _v; }},
+					[primitiveBoolBlock, primitiveBoolVar](NomBuilder& _b, RTPWValuePtr<PWBool> _v) { if (primitiveBoolBlock != nullptr) { *primitiveBoolBlock = _b->GetInsertBlock(); }if (primitiveBoolVar != nullptr) { *primitiveBoolVar = _v; }},
+					unpackPrimitives, refWeight, intWeight, floatWeight, boolWeight);
+			}
+			return value->GenerateRefOrPrimitiveValueSwitch(builder, 
+				[refValueBlock](NomBuilder& _b, RTPWValuePtr<PWRefValue> _v) { if (refValueBlock != nullptr) { *refValueBlock = _b->GetInsertBlock(); }},
+				[intBlock](NomBuilder& _b, RTPWValuePtr<PWInt64> _v) { if (intBlock != nullptr) { *intBlock = _b->GetInsertBlock(); }},
+				[floatBlock](NomBuilder& _b, RTPWValuePtr<PWFloat> _v) { if (floatBlock != nullptr) { *floatBlock = _b->GetInsertBlock(); }},
+				[primitiveBoolBlock](NomBuilder& _b, RTPWValuePtr<PWBool> _v) { if (primitiveBoolBlock != nullptr) { *primitiveBoolBlock = _b->GetInsertBlock(); }},
+				unpackPrimitives, refWeight, intWeight, floatWeight, boolWeight);
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
 			llvm::Type* valType = value->getType();

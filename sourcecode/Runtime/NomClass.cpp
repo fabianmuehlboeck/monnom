@@ -122,7 +122,7 @@ namespace Nom
 
 
 
-		NomValue NomClass::GenerateConstructorCall(NomBuilder& builder, CompileEnv* env, const TypeList typeArgs, llvm::Value* objpointer, llvm::ArrayRef<NomValue> args) const
+		RTValuePtr NomClass::GenerateConstructorCall(NomBuilder& builder, CompileEnv* env, const TypeList typeArgs, llvm::Value* objpointer, llvm::ArrayRef<RTValuePtr> args) const
 		{
 			auto argssize = args.size();
 			NomTypeRef* argTypesBuf = makenmalloc(NomTypeRef, argssize);
@@ -177,7 +177,7 @@ namespace Nom
 					auto callInst = builder->CreateCall(fun, argValues);
 					callInst->setCallingConv(NOMCC);
 					//callInst->setTailCallKind(llvm::CallInst::TailCallKind::TCK_Tail);
-					return NomValue(callInst, this->GetType(typeArgs), true);
+					return RTValue::GetValue(builder, callInst, this->GetType(typeArgs), true);
 				}
 			}
 			throw new std::exception(); //TODO : call dispatcher
@@ -476,7 +476,7 @@ namespace Nom
 				auto argsarr = makealloca(Value*, paramCount);
 
 				NomSubstitutionContextMemberContext nscmc(method);
-				CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
+				CastedValueCompileEnv cvce = CastedValueCompileEnv(builder, method->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
 				for (decltype(paramCount) j = 0; j < paramCount; j++)
 				{
 					Value* curArg = nullptr;
@@ -547,8 +547,8 @@ namespace Nom
 				builder->SetInsertPoint(start);
 				auto nameSwitch = builder->CreateSwitch(namearg, notfound, static_cast<unsigned int>(this->AllFields.size()));
 
-				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType() }), thisType);
-				scce[0] = thisarg;
+				SimpleClassCompileEnv scce = SimpleClassCompileEnv(builder, fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType() }), thisType);
+				scce[0] = RTValue::GetValue(builder, thisarg, thisType);
 
 				for (auto field : AllFields)
 				{
@@ -556,7 +556,7 @@ namespace Nom
 					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "field:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					builder->CreateRet(EnsurePacked(builder, field->GenerateRead(builder, &scce, NomValue(thisarg, thisType))));
+					builder->CreateRet(EnsurePacked(builder, field->GenerateRead(builder, &scce, scce[0])));
 				}
 				builder->SetInsertPoint(notfound);
 				static const char* lookupfailstr = "Could not find any fields with matching name!";
@@ -604,8 +604,8 @@ namespace Nom
 				builder->SetInsertPoint(start);
 				auto nameSwitch = builder->CreateSwitch(namearg, notfound, static_cast<unsigned int>(this->AllFields.size()));
 
-				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType(), &NomDynamicType::Instance() }), thisType);
-				scce[0] = thisarg;
+				SimpleClassCompileEnv scce = SimpleClassCompileEnv(builder, fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType(), &NomDynamicType::Instance() }), thisType);
+				scce[0] = RTValue::GetValue(builder, thisarg, thisType);
 
 				for (auto field : AllFields)
 				{
@@ -641,7 +641,7 @@ namespace Nom
 					{
 						writeValue = EnsurePacked(builder, writeValue);
 					}
-					field->GenerateWrite(builder, &scce, NomValue(thisarg, thisType), NomValue(writeValue, field->GetType()));
+					field->GenerateWrite(builder, &scce, scce[0], RTValue::GetValue(builder, writeValue, field->GetType()));
 					builder->CreateRetVoid();
 				}
 				builder->SetInsertPoint(notfound);
@@ -760,7 +760,7 @@ namespace Nom
 					auto argsarr = makealloca(Value*, paramCount);
 
 					NomSubstitutionContextMemberContext nscmc(meth);
-					CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
+					CastedValueCompileEnv cvce = CastedValueCompileEnv(builder, meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
 					for (decltype(paramCount) j = 0; j < paramCount; j++)
 					{
 						Value* curArg = nullptr;

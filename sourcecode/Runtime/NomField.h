@@ -8,6 +8,7 @@ POPDIAGSUPPRESSION
 #include "NomValue.h"
 #include <set>
 #include "NomBuilder.h"
+#include "RTValuePtr.h"
 
 namespace Nom
 {
@@ -15,6 +16,7 @@ namespace Nom
 	{
 		class NomClass;
 		class NomLambda;
+		class NomRecord;
 		class NomField
 		{
 		public:
@@ -24,8 +26,8 @@ namespace Nom
 			NomField(NomField&&) = default;
 			virtual NomTypeRef GetType() const = 0;
 			virtual NomStringRef GetName() const = 0;
-			virtual NomValue GenerateRead(NomBuilder &builder, CompileEnv* env, NomValue receiver) const = 0;
-			virtual void GenerateWrite(NomBuilder &builder, CompileEnv* env, NomValue receiver, NomValue value) const = 0;
+			virtual RTValuePtr GenerateRead(NomBuilder &builder, CompileEnv* env, RTValuePtr receiver) const = 0;
+			virtual void GenerateWrite(NomBuilder &builder, CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const = 0;
 			virtual bool IsReadOnly() const = 0;
 			virtual bool IsVolatile() const = 0;
 			virtual Visibility GetVisibility() const = 0;
@@ -54,8 +56,8 @@ namespace Nom
 
 			virtual NomTypeRef GetType() const override;
 			virtual NomStringRef GetName() const override;
-			virtual NomValue GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const override;
-			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const override;
+			virtual RTValuePtr GenerateRead(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver) const override;
+			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const override;
 			virtual bool IsReadOnly() const override { return readonly; }
 			virtual bool IsVolatile() const override { return isvolatile; }
 			virtual Visibility GetVisibility() const override { return visibility; }
@@ -81,8 +83,8 @@ namespace Nom
 
 			virtual NomTypeRef GetType() const override;
 			virtual NomStringRef GetName() const override;
-			virtual NomValue GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const override;
-			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const override;
+			virtual RTValuePtr GenerateRead(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver) const override;
+			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const override;
 
 			virtual bool IsReadOnly() const override { return false; }
 			virtual bool IsVolatile() const override { return false; }
@@ -112,8 +114,8 @@ namespace Nom
 			virtual Visibility GetVisibility() const override { return Visibility::Private; }
 			virtual NomTypeRef GetType() const override;
 			virtual NomStringRef GetName() const override;
-			virtual NomValue GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const override;
-			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const override;
+			virtual RTValuePtr GenerateRead(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver) const override;
+			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const override;
 			virtual void PushDependencies([[maybe_unused]] std::set<ConstantID>& set) const override
 			{
 				set.insert(Name);
@@ -143,8 +145,8 @@ namespace Nom
 			virtual Visibility GetVisibility() const override { return Visibility::Public; }
 			virtual NomTypeRef GetType() const override;
 			virtual NomStringRef GetName() const override;
-			virtual NomValue GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const override;
-			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const override;
+			virtual RTValuePtr GenerateRead(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver) const override;
+			virtual void GenerateWrite(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const override;
 			virtual void PushDependencies([[maybe_unused]] std::set<ConstantID>& set) const override
 			{
 				set.insert(Name);

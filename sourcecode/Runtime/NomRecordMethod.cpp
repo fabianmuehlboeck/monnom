@@ -24,7 +24,7 @@ namespace Nom
 			auto fun = Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(NOMCC);
 
-			StructMethodCompileEnv menv = StructMethodCompileEnv(regcount, name, fun, &phiNodes, this->GetDirectTypeParameters(), this->GetArgumentTypes(nullptr), this);
+			StructMethodCompileEnv menv = StructMethodCompileEnv(builder, regcount, name, fun, &phiNodes, this->GetDirectTypeParameters(), this->GetArgumentTypes(nullptr), this);
 			CompileEnv* env = &menv;
 
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, name + "start", fun);

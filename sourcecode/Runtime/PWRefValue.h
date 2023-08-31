@@ -16,7 +16,6 @@ namespace Nom
 			{
 
 			}
-			llvm::Value* ReadTypeTag(NomBuilder& builder) const;
 			PWVTable ReadVTable(NomBuilder& builder) const;
 			void WriteVTable(NomBuilder& builder, PWVTable vtbl) const;
 			llvm::Value* WriteVTableCMPXCHG(NomBuilder& builder, PWVTable vtbl, PWVTable orig) const;

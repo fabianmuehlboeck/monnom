@@ -17,6 +17,10 @@ POPDIAGSUPPRESSION
 #include "../RTOutput.h"
 #include "../Metadata.h"
 #include "../PWRefValue.h"
+#include "../PWPacked.h"
+#include "../PWFloat.h"
+#include "../PWInt.h"
+#include "../PWObject.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wswitch-enum"
@@ -71,15 +75,34 @@ namespace Nom
 		void BinOpInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			static auto boolType = NomBoolClass::GetInstance()->GetType();
-			if (this->Operation == BinaryOperation::RefEquals || this->Operation == BinaryOperation::Equals)
+			if (this->Operation == BinaryOperation::RefEquals)
 			{
-
+				auto left = (*env)[Left];
+				auto right = (*env)[Right];
+				if (left->getType() != right->getType())
+				{
+					RegisterValue(env, RTValue::GetValue(builder, MakeUInt(1, 0), GetBoolClassType()));
+					return;
+				}
+				if (left->getType()->isIntegerTy())
+				{
+					RegisterValue(env, RTValue::GetValue(builder, builder->CreateICmpEQ(left, right, "isRefEqual"), GetBoolClassType()));
+					return;
+				}
+				if (left->getType()->isDoubleTy())
+				{
+					RegisterValue(env, RTValue::GetValue(builder, builder->CreateFCmpOEQ(left, right, "isRefEqual"), GetBoolClassType()));
+					return;
+				}
+				RegisterValue(env, RTValue::GetValue(builder, builder->CreateICmpEQ(builder->CreatePtrToInt(left, numtype(intptr_t)), builder->CreatePtrToInt(right, numtype(intptr_t)), "isRefEqual"), GetBoolClassType()));
+				return;
+			}
+			else if(this->Operation == BinaryOperation::Equals)
+			{
 				auto inttype = NomIntClass::GetInstance()->GetType();
 				auto floattype = NomFloatClass::GetInstance()->GetType();
 				auto left = (*env)[Left];
 				auto right = (*env)[Right];
-				PWRefValue leftrv = left.AsPWRef();
-				PWRefValue rightrv = right.AsPWRef();
 
 				auto lefttype = left.GetNomType();
 				auto righttype = right.GetNomType();
@@ -93,7 +116,7 @@ namespace Nom
 						auto baseeq = builder->CreateICmpEQ(builder->CreatePtrToInt(left, INTTYPE, "leftAddr"), builder->CreatePtrToInt(right, INTTYPE, "rightaddr"), "refequal");
 						if (lefttype->IsDisjoint(righttype) || (lefttype->IsDisjoint(inttype) && lefttype->IsDisjoint(floattype)) || (righttype->IsDisjoint(inttype) && righttype->IsDisjoint(floattype)))
 						{
-							RegisterValue(env, NomValue(baseeq, NomBoolClass::GetInstance()->GetType()));
+							RegisterValue(env, RTValue::GetValue(builder, baseeq, NomBoolClass::GetInstance()->GetType()));
 							return;
 						}
 						llvm::BasicBlock* nrefeqblock = llvm::BasicBlock::Create(LLVMCONTEXT, "NREFEQ", env->Function);
@@ -104,17 +127,17 @@ namespace Nom
 					}
 					else if (left->getType() == INTTYPE)
 					{
-						RegisterValue(env, NomValue(builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType()));
+						RegisterValue(env, RTValue::GetValue(builder, builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType()));
 						return;
 					}
 					else if (left->getType() == FLOATTYPE)
 					{
-						RegisterValue(env, NomValue(builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType()));
+						RegisterValue(env, RTValue::GetValue(builder, builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType()));
 						return;
 					}
 					else if (left->getType() == BOOLTYPE)
 					{
-						RegisterValue(env, NomValue(builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType()));
+						RegisterValue(env, RTValue::GetValue(builder, builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType()));
 						return;
 					}
 					else
@@ -133,6 +156,8 @@ namespace Nom
 				}
 				BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operands for primitive operation!");
 
+				PWRefValue leftrv = left->AsRefValue(builder)->value;
+				PWRefValue rightrv = right->AsRefValue(builder)->value;
 				llvm::BasicBlock* startBlock = builder->GetInsertBlock();
 				llvm::BasicBlock* outblock = llvm::BasicBlock::Create(LLVMCONTEXT, "REFEQOUT", env->Function);
 
@@ -762,7 +787,7 @@ namespace Nom
 				outPHI->addIncoming(MakeUInt(1, 1), eqblock);
 				outPHI->addIncoming(MakeUInt(1, 0), neqblock);
 
-				RegisterValue(env, NomValue(outPHI, NomBoolClass::GetInstance()->GetType()));
+				RegisterValue(env, RTValue::GetValue(builder, outPHI, NomBoolClass::GetInstance()->GetType()));
 			}
 			else
 			{
@@ -787,18 +812,18 @@ namespace Nom
 
 				BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut", fun);
 				PHINode* outPHI = nullptr;
-				NomValue outValue;
+				RTValuePtr outValue;
 				if (cases > 1)
 				{
 					builder->SetInsertPoint(outBlock);
 					outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult");
-					outValue = NomValue(outPHI);
+					outValue = RTValue::GetValue(builder, outPHI);
 				}
 				if (primitiveIntBlock != nullptr)
 				{
 					builder->SetInsertPoint(primitiveIntBlock);
 					auto retVal = CompileLeftInt(builder, env, lineno, leftIntValue);
-					if (retVal->getValueID() == Value::PoisonValueVal)
+					if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 					{
 						if (builder->GetInsertBlock()->getTerminator() == nullptr)
 						{
@@ -818,8 +843,7 @@ namespace Nom
 						}
 						else
 						{
-							retVal = EnsurePacked(builder, retVal);
-							outPHI->addIncoming(retVal, builder->GetInsertBlock());
+							outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 						}
 						builder->CreateBr(outBlock);
 					}
@@ -828,7 +852,7 @@ namespace Nom
 				{
 					builder->SetInsertPoint(primitiveFloatBlock);
 					auto retVal = CompileLeftFloat(builder, env, lineno, leftFloatValue);
-					if (retVal->getValueID() == Value::PoisonValueVal)
+					if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 					{
 						if (builder->GetInsertBlock()->getTerminator() == nullptr)
 						{
@@ -848,8 +872,7 @@ namespace Nom
 						}
 						else
 						{
-							retVal = EnsurePacked(builder, retVal);
-							outPHI->addIncoming(retVal, builder->GetInsertBlock());
+							outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 						}
 						builder->CreateBr(outBlock);
 					}
@@ -858,7 +881,7 @@ namespace Nom
 				{
 					builder->SetInsertPoint(primitiveBoolBlock);
 					auto retVal = CompileLeftBool(builder, env, lineno, leftBoolValue);
-					if (retVal->getValueID() == Value::PoisonValueVal)
+					if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 					{
 						if (builder->GetInsertBlock()->getTerminator() == nullptr)
 						{
@@ -878,8 +901,7 @@ namespace Nom
 						}
 						else
 						{
-							retVal = EnsurePacked(builder, retVal);
-							outPHI->addIncoming(retVal, builder->GetInsertBlock());
+							outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 						}
 						builder->CreateBr(outBlock);
 					}
@@ -904,7 +926,7 @@ namespace Nom
 		{
 		}
 
-		NomValue BinOpInstruction::CompileLeftInt(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left)
+		RTValuePtr BinOpInstruction::CompileLeftInt(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left)
 		{
 			auto rightVal = (*env)[Right];
 
@@ -927,22 +949,22 @@ namespace Nom
 			if (cases == 0)
 			{
 				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
 			}
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftInt", fun);
 			PHINode* outPHI = nullptr;
-			NomValue outValue;
+			RTValuePtr outValue;
 			if (cases > 1)
 			{
 				builder->SetInsertPoint(outBlock);
 				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftInt");
-				outValue = NomValue(outPHI);
+				outValue = RTValue::GetValue(builder, outPHI);
 			}
 			if (primitiveIntBlock != nullptr)
 			{
 				builder->SetInsertPoint(primitiveIntBlock);
 				auto retVal = CompileIntInt(builder, env, lineno, left, rightIntValue);
-				if (retVal->getValueID() == Value::PoisonValueVal)
+				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 				{
 
 					if (builder->GetInsertBlock()->getTerminator() == nullptr)
@@ -963,8 +985,7 @@ namespace Nom
 					}
 					else
 					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
+						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 					}
 					builder->CreateBr(outBlock);
 				}
@@ -973,7 +994,7 @@ namespace Nom
 			{
 				builder->SetInsertPoint(primitiveFloatBlock);
 				auto retVal = CompileFloatFloat(builder, env, lineno, builder->CreateSIToFP(left, FLOATTYPE, "leftAsFloat"), rightFloatValue);
-				if (retVal->getValueID() == Value::PoisonValueVal)
+				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 				{
 
 					if (builder->GetInsertBlock()->getTerminator() == nullptr)
@@ -994,8 +1015,7 @@ namespace Nom
 					}
 					else
 					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
+						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 					}
 					builder->CreateBr(outBlock);
 				}
@@ -1003,7 +1023,7 @@ namespace Nom
 			builder->SetInsertPoint(outBlock);
 			return outValue;
 		}
-		NomValue BinOpInstruction::CompileLeftFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
+		RTValuePtr BinOpInstruction::CompileLeftFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
 		{
 			auto rightVal = (*env)[Right];
 
@@ -1026,23 +1046,23 @@ namespace Nom
 			if (cases == 0)
 			{
 				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
 			}
 
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftFloat", fun);
 			PHINode* outPHI = nullptr;
-			NomValue outValue;
+			RTValuePtr outValue;
 			if (cases > 1)
 			{
 				builder->SetInsertPoint(outBlock);
 				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftFloat");
-				outValue = NomValue(outPHI);
+				outValue = RTValue::GetValue(builder, outPHI);
 			}
 			if (primitiveIntBlock != nullptr)
 			{
 				builder->SetInsertPoint(primitiveIntBlock);
 				auto retVal = CompileFloatFloat(builder, env, lineno, left, builder->CreateSIToFP(rightIntValue, FLOATTYPE, "rightAsFloat"));
-				if (retVal->getValueID() == Value::PoisonValueVal)
+				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 				{
 
 					if (builder->GetInsertBlock()->getTerminator() == nullptr)
@@ -1063,8 +1083,7 @@ namespace Nom
 					}
 					else
 					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
+						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 					}
 					builder->CreateBr(outBlock);
 				}
@@ -1072,7 +1091,8 @@ namespace Nom
 			if (primitiveFloatBlock != nullptr)
 			{
 				builder->SetInsertPoint(primitiveFloatBlock);
-				auto retVal = CompileFloatFloat(builder, env, lineno, left, rightFloatValue); if (retVal->getValueID() == Value::PoisonValueVal)
+				auto retVal = CompileFloatFloat(builder, env, lineno, left, rightFloatValue);
+				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 				{
 					if (builder->GetInsertBlock()->getTerminator() == nullptr)
 					{
@@ -1092,8 +1112,7 @@ namespace Nom
 					}
 					else
 					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
+						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 					}
 					builder->CreateBr(outBlock);
 				}
@@ -1101,7 +1120,7 @@ namespace Nom
 			builder->SetInsertPoint(outBlock);
 			return outValue;
 		}
-		NomValue BinOpInstruction::CompileLeftBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
+		RTValuePtr BinOpInstruction::CompileLeftBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
 		{
 			auto rightVal = (*env)[Right];
 
@@ -1132,23 +1151,23 @@ namespace Nom
 				//auto nullVal = GetLLVMRef(nullptr);
 				//nullVal->setName("INVALID_VALUE");
 				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
 			}
 
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftBool", fun);
 			PHINode* outPHI = nullptr;
-			NomValue outValue;
+			RTValuePtr outValue;
 			if (cases > 1)
 			{
 				builder->SetInsertPoint(outBlock);
 				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftBool");
-				outValue = NomValue(outPHI);
+				outValue = RTValue::GetValue(builder, outPHI);
 			}
 			if (primitiveBoolBlock != nullptr)
 			{
 				builder->SetInsertPoint(primitiveBoolBlock);
 				auto retVal = CompileBoolBool(builder, env, lineno, left, rightBoolValue);
-				if (retVal->getValueID() == Value::PoisonValueVal)
+				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
 				{
 
 					if (builder->GetInsertBlock()->getTerminator() == nullptr)
@@ -1169,8 +1188,7 @@ namespace Nom
 					}
 					else
 					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
+						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
 					}
 					builder->CreateBr(outBlock);
 				}
@@ -1178,94 +1196,94 @@ namespace Nom
 			builder->SetInsertPoint(outBlock);
 			return outValue;
 		}
-		NomValue BinOpInstruction::CompileLeftPointer([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, [[maybe_unused]] llvm::Value* left)
+		RTValuePtr BinOpInstruction::CompileLeftPointer([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, [[maybe_unused]] llvm::Value* left)
 		{
-			return NomValue(GetLLVMRef(nullptr), NomType::Anything);
+			return RTValue::GetValue(builder, GetLLVMRef(nullptr), NomType::AnythingRef);
 		}
-		NomValue BinOpInstruction::CompileIntInt(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
-		{
-			switch (Operation)
-			{
-			case BinaryOperation::Add:
-				return NomValue(builder->CreateAdd(left, right), NomIntClass::GetInstance()->GetType());
-			case BinaryOperation::Subtract:
-				return NomValue(builder->CreateSub(left, right), NomIntClass::GetInstance()->GetType());
-			case BinaryOperation::Multiply:
-				return NomValue(builder->CreateMul(left, right), NomIntClass::GetInstance()->GetType());
-			case BinaryOperation::Divide:
-				return NomValue(builder->CreateSDiv(left, right), NomIntClass::GetInstance()->GetType());
-			case BinaryOperation::Mod:
-				return NomValue(builder->CreateSRem(left, right), NomIntClass::GetInstance()->GetType());
-			case BinaryOperation::GreaterThan:
-				return NomValue(builder->CreateICmpSGT(left, right), NomBoolClass::GetInstance()->GetType());
-			case BinaryOperation::LessThan:
-				return NomValue(builder->CreateICmpSLT(left, right), NomBoolClass::GetInstance()->GetType());
-			case BinaryOperation::GreaterOrEqualTo:
-				return NomValue(builder->CreateICmpSGE(left, right), NomBoolClass::GetInstance()->GetType());
-			case BinaryOperation::LessOrEqualTo:
-				return NomValue(builder->CreateICmpSLE(left, right), NomBoolClass::GetInstance()->GetType());
-			case BinaryOperation::Equals:
-				return NomValue(builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
-			case BinaryOperation::RefEquals:
-				return NomValue(builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
-			default:
-			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
-			}
-			}
-		}
-		NomValue BinOpInstruction::CompileFloatFloat(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
+		RTValuePtr BinOpInstruction::CompileIntInt(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
 		{
 			switch (Operation)
 			{
 			case BinaryOperation::Add:
-				return NomValue(builder->CreateFAdd(left, right), NomFloatClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateAdd(left, right), NomIntClass::GetInstance()->GetType());
 			case BinaryOperation::Subtract:
-				return NomValue(builder->CreateFSub(left, right), NomFloatClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateSub(left, right), NomIntClass::GetInstance()->GetType());
 			case BinaryOperation::Multiply:
-				return NomValue(builder->CreateFMul(left, right), NomFloatClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateMul(left, right), NomIntClass::GetInstance()->GetType());
 			case BinaryOperation::Divide:
-				return NomValue(builder->CreateFDiv(left, right), NomFloatClass::GetInstance()->GetType());
-			case BinaryOperation::Equals:
-				return NomValue(builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType());
-			case BinaryOperation::RefEquals:
-				return NomValue(builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateSDiv(left, right), NomIntClass::GetInstance()->GetType());
 			case BinaryOperation::Mod:
-				return NomValue(builder->CreateFRem(left, right), NomFloatClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateSRem(left, right), NomIntClass::GetInstance()->GetType());
 			case BinaryOperation::GreaterThan:
-				return NomValue(builder->CreateFCmpOGT(left, right), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateICmpSGT(left, right), NomBoolClass::GetInstance()->GetType());
 			case BinaryOperation::LessThan:
-				return NomValue(builder->CreateFCmpOLT(left, right), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateICmpSLT(left, right), NomBoolClass::GetInstance()->GetType());
 			case BinaryOperation::GreaterOrEqualTo:
-				return NomValue(builder->CreateFCmpOGE(left, right), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateICmpSGE(left, right), NomBoolClass::GetInstance()->GetType());
 			case BinaryOperation::LessOrEqualTo:
-				return NomValue(builder->CreateFCmpOLE(left, right), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateICmpSLE(left, right), NomBoolClass::GetInstance()->GetType());
+			case BinaryOperation::Equals:
+				return RTValue::GetValue(builder, builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
+			case BinaryOperation::RefEquals:
+				return RTValue::GetValue(builder, builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
 			default:
 			{
 				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
 			}
 			}
 		}
-		NomValue BinOpInstruction::CompileBoolBool(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
+		RTValuePtr BinOpInstruction::CompileFloatFloat(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
+		{
+			switch (Operation)
+			{
+			case BinaryOperation::Add:
+				return RTValue::GetValue(builder, builder->CreateFAdd(left, right), NomFloatClass::GetInstance()->GetType());
+			case BinaryOperation::Subtract:
+				return RTValue::GetValue(builder, builder->CreateFSub(left, right), NomFloatClass::GetInstance()->GetType());
+			case BinaryOperation::Multiply:
+				return RTValue::GetValue(builder, builder->CreateFMul(left, right), NomFloatClass::GetInstance()->GetType());
+			case BinaryOperation::Divide:
+				return RTValue::GetValue(builder, builder->CreateFDiv(left, right), NomFloatClass::GetInstance()->GetType());
+			case BinaryOperation::Equals:
+				return RTValue::GetValue(builder, builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType());
+			case BinaryOperation::RefEquals:
+				return RTValue::GetValue(builder, builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType());
+			case BinaryOperation::Mod:
+				return RTValue::GetValue(builder, builder->CreateFRem(left, right), NomFloatClass::GetInstance()->GetType());
+			case BinaryOperation::GreaterThan:
+				return RTValue::GetValue(builder, builder->CreateFCmpOGT(left, right), NomBoolClass::GetInstance()->GetType());
+			case BinaryOperation::LessThan:
+				return RTValue::GetValue(builder, builder->CreateFCmpOLT(left, right), NomBoolClass::GetInstance()->GetType());
+			case BinaryOperation::GreaterOrEqualTo:
+				return RTValue::GetValue(builder, builder->CreateFCmpOGE(left, right), NomBoolClass::GetInstance()->GetType());
+			case BinaryOperation::LessOrEqualTo:
+				return RTValue::GetValue(builder, builder->CreateFCmpOLE(left, right), NomBoolClass::GetInstance()->GetType());
+			default:
+			{
+				auto nullVal = PoisonValue::get(REFTYPE);
+				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
+			}
+			}
+		}
+		RTValuePtr BinOpInstruction::CompileBoolBool(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
 		{
 			switch (Operation)
 			{
 			case BinaryOperation::And:
-				return NomValue(EnsurePacked(builder, builder->CreateAnd(left, right)), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateAnd(left, right), NomBoolClass::GetInstance()->GetType());
 			case BinaryOperation::Or:
-				return NomValue(EnsurePacked(builder, builder->CreateOr(left, right)), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateOr(left, right), NomBoolClass::GetInstance()->GetType());
 			case BinaryOperation::BitXOR:
-				return NomValue(EnsurePacked(builder, builder->CreateXor(left, right)), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateXor(left, right), NomBoolClass::GetInstance()->GetType());
 			case BinaryOperation::Equals:
-				return NomValue(EnsurePacked(builder, builder->CreateICmpEQ(left, right)), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
 			case BinaryOperation::RefEquals:
-				return NomValue(EnsurePacked(builder, builder->CreateICmpEQ(left, right)), NomBoolClass::GetInstance()->GetType());
+				return RTValue::GetValue(builder, builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
 			default:
 			{
 				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
 			}
 			}
 		}

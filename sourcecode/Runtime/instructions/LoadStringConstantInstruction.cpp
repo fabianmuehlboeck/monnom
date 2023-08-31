@@ -10,7 +10,7 @@ namespace Nom
 		void LoadStringConstantInstruction::Compile([[maybe_unused]] NomBuilder &builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
 			env->basicBlockTerminated = false;
-			RegisterValue(env, NomValue(NomConstants::GetString(this->constantID)->getObject(*(env->Module)), NomStringClass::GetInstance()->GetType()));
+			RegisterValue(env, RTValue::GetValue(builder, NomConstants::GetString(this->constantID)->getObject(*(env->Module)), NomStringClass::GetInstance()->GetType()));
 		}
 		void LoadStringConstantInstruction::Print(bool resolve)
 		{

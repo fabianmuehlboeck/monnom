@@ -5,7 +5,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "NomType.h"
-#include "TypeList.h"
 #include "Defs.h"
 #include <vector>
 #include <string>

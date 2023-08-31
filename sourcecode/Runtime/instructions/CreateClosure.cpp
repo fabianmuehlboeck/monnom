@@ -41,14 +41,14 @@ namespace Nom
 
 			for (size_t i = 0; i < env->GetArgCount(); i++)
 			{
-				NomValue nv = env->GetArgument(i);
-				argbuf[i+targcount] = EnsureType(builder, env, nv, argtypes[i], cft->getParamType(static_cast<unsigned int>(i+targcount)));
+				RTValuePtr nv = env->GetArgument(i);
+				argbuf[i+targcount] = nv->EnsureType(builder, env, argtypes[i], cft->getParamType(static_cast<unsigned int>(i+targcount)));
 				//argbuf[i] = env->GetArgument(i);
 			}
 			auto callinst = builder->CreateCall(constructorFun, llvm::ArrayRef<llvm::Value*>(argbuf, env->GetArgCount()+targcount), "closure");
 			callinst->setCallingConv(NOMCC);
 			env->ClearArguments();
-			RegisterValue(env, NomValue(callinst, &NomDynamicType::Instance(), true));
+			RegisterValue(env, RTValue::GetValue(builder, callinst, &NomDynamicType::Instance(), true));
 		}
 		void CreateClosure::Print(bool resolve)
 		{

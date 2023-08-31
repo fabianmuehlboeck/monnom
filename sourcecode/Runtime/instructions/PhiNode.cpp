@@ -21,7 +21,7 @@ namespace Nom
 			for (auto &reg : mergeRegisters)
 			{
 				NomTypeRef type = NomConstants::GetType(&nscmc, std::get<1>(reg));
-				(*env)[std::get<0>(reg)] = NomValue(builder->CreatePHI(type->GetLLVMType(), IncomingCount), type);
+				(*env)[std::get<0>(reg)] = RTValue::GetValue(builder, builder->CreatePHI(type->GetLLVMType(), IncomingCount), type);
 			}
 		}
 

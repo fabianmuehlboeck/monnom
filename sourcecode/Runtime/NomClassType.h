@@ -1,7 +1,5 @@
 #pragma once
 #include "NomType.h"
-#include "Defs.h"
-#include "TypeList.h"
 PUSHDIAGSUPPRESSION
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Error.h"

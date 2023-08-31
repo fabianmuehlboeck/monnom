@@ -4,7 +4,6 @@ PUSHDIAGSUPPRESSION
 #include "llvm/IR/Function.h"
 #include "llvm/ADT/StringRef.h"
 POPDIAGSUPPRESSION
-#include "TypeList.h"
 #include "NomTypeDecls.h"
 #include "NomConstants.h"
 #include "NomMemberContext.h"

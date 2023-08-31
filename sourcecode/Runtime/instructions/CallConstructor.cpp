@@ -114,12 +114,12 @@ namespace Nom
 				RefValueHeader::GenerateWriteRawInvoke(builder, newmem, cls.Elem->GetRawInvokeFunction(*(env->Module)));
 			}
 
-			NomValue * argbuf = makenmalloc(NomValue, env->GetArgCount());
+			RTValuePtr *argbuf = makenmalloc(RTValuePtr, env->GetArgCount());
 			for (size_t i = 0; i < env->GetArgCount(); i++)
 			{
 				argbuf[i] = env->GetArgument(i);
 			}
-			RegisterValue(env, cls.Elem->GenerateConstructorCall(builder, env, cls.TypeArgs, newmem, llvm::ArrayRef<NomValue>(argbuf, env->GetArgCount())));
+			RegisterValue(env, cls.Elem->GenerateConstructorCall(builder, env, cls.TypeArgs, newmem, llvm::ArrayRef<RTValuePtr>(argbuf, env->GetArgCount())));
 			env->ClearArguments();
 		
 		}

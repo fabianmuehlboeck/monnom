@@ -28,7 +28,7 @@ namespace Nom
 			{
 
 			}
-			~PhiNode() override
+			virtual ~PhiNode() override
 			{
 			}
 

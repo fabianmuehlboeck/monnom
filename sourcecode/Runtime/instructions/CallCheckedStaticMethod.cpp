@@ -50,7 +50,7 @@ namespace Nom
 			llvm::ArrayRef<llvm::Type*> funcparams = func->getFunctionType()->params();
 			for (size_t i = 0; i < argcount; i++)
 			{
-				NomValue arg = env->GetArgument(i);
+				auto arg = env->GetArgument(i);
 				argarr[i + targcount] = CastInstruction::MakeCast(builder, env, arg, signature.ArgumentTypes[i]);
 			}
 			for (size_t i = 0; i < targcount; i++)
@@ -76,7 +76,7 @@ namespace Nom
 			auto args = llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + typeArgs.size());
 			auto call = GenerateFunctionCall(builder, *(env->Module), func, args, true);
 
-			RegisterValue(env, NomValue(call, method.Elem->GetReturnType(&substC), true));
+			RegisterValue(env, RTValue::GetValue(builder, call, method.Elem->GetReturnType(&substC), true));
 		}
 		void CallCheckedStaticMethod::Print(bool resolve)
 		{

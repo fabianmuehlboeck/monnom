@@ -1,5 +1,7 @@
 #pragma once
 #include "NomClass.h"
+#include "PWInt.h"
+
 namespace Nom
 {
 	namespace Runtime
@@ -27,7 +29,7 @@ namespace Nom
 			static llvm::Value* PackBool(NomBuilder& builder, llvm::Value* b);
 			static llvm::Value* UnpackBool(NomBuilder& builder, llvm::Value* b);
 
-
+			static PWBool BoolObjToRawBool(NomBuilder& builder, llvm::Value* b);
 
 			// Inherited via AvailableExternally
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;

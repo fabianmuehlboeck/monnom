@@ -11,7 +11,7 @@ namespace Nom
 	{
 		void LoadNullConstantInstruction::Compile([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
-			RegisterValue(env, NomValue(
+			RegisterValue(env, RTValue::GetValue(builder,
 				NomNullObject::GetInstance()->GetLLVMElement(*builder->GetInsertBlock()->getParent()->getParent()),
 				NomNullClass::GetInstance()->GetType(), false));
 		}

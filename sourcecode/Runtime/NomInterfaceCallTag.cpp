@@ -197,7 +197,7 @@ namespace Nom
 						{
 							builder->CreateCall(GetIncPerfectCallTagTypeMatchesFunction(*fun->getParent()), {});
 						}
-						CastedValueCompileEnv cvce = CastedValueCompileEnv(method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreateGEP(RTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }));
+						CastedValueCompileEnv cvce = CastedValueCompileEnv(builder, method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreateGEP(RTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }));
 						auto castResult = RTCast::GenerateCast(builder, &cvce, actualResult, method->GetReturnType());
 						//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
 						//builder->CreateCondBr(castResult, outBlock, castFailBlock, GetLikelyFirstBranchMetadata());

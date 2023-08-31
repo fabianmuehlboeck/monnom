@@ -1,5 +1,4 @@
 #pragma once
-#include "TypeList.h"
 #include "ClassTypeList.h"
 #include "RTClass.h"
 PUSHDIAGSUPPRESSION

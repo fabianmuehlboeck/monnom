@@ -21,7 +21,7 @@ namespace Nom
 			const std::string SymbolName;
 			NomPartialApplication(const std::string symbolName, llvm::ArrayRef<const NomCallable*> methods, const NomMemberContext* context, NomTypeRef thisType);
 			static llvm::FunctionType* GetDynamicDispatcherType();
-			static llvm::Function* GetDispatcherEntry(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::ArrayRef<const NomCallable*> overloadings, const NomMemberContext* context);
+			static llvm::Function* GetDispatcherEntry(llvm::Module& mod, NomTypeRef thisType, llvm::GlobalValue::LinkageTypes linkage, llvm::ArrayRef<const NomCallable*> overloadings, const NomMemberContext* context);
 			virtual ~NomPartialApplication() override {}
 			// Inherited via AvailableExternally
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;

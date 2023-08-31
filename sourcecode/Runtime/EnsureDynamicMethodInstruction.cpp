@@ -39,7 +39,7 @@ namespace Nom
 		}
 
 
-		llvm::Value* EnsureDynamicMethodInstruction::GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, NomValue receiver)
+		llvm::Value* EnsureDynamicMethodInstruction::GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, RTValuePtr receiver)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -117,7 +117,7 @@ namespace Nom
 
 		void EnsureDynamicMethodInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
-			NomValue receiver = (*env)[Receiver];
+			RTValuePtr receiver = (*env)[Receiver];
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
 

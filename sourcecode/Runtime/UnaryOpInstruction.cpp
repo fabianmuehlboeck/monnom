@@ -44,7 +44,7 @@ namespace Nom
 				BasicBlock* refObjectBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * boolBlock = nullptr;
 				Value* intValue, * floatValue, * boolValue;
 
-				NomValue val = ((*env)[Arg]);
+				auto val = ((*env)[Arg]);
 
 				unsigned int cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, val, &refObjectBlock, nullptr, nullptr, true, &intBlock, &intValue, &floatBlock, &floatValue, &boolBlock, &boolValue);
 				if (refObjectBlock!=nullptr)
@@ -105,11 +105,11 @@ namespace Nom
 				if (mergePHI)
 				{
 					builder->SetInsertPoint(mergeBlock);
-					RegisterValue(env, NomValue(mergeResult, &NomDynamicType::Instance(), false));
+					RegisterValue(env, RTValue::GetValue(builder, mergeResult, &NomDynamicType::Instance(), false));
 				}
 				else
 				{
-					RegisterValue(env, NomValue(mergeResult, singleCaseType, false));
+					RegisterValue(env, RTValue::GetValue(builder, mergeResult, singleCaseType, false));
 				}
 
 				//	if ((*env)[Arg]->getType()->isIntegerTy(INTTYPE->getPrimitiveSizeInBits()) || (*env)[Arg].GetNomType()->IsSubtype(NomIntClass::GetInstance()->GetType()))
@@ -172,7 +172,7 @@ namespace Nom
 				break;
 			}
 			case UnaryOperation::Not: {
-				RegisterValue(env, NomValue(PackBool(builder, builder->CreateNot(EnsureUnpackedBool(builder, env, (*env)[Arg]))), NomBoolClass::GetInstance()->GetType(), false));
+				RegisterValue(env, RTValue::GetValue(builder, PackBool(builder, builder->CreateNot((*env)[Arg]->AsRawBool(builder))), NomBoolClass::GetInstance()->GetType(), false));
 				return;
 			}
 			}

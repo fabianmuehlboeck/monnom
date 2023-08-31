@@ -2,7 +2,7 @@
   "profiles": {
     "BenchmarkGenerator": {
       "commandName": "Project",
-      "commandLineArgs": "-p \"c:\\MonNomBenchmarks\\float\" -r 1 --project Float"
+      "commandLineArgs": "-p \"c:\\monnom\\monnom\\experiments\\monnom\\sieve\" -r 1 -w 2 --omituntypedinterfaces --project Sieve"
     }
   }
 }

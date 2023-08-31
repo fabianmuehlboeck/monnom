@@ -71,6 +71,17 @@ namespace Nom
 			return builder->CreatePtrToInt(PWObject(b).ReadField(builder, PWCInt32(0,false), false), llvm::IntegerType::get(LLVMCONTEXT, 1));
 		}
 
+		PWBool NomBoolObjects::BoolObjToRawBool(NomBuilder& builder, llvm::Value* b)
+		{
+			llvm::Value* baddr = builder->CreatePtrToInt(b, numtype(intptr_t));
+			llvm::Constant* basePtr = GetInstance()->findLLVMElement(*builder->GetInsertBlock()->getParent()->getParent());
+			llvm::Constant* basePtrNext = ConstantExpr::getGetElementPtr(arrtype(ObjectHeader::GetLLVMType(1, 0, false), 2), ConstantPointerNull::get(POINTERTYPE), llvm::ArrayRef<llvm::Constant*>({MakeInt32(0), MakeInt32(1),MakeInt32(ObjectHeaderFields::RefValueHeader)}));
+			llvm::Constant* base = ConstantExpr::getPtrToInt(basePtr, numtype(intptr_t));
+			llvm::Value* relToBase = builder->CreateSub(baddr, base);
+			llvm::Value* divBySize = builder->CreateUDiv(relToBase, ConstantExpr::getPtrToInt(basePtrNext, numtype(intptr_t)));
+			return builder->CreateTrunc(divBySize, inttype(1), "addrToBool");
+		}
+
 
 		llvm::Constant* NomBoolObjects::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{

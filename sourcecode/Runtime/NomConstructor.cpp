@@ -81,7 +81,7 @@ namespace Nom
 			{
 				selfType = Class->GetType();
 			}
-			ConstructorCompileEnv cenv = ConstructorCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), this->GetAllTypeParameters(), this->GetArgumentTypes(nullptr), selfType, this);
+			ConstructorCompileEnv cenv = ConstructorCompileEnv(builder, regcount, *GetSymbolName(), fun, &(this->phiNodes), this->GetAllTypeParameters(), this->GetArgumentTypes(nullptr), selfType, this);
 			CompileEnv* env = &cenv;
 
 
@@ -106,13 +106,13 @@ namespace Nom
 			auto superclass = Class->GetSuperClass();
 			if (superclass.HasElem()&&superclass.Elem!=NomObjectClass::GetInstance())
 			{
-				NomValue *superArgsBuf = makenmalloc(NomValue,superConstructorArgs.size());
+				RTValuePtr *superArgsBuf = makenmalloc(RTValuePtr,superConstructorArgs.size());
 				auto scasize = superConstructorArgs.size();
 				for (decltype(scasize) i = 0; i < scasize; i++)
 				{
 					superArgsBuf[i] = (*env)[superConstructorArgs[i]];
 				}
-				superclass.Elem->GenerateConstructorCall(builder, env, superclass.TypeArgs, (*env)[0], llvm::ArrayRef<NomValue>(superArgsBuf, superConstructorArgs.size()));
+				superclass.Elem->GenerateConstructorCall(builder, env, superclass.TypeArgs, (*env)[0], llvm::ArrayRef<RTValuePtr>(superArgsBuf, superConstructorArgs.size()));
 			}
 			cenv.SetPastInitialSetup();
 			auto instructions = GetInstructions();

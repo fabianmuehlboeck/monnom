@@ -348,7 +348,7 @@ namespace Nom
 								for (auto& arg : this->Arguments)
 								{
 									auto targ = MakeInvariantLoad(builder, arrtype(TYPETYPE,0), typeArgs, MakeInt32(-(pos + 1)), "typeArg", AtomicOrdering::NotAtomic);
-									auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, { targ, rssv, arg->GetLLVMElement(mod), ConstantPointerNull::get(RTSubstStack::GetLLVMType()->getPointerTo()) });
+									auto isTypeEq = builder->CreateCall(RTTypeEq::GetLLVMFunctionType(false), typeEqFun, llvm::ArrayRef<llvm::Value*>({ targ, rssv.operator*(), arg->GetLLVMElement(mod), ConstantPointerNull::get(NLLVMPointer(RTSubstStack::GetLLVMType()))}));
 									isTypeEq->setCallingConv(NOMCC);
 									CreateExpect(builder, isTypeEq, MakeUInt(1, 1));
 

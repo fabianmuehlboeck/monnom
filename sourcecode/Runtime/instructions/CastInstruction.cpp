@@ -25,7 +25,7 @@ namespace Nom
 
 		}
 
-		NomValue CastInstruction::MakeCast(NomBuilder& builder, CompileEnv* env, NomValue val, NomTypeRef type)
+		RTValuePtr CastInstruction::MakeCast(NomBuilder& builder, CompileEnv* env, RTValuePtr val, NomTypeRef type)
 		{
 			auto valtype = val.GetNomType();
 			if (valtype->IsSubtype(type))
@@ -34,7 +34,7 @@ namespace Nom
 			}
 			Function* fun = builder->GetInsertBlock()->getParent();
 			auto castResult = RTCast::GenerateCast(builder, env, val, type);
-			return NomValue(castResult, type, true);
+			return RTValue::GetValue(builder, castResult, type, true);
 		}
 
 		void CastInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)

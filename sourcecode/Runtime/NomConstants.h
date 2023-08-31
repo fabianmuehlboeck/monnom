@@ -12,11 +12,7 @@ POPDIAGSUPPRESSION
 #include "Context.h"
 #include <map>
 #include "ClassTypeList.h"
-#include "TypeList.h"
 #include "NomInstantiationRef.h"
-//#include "NomMethod.h"
-//#include "NomStaticMethod.h"
-//#include "NomVMInterface.h"
 #include "boehmgcinterface.h"
 #include "NomSubstitutionContext.h"
 

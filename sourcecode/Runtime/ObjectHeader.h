@@ -55,7 +55,7 @@ namespace Nom
 
 			static llvm::Value* GenerateSetClassDescriptor(NomBuilder &builder, llvm::Value * ohref, size_t fieldCount, llvm::Value * desc);
 
-			static llvm::Value* CreateDictionaryLoad(NomBuilder& builder, CompileEnv* env, NomValue& receiver, llvm::ConstantInt *key,const llvm::Twine keyName="");
+			static llvm::Value* CreateDictionaryLoad(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver, llvm::ConstantInt *key,const llvm::Twine keyName="");
 
 			static void EnsureExternalReadWriteFieldFunctions(llvm::Module* mod);
 

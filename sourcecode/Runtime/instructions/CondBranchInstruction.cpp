@@ -4,6 +4,7 @@
 #include <iostream>
 #include <tuple>
 #include "../NomValue.h"
+#include "../CompileEnv.h"
 
 using namespace llvm;
 using namespace std;
@@ -24,7 +25,7 @@ namespace Nom
 		{
 			PhiNode *thenPhi = env->GetPhiNode(ThenTarget);
 			PhiNode *elsePhi = env->GetPhiNode(ElseTarget);
-			auto condition = EnsureUnpackedBool(builder, env, (*env)[Condition]);
+			RTValuePtr condition = (*env)[Condition]->AsRawBool(builder);
 			
 			auto thenIncCount = ThenIncomings.size();
 			auto elseIncCount = ElseIncomings.size();
@@ -35,17 +36,17 @@ namespace Nom
 
 			for (auto ti : ThenIncomings)
 			{
-				NomValue nv = (*env)[std::get<0>(ti)];
+				RTValuePtr nv = (*env)[std::get<0>(ti)];
 				llvm::PHINode* llvmPHI = static_cast<llvm::PHINode*>(static_cast<llvm::Value*>(nv));
-				auto incval = EnsureType(builder, env, (*env)[std::get<1>(ti)], nv.GetNomType(), llvmPHI->getType());
+				auto incval = (*env)[std::get<1>(ti)]->ForLLVMType(builder, llvmPHI->getType(), false);
 				incPairs[incPos] = std::make_pair(llvmPHI, incval);
 				incPos++;
 			}
 			for (auto ei : ElseIncomings)
 			{
-				NomValue nv = (*env)[std::get<0>(ei)];
+				RTValuePtr nv = (*env)[std::get<0>(ei)];
 				llvm::PHINode* llvmPHI = static_cast<llvm::PHINode*>(static_cast<llvm::Value*>(nv));
-				auto incval = EnsureType(builder, env, (*env)[std::get<1>(ei)], nv.GetNomType(), llvmPHI->getType());
+				auto incval = (*env)[std::get<1>(ei)]->ForLLVMType(builder, llvmPHI->getType(), false);
 				incPairs[incPos] = std::make_pair(llvmPHI, incval);
 				incPos++;
 			}

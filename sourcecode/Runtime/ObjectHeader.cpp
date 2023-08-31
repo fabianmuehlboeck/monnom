@@ -143,7 +143,7 @@ namespace Nom
 			RefValueHeader::GenerateWriteVTablePointer(builder, ohref, builder->CreatePointerCast(desc, RTVTable::GetLLVMType()->getPointerTo()));
 			return ohref;
 		}
-		llvm::Value* ObjectHeader::CreateDictionaryLoad(NomBuilder& builder, [[maybe_unused]]  CompileEnv* env, NomValue& receiver, llvm::ConstantInt* key, [[maybe_unused]]  const llvm::Twine keyName)
+		llvm::Value* ObjectHeader::CreateDictionaryLoad(NomBuilder& builder, [[maybe_unused]]  CompileEnv* env, RTValuePtr receiver, llvm::ConstantInt* key, [[maybe_unused]]  const llvm::Twine keyName)
 		{
 			if (NomCastStats)
 			{

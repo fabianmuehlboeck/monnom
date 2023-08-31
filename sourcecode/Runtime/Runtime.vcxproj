@@ -145,6 +145,7 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Diagnostics.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <DiagnosticsFormat Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Caret</DiagnosticsFormat>
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Diagnostics.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ShowIncludes>
     </ClCompile>
     <Lib>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(LLVMDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -354,9 +355,12 @@
     <ClCompile Include="RTRefValue.cpp" />
     <ClCompile Include="RTSignature.cpp" />
     <ClCompile Include="RTConfig.cpp" />
+    <ClCompile Include="RTStructuralValue.cpp" />
     <ClCompile Include="RTSubstStack.cpp" />
     <ClCompile Include="RTTypeEq.cpp" />
     <ClCompile Include="RTValue.cpp" />
+    <ClCompile Include="RTValuePtr.cpp" />
+    <ClCompile Include="RTValueVisitor.cpp" />
     <ClCompile Include="RTVMPtr.cpp" />
     <ClCompile Include="RTVTable.cpp" />
     <ClCompile Include="RTInterfaceTableEntry.cpp" />
@@ -374,7 +378,6 @@
     <ClCompile Include="RecordHeader.cpp" />
     <ClCompile Include="StructuralValueHeader.cpp" />
     <ClCompile Include="TimerClass.cpp" />
-    <ClCompile Include="TypeList.cpp" />
     <ClCompile Include="NullClass.cpp" />
     <ClCompile Include="NomTypeRegistry.cpp" />
     <ClCompile Include="TypeOperations.cpp" />
@@ -533,9 +536,12 @@
     <ClInclude Include="RTRefValue.h" />
     <ClInclude Include="RTSignature.h" />
     <ClInclude Include="RTConfig.h" />
+    <ClInclude Include="RTStructuralValue.h" />
     <ClInclude Include="RTSubstStack.h" />
     <ClInclude Include="RTTypeEq.h" />
     <ClInclude Include="RTValue.h" />
+    <ClInclude Include="RTValuePtr.h" />
+    <ClInclude Include="RTValueVisitor.h" />
     <ClInclude Include="RTVMPtr.h" />
     <ClInclude Include="RTVTable.h" />
     <ClInclude Include="RTInterfaceTableEntry.h" />
@@ -593,7 +599,6 @@
     <ClInclude Include="RecordHeader.h" />
     <ClInclude Include="StructuralValueHeader.h" />
     <ClInclude Include="TimerClass.h" />
-    <ClInclude Include="TypeList.h" />
     <ClInclude Include="NomTypeRegistry.h" />
     <ClInclude Include="TypeOperations.h" />
     <ClInclude Include="UnaryOpInstruction.h" />

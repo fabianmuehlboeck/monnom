@@ -37,7 +37,7 @@ namespace Nom
 		{
 		public:
 			const NomCallable* const Callable;
-			NomPartialApplicationDispatcherEnv(llvm::Value* _receiver, RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, llvm::ArrayRef<NomTypeParameterRef> _typeParams, llvm::ArrayRef<llvm::Value*> _typeArgValues, const NomCallable* _method) : ACompileEnv(_regcount, _contextName, _function, _method->GetParent(), nullptr, _typeParams, _typeArgValues), Callable(_method)
+			NomPartialApplicationDispatcherEnv(NomBuilder &builder, RTValuePtr _receiver, RegIndex _regcount, const llvm::Twine _contextName, llvm::Function* _function, llvm::ArrayRef<NomTypeParameterRef> _typeParams, llvm::ArrayRef<llvm::Value*> _typeArgValues, const NomCallable* _method) : ACompileEnv(builder, _regcount, _contextName, _function, _method->GetParent(), nullptr, _typeParams, _typeArgValues), Callable(_method)
 			{
 				registers[0] = _receiver;
 			}
@@ -65,15 +65,20 @@ namespace Nom
 			{
 				return false;
 			}
+			virtual NomTypeRef GetReturnType() override
+			{
+				return Callable->GetReturnType();
+			}
 		};
 		class NomPartialApplicationDispatcherEntry : public NomCallable, public NomMemberContextInternal
 		{
 		private:
 			const std::string name;
 			const std::string qname;
+			NomTypeRef thisType;
 			llvm::ArrayRef<const NomCallable*> overloadings;
 		public:
-			NomPartialApplicationDispatcherEntry(const NomMemberContext* _parent, llvm::ArrayRef<const NomCallable*> _overloadings) : NomCallable(), NomMemberContextInternal(_parent), name("NOM_OD_" + _overloadings[0]->GetQName()), qname("NOM_OD_" + _overloadings[0]->GetQName()), overloadings(_overloadings)
+			NomPartialApplicationDispatcherEntry(const NomMemberContext* _parent, NomTypeRef _thisType, llvm::ArrayRef<const NomCallable*> _overloadings) : NomCallable(), NomMemberContextInternal(_parent), name("NOM_OD_" + _overloadings[0]->GetQName()), qname("NOM_OD_" + _overloadings[0]->GetQName()), thisType(_thisType), overloadings(_overloadings)
 			{
 			}
 			// Inherited via NomCallable
@@ -136,7 +141,7 @@ namespace Nom
 						}
 					}
 					NomSubstitutionContextMemberContext nscmc(this);
-					NomPartialApplicationDispatcherEnv padenv(receiver, argCount + 1, funname, dispatcher, typeParams, ArrayRef<llvm::Value*>(targValueArr, typeArgCount), this);
+					NomPartialApplicationDispatcherEnv padenv(builder, RTValue::GetValue(builder, receiver, thisType), argCount + 1, funname, dispatcher, typeParams, ArrayRef<llvm::Value*>(targValueArr, typeArgCount), this);
 					//TODO: check type argument constraints, if any
 					CompileEnv* env = &padenv;
 					auto methargtypes = meth->GetArgumentTypes(&nscmc);
@@ -294,9 +299,9 @@ namespace Nom
 			return ft;
 		}
 
-		llvm::Function* NomPartialApplication::GetDispatcherEntry(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage,/* int32_t typeArgCount, int32_t argCount,*/ llvm::ArrayRef<const NomCallable*> overloadings, const NomMemberContext* context/*, NomTypeRef thisType*/)
+		llvm::Function* NomPartialApplication::GetDispatcherEntry(llvm::Module& mod, NomTypeRef thisType, llvm::GlobalValue::LinkageTypes linkage,/* int32_t typeArgCount, int32_t argCount,*/ llvm::ArrayRef<const NomCallable*> overloadings, const NomMemberContext* context/*, NomTypeRef thisType*/)
 		{
-			return ((new NomPartialApplicationDispatcherEntry(context, overloadings/*, typeArgCount, argCount, thisType*/))->createLLVMElement(mod, linkage));
+			return ((new NomPartialApplicationDispatcherEntry(context, thisType, overloadings/*, typeArgCount, argCount, thisType*/))->createLLVMElement(mod, linkage));
 		}
 
 		llvm::Constant* NomPartialApplication::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
@@ -332,7 +337,7 @@ namespace Nom
 			{
 				for (auto& ole2 : ole1.second)
 				{
-					argsbuf[constantsBufPos] = make_pair(make_pair(ole1.first, ole2.first), ConstantExpr::getPointerCast(GetDispatcherEntry(mod, linkage, /*ole1.first, ole2.first,*/ ole2.second, context/*, thisType*/), POINTERTYPE));
+					argsbuf[constantsBufPos] = make_pair(make_pair(ole1.first, ole2.first), ConstantExpr::getPointerCast(GetDispatcherEntry(mod, thisType, linkage, /*ole1.first, ole2.first,*/ ole2.second, context/*, thisType*/), POINTERTYPE));
 					constantsBufPos++;
 				}
 			}

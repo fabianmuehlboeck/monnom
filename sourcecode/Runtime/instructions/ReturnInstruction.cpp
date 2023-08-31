@@ -1,6 +1,7 @@
 #include "ReturnInstruction.h"
 #include "../TypeOperations.h"
 #include <iostream>
+#include "../CompileEnv.h"
 
 using namespace Nom::Runtime;
 using namespace std;
@@ -8,18 +9,18 @@ using namespace std;
 void Nom::Runtime::ReturnInstruction::Compile([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno)
 {
 	auto rtype = env->Function->getReturnType();
-	auto rval = *((*env)[this->reg]);
+	auto rval = ((*env)[this->reg]);
 	if (rval->getType() != rtype)
 	{
-		rval = EnsurePackedUnpacked(builder, rval, rtype);
+		rval = rval->EnsureType(builder, env, env->GetReturnType(), rtype);
 	}
 	else
 	{
-		if ((*env)[this->reg].IsFunctionCall())
+		if ((*env)[this->reg]->IsFunctionCall())
 		{
-			if ((static_cast<llvm::CallInst*>(*(*env)[this->reg]))->getCallingConv() == llvm::CallingConv::Fast)
+			if (static_cast<llvm::CallInst*>((*env)[this->reg].operator llvm::Value *())->getCallingConv() == llvm::CallingConv::Fast)
 			{
-				(static_cast<llvm::CallInst*>(*(*env)[this->reg]))->setTailCallKind(llvm::CallInst::TailCallKind::TCK_Tail);
+				static_cast<llvm::CallInst*>((*env)[this->reg].operator llvm::Value *())->setTailCallKind(llvm::CallInst::TailCallKind::TCK_Tail);
 			}
 		}
 	}

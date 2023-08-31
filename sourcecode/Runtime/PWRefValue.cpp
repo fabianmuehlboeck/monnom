@@ -14,10 +14,6 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		llvm::Value* Nom::Runtime::PWRefValue::ReadTypeTag(NomBuilder& builder) const
-		{
-			return builder->CreateTrunc(builder->CreatePtrToInt(MakeLoad(builder, RefValueHeader::GetLLVMType(), wrapped, MakeInt32(RefValueHeaderFields::InterfaceTable)), numtype(intptr_t)), IntegerType::get(LLVMCONTEXT, 3));
-		}
 		PWVTable PWRefValue::ReadVTable(NomBuilder& builder) const
 		{
 			return PWVTable(MakeInvariantLoad(builder, RefValueHeader::GetLLVMType(), wrapped, MakeInt32(RefValueHeaderFields::InterfaceTable)));
@@ -70,7 +66,7 @@ namespace Nom
 			BasicBlock* mergeBlock = nullptr;
 			PHINode* tablePHI = nullptr;
 
-			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, recreg, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
+			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, RTValue::GetValue(builder, recreg), &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
 
 			unsigned int count = (refValueBlock != nullptr ? 1 : 0) + (packedIntBlock != nullptr ? 1 : 0) + (packedFloatBlock != nullptr ? 1 : 0) + (primitiveIntBlock != nullptr ? 1 : 0) + (primitiveFloatBlock != nullptr ? 1 : 0) + (primitiveBoolBlock != nullptr ? 1 : 0);
 

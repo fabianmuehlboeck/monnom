@@ -4,7 +4,6 @@ PUSHDIAGSUPPRESSION
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_os_ostream.h"
 POPDIAGSUPPRESSION
-#include "TypeList.h"
 #include "NomConstants.h"
 #include "Context.h"
 #include <iostream>
@@ -38,10 +37,10 @@ namespace Nom
 			{
 				return fun;
 			}
-			StaticMethodCompileEnv smenv = StaticMethodCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), this->GetAllTypeParameters(), this->GetArgumentTypes(nullptr), this);
+			NomBuilder builder;
+			StaticMethodCompileEnv smenv = StaticMethodCompileEnv(builder, regcount, *GetSymbolName(), fun, &(this->phiNodes), this->GetAllTypeParameters(), this->GetArgumentTypes(nullptr), this);
 			CompileEnv* env = &smenv;
 
-			NomBuilder builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, *GetSymbolName() + "$start", fun);
 
 			InitializePhis(builder, fun, env);

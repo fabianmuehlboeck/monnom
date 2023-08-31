@@ -36,13 +36,13 @@ namespace Nom
 		class BinOpInstruction : public NomValueInstruction
 		{
 		private:
-			NomValue CompileLeftInt(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
-			NomValue CompileLeftFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
-			NomValue CompileLeftBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
-			NomValue CompileLeftPointer(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
-			NomValue CompileIntInt(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left, llvm::Value* right);
-			NomValue CompileFloatFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left, llvm::Value* right);
-			NomValue CompileBoolBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left, llvm::Value* right);
+			RTValuePtr CompileLeftInt(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
+			RTValuePtr CompileLeftFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
+			RTValuePtr CompileLeftBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
+			RTValuePtr CompileLeftPointer(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left);
+			RTValuePtr CompileIntInt(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left, llvm::Value* right);
+			RTValuePtr CompileFloatFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left, llvm::Value* right);
+			RTValuePtr CompileBoolBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left, llvm::Value* right);
 		public:
 			const BinaryOperation Operation;
 			const RegIndex Left;

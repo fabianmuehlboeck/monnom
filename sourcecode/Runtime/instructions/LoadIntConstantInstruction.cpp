@@ -20,7 +20,7 @@ namespace Nom
 
 		void LoadIntConstantInstruction::Compile(NomBuilder &builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
-			RegisterValue(env, NomValue(builder->getInt64(Value), NomIntClass::GetInstance()->GetType()));
+			RegisterValue(env, RTValue::GetValue(builder, builder->getInt64(Value), NomIntClass::GetInstance()->GetType()));
 		}
 		void LoadIntConstantInstruction::Print([[maybe_unused]] bool resolve)
 		{

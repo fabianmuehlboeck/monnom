@@ -20,7 +20,7 @@ namespace Nom
 
 		void LoadFloatConstantInstruction::Compile([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno)
 		{
-			RegisterValue(env, NomValue(ConstantFP::get(FLOATTYPE, Value), NomFloatClass::GetInstance()->GetType()));
+			RegisterValue(env, RTValue::GetValue(builder, ConstantFP::get(FLOATTYPE, Value), NomFloatClass::GetInstance()->GetType()));
 		}
 		void LoadFloatConstantInstruction::Print([[maybe_unused]] bool resolve)
 		{

@@ -2,6 +2,7 @@
 #include "RTSignature.h"
 #include "PWType.h"
 #include "PWVMPtr.h"
+#include "CompileHelpers.h"
 
 namespace Nom
 {

@@ -89,7 +89,7 @@ namespace Nom
 			auto constant = RTRecord::CreateConstant(this, GetDynamicFieldLookup(mod, linkage), GetDynamicFieldStore(mod, linkage), GetInterfaceTableLookup(mod, linkage), ddreftable);
 			gv->setInitializer(ConstantStruct::get(gvartype, { ConstantArray::get(arrtype(inttype(64), hasRawInvoke ? 1 : 0), ArrayRef<Constant*>(pushArr, hasRawInvoke ? 1 : 0)), constant, ddtable }));
 
-			StructInstantiationCompileEnv sice = StructInstantiationCompileEnv(regcount, fun, GetAllTypeParameters(), GetArgumentTypes(nullptr), this, EndArgRegisterCount);
+			StructInstantiationCompileEnv sice = StructInstantiationCompileEnv(builder, regcount, fun, GetAllTypeParameters(), GetArgumentTypes(nullptr), this, EndArgRegisterCount);
 
 			RecordHeader::GenerateConstructorCode(builder, ArrayRef<Value*>(typeArgBuf, targc), &sice, ConstantExpr::getGetElementPtr(gvartype, gv, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1) })), GetInstructions());
 
@@ -154,7 +154,7 @@ namespace Nom
 				builder->SetInsertPoint(start);
 				auto nameSwitch = builder->CreateSwitch(namearg, notfound, static_cast<unsigned int>(this->Fields.size()));
 
-				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType() }), thisType);
+				SimpleClassCompileEnv scce = SimpleClassCompileEnv(builder, fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType() }), thisType);
 
 				for (auto field : Fields)
 				{
@@ -162,7 +162,7 @@ namespace Nom
 					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "field:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					builder->CreateRet(field->GenerateRead(builder, &scce, NomValue(thisarg, thisType)));//removed EnsurePacked from here, because struct values are always supposed to be packed
+					builder->CreateRet(field->GenerateRead(builder, &scce, RTValue::GetValue(builder, thisarg, thisType)));//removed EnsurePacked from here, because struct values are always supposed to be packed
 				}
 				builder->SetInsertPoint(notfound);
 				static const char* lookupfailstr = "Could not find any fields with matching name!";
@@ -215,7 +215,7 @@ namespace Nom
 				builder->SetInsertPoint(start);
 				auto nameSwitch = builder->CreateSwitch(namearg, notfound, static_cast<unsigned int>(this->Fields.size()));
 
-				SimpleClassCompileEnv scce = SimpleClassCompileEnv(fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType(), &NomDynamicType::Instance() }), thisType);
+				SimpleClassCompileEnv scce = SimpleClassCompileEnv(builder, fun, this, nullarray(NomTypeParameterRef), TypeList({ NomIntClass::GetInstance()->GetType(), &NomDynamicType::Instance() }), thisType);
 
 				for (auto field : Fields)
 				{
@@ -226,7 +226,7 @@ namespace Nom
 					RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
 					auto writeValue = newValue;
 					writeValue = EnsurePacked(builder, writeValue);
-					field->GenerateWrite(builder, &scce, NomValue(thisarg, thisType), NomValue(writeValue, field->GetType()));
+					field->GenerateWrite(builder, &scce, RTValue::GetValue(builder, thisarg, thisType), RTValue::GetValue(builder, writeValue, field->GetType()));
 					builder->CreateRetVoid();
 				}
 				builder->SetInsertPoint(notfound);
@@ -296,7 +296,7 @@ namespace Nom
 						auto argsarr = makealloca(Value*, paramCount);		
 
 						NomSubstitutionContextMemberContext nscmc(meth);
-						CastedValueCompileEnv cvce = CastedValueCompileEnv(meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
+						CastedValueCompileEnv cvce = CastedValueCompileEnv(builder, meth->GetDirectTypeParameters(), this->GetAllTypeParameters(), fun, 2, paramCount, PWObject(varargs[0]).PointerToTypeArguments(builder));
 
 						for (decltype(paramCount) j = 0; j < paramCount; j++)
 						{

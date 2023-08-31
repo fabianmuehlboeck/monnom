@@ -81,7 +81,7 @@ namespace Nom
 			void CompileLLVM(llvm::Module* mod) const override;
 			void PreprocessInheritance() const override;
 
-			NomValue GenerateConstructorCall(NomBuilder& builder, CompileEnv* env, const TypeList typeArgs, llvm::Value* objpointer, llvm::ArrayRef<NomValue> args) const;
+			RTValuePtr GenerateConstructorCall(NomBuilder& builder, CompileEnv* env, const TypeList typeArgs, llvm::Value* objpointer, llvm::ArrayRef<RTValuePtr> args) const;
 			NomInstantiationRef<const NomStaticMethod> GetStaticMethod(NomStringRef methodName, const TypeList typeArgs, const TypeList argTypes) const;
 
 			NomInstantiationRef<const NomConstructor> GetConstructor(const TypeList typeArgs, const TypeList argTypes) const;

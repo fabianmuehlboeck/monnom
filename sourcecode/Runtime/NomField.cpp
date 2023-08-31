@@ -25,6 +25,9 @@
 #include "PWLambda.h"
 #include "PWObject.h"
 #include "PWRecord.h"
+#include "PWInt.h"
+#include "PWFloat.h"
+#include "PWPacked.h"
 
 using namespace llvm;
 using namespace std;
@@ -66,7 +69,7 @@ namespace Nom
 			return NomConstants::GetString(Name)->GetText();
 		}
 
-		NomValue NomTypedField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver) const
+		RTValuePtr NomTypedField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, RTValuePtr receiver) const
 		{
 			auto recinst = Class->GetInstantiation(receiver.GetNomType());
 			if (recinst != nullptr)
@@ -81,12 +84,12 @@ namespace Nom
 					retval = builder->CreateBitCast(builder->CreatePtrToInt(retval, INTTYPE), FLOATTYPE);
 				}
 				NomSubstitutionContextList nscl(recinst->Arguments);
-				return NomValue(retval, GetType()->SubstituteSubtyping(&nscl));
+				return RTValue::GetValue(builder, retval, GetType()->SubstituteSubtyping(&nscl));
 			}
 			throw new std::exception();
 		}
 
-		void NomTypedField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
+		void NomTypedField::GenerateWrite(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const
 		{
 			auto recinst = Class->GetInstantiation(receiver.GetNomType());
 			if (recinst != nullptr)
@@ -98,15 +101,15 @@ namespace Nom
 				}
 				if (this->GetType()->IsSubtype(NomIntClass::GetInstance()->GetType(), false))
 				{
-					value = NomValue(builder->CreateIntToPtr(EnsureUnpackedInt(builder, env, value), REFTYPE), value.GetNomType());
+					value = RTValue::GetValue(builder, builder->CreateIntToPtr(value->AsRawInt(builder, nullptr, true), REFTYPE), value.GetNomType());
 				}
 				else if (this->GetType()->IsSubtype(NomFloatClass::GetInstance()->GetType(), false))
 				{
-					value = NomValue(builder->CreateIntToPtr(builder->CreateBitCast(EnsureUnpackedFloat(builder, env, value), INTTYPE), REFTYPE), value.GetNomType());
+					value = RTValue::GetValue(builder, builder->CreateIntToPtr(builder->CreateBitCast(value->AsRawFloat(builder, nullptr, true), INTTYPE), REFTYPE), value.GetNomType());
 				}
 				else
 				{
-					value = EnsurePacked(builder, value);
+					value = value->AsPackedValue(builder);
 				}
 				ObjectHeader::WriteField(builder, receiver, PWCInt32(this->Index,false), value, this->Class->GetHasRawInvoke());
 				return;
@@ -151,12 +154,12 @@ namespace Nom
 		{
 			return Name;
 		}
-		NomValue NomDictField::GenerateRead(NomBuilder& builder, CompileEnv* env, NomValue receiver) const
+		RTValuePtr NomDictField::GenerateRead(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver) const
 		{
 			std::string key = GetName()->ToStdString();
-			return NomValue(builder->CreatePointerCast(ObjectHeader::CreateDictionaryLoad(builder, env, receiver, MakeInt(NomNameRepository::Instance().GetNameID(key))), REFTYPE, key), NomType::DynamicRef);
+			return RTValue::GetValue(builder, builder->CreatePointerCast(ObjectHeader::CreateDictionaryLoad(builder, env, receiver, MakeInt(NomNameRepository::Instance().GetNameID(key))), REFTYPE, key), NomType::DynamicRef);
 		}
-		void NomDictField::GenerateWrite(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver, NomValue value) const
+		void NomDictField::GenerateWrite(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -216,11 +219,11 @@ namespace Nom
 		{
 			return NomConstants::GetString(Name)->GetText();
 		}
-		NomValue NomClosureField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver) const
+		RTValuePtr NomClosureField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, RTValuePtr receiver) const
 		{
-			return NomValue(PWLambdaPrecise(receiver, Lambda).ReadLambdaField(builder, Index), GetType());
+			return RTValue::GetValue(builder, PWLambdaPrecise(receiver, Lambda).ReadLambdaField(builder, Index), GetType());
 		}
-		void NomClosureField::GenerateWrite([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] NomValue receiver, [[maybe_unused]] NomValue value) const
+		void NomClosureField::GenerateWrite([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] RTValuePtr receiver, [[maybe_unused]] RTValuePtr value) const
 		{
 			throw new std::exception();
 		}
@@ -239,18 +242,18 @@ namespace Nom
 		{
 			return NomConstants::GetString(Name)->GetText();
 		}
-		NomValue NomRecordField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue receiver) const
+		RTValuePtr NomRecordField::GenerateRead(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, RTValuePtr receiver) const
 		{
 			llvm::Value* retval = RecordHeader::GenerateReadField(builder, receiver, PWCInt32(Index, false), this->Structure->GetHasRawInvoke()); //loadinst;
-			return NomValue(retval, GetType());
+			return RTValue::GetValue(builder, retval, GetType());
 		}
-		void NomRecordField::GenerateWrite(NomBuilder& builder, CompileEnv* env, NomValue receiver, NomValue value) const
+		void NomRecordField::GenerateWrite(NomBuilder& builder, CompileEnv* env, RTValuePtr receiver, RTValuePtr value) const
 		{
 			if (!value.GetNomType()->IsSubtype(this->GetType()))
 			{
 				value = CastInstruction::MakeCast(builder, env, value, this->GetType());
 			}
-			value = EnsurePacked(builder, value);
+			value = value->AsPackedValue(builder);
 			if (!env->GetInConstructor())
 			{
 				RecordHeader::GenerateWriteWrittenTag(builder, receiver, PWCInt32(Index, false), Structure->Fields.size());

@@ -1,7 +1,6 @@
 #include "ObjectClass.h"
 #include "NomConstants.h"
 #include "NomClassType.h"
-#include "TypeList.h"
 #include "NomString.h"
 #include "DLLExport.h"
 PUSHDIAGSUPPRESSION

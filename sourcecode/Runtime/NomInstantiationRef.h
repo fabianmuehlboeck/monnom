@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TypeList.h"
+#include "NomTypeDecls.h"
 
 namespace Nom
 {

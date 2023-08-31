@@ -19,6 +19,10 @@ namespace Nom
 		{
 			return NLLVMPointer(GetLLVMType());
 		}
+		PWBool PWVTable::CompareWith(NomBuilder& builder, PWVTable other) const
+		{
+			return builder->CreateICmpEQ(builder->CreatePtrToInt(wrapped, numtype(intptr_t)), builder->CreatePtrToInt(other.wrapped, numtype(intptr_t)), "vtablesEqual");
+		}
 		llvm::Value* Nom::Runtime::PWVTable::ReadHasRawInvoke(NomBuilder& builder) const
 		{
 			if (RTConfig_UseLambdaOffset)

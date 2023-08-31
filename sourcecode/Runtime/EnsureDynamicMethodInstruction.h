@@ -16,7 +16,7 @@ namespace Nom
 			EnsureDynamicMethodInstruction(ConstantID methodNameID, RegIndex receiver);
 			virtual ~EnsureDynamicMethodInstruction() override;
 
-			static llvm::Value* GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, NomValue receiver);
+			static llvm::Value* GenerateGetBestInvokeDispatcherDyn(NomBuilder& builder, RTValuePtr receiver);
 
 			// Inherited via NomInstruction
 			virtual void Compile(NomBuilder& builder, CompileEnv* env, size_t lineno) override;

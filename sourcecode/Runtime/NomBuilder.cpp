@@ -9,28 +9,28 @@ namespace Nom
 		void NomBuilder::AllocNewPage()
 		{
 			char* newpage = reinterpret_cast<char*>(malloc(PAGESIZE));
-			if (curallocstart != 0)
+			if (curallocstart != nullptr)
 			{
 				*curallocstart = newpage;
-				if (firstpageptr == 0)
+				if (firstpageptr == nullptr)
 				{
 					firstpageptr = curallocstart;
 				}
 			}
 			curallocstart=reinterpret_cast<char**>(newpage);
-			*curallocstart = 0;
+			*curallocstart = nullptr;
 			curallocend = newpage + PAGESIZE;
 			curallocpos = reinterpret_cast<char*>(curallocstart+1);
 		}
 		NomBuilder::~NomBuilder()
 		{
-			while (firstpageptr != 0)
+			while (firstpageptr != nullptr)
 			{
 				char** curptr = firstpageptr;
 				firstpageptr = reinterpret_cast<char**>(*curptr);
 				free(curptr);
 			}
-			if (curallocstart != 0)
+			if (curallocstart != nullptr)
 			{
 				free(curallocstart);
 			}

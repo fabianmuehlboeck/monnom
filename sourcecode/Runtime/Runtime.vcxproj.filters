@@ -132,9 +132,6 @@
     <ClCompile Include="CompileEnv.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="TypeList.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="Util.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -678,6 +675,12 @@
     <ClCompile Include="PWPacked.cpp">
       <Filter>Wrappers\Values</Filter>
     </ClCompile>
+    <ClCompile Include="RTValuePtr.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTStructuralValue.cpp">
+      <Filter>Values</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -711,9 +714,6 @@
       <Filter>Instructions</Filter>
     </ClInclude>
     <ClInclude Include="Util.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="TypeList.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="StringClass.h">
@@ -1330,6 +1330,12 @@
     </ClInclude>
     <ClInclude Include="PWPacked.h">
       <Filter>Wrappers\Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTValuePtr.h">
+      <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTStructuralValue.h">
+      <Filter>Values</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -18,11 +18,11 @@ namespace Nom
 		{
 			if (Value)
 			{
-				RegisterValue(env, NomValue(NomBoolObjects::GetTrue(*env->Module), NomBoolClass::GetInstance()->GetType(), false));
+				RegisterValue(env, RTValue::GetValue(builder, NomBoolObjects::GetTrue(*env->Module), NomBoolClass::GetInstance()->GetType(), false));
 			}
 			else
 			{
-				RegisterValue(env, NomValue(NomBoolObjects::GetFalse(*env->Module), NomBoolClass::GetInstance()->GetType(), false));
+				RegisterValue(env, RTValue::GetValue(builder, NomBoolObjects::GetFalse(*env->Module), NomBoolClass::GetInstance()->GetType(), false));
 			}
 		}
 		void LoadBoolConstantInstruction::Print([[maybe_unused]] bool resolve)

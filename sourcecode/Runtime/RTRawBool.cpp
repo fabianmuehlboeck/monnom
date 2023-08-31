@@ -4,58 +4,73 @@
 #include "RTVMPtr.h"
 #include "RTObject.h"
 #include "RTRefValue.h"
+#include "PWRefValue.h"
+#include "PWObject.h"
 
+using namespace llvm;
 namespace Nom
 {
 	namespace Runtime
 	{
-		const RTRawBool& RTRawBool::Get(NomBuilder& builder, const PWBool _value)
+		const RTRawBool* RTRawBool::Get(NomBuilder& builder, const PWBool _value, bool _isfc = false)
 		{
-			return *new(builder.Malloc(sizeof(RTRawBool))) RTRawBool(_value);
+			return new(builder.Malloc(sizeof(RTRawBool))) RTRawBool(_value, GetBoolClassType(), _isfc);
 		}
-		NomTypeRef RTRawBool::GetType() const
+		NomTypeRef RTRawBool::GetNomType() const
 		{
 			return GetBoolClassType();
 		}
-		const RTPWValue<PWInt64>* RTRawBool::AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWInt64> RTRawBool::AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
-			return RTConvValue<PWInt64, NomTypeRef, RTRawInt>::Get(builder, value.Resize<64>(builder), GetIntClassType(), orig == nullptr ? this : orig);
+			return RTConvValue<PWInt64, NomTypeRef, RTRawInt>::Get(builder, value.Resize<64>(builder), GetIntClassType(), orig.Coalesce(this));
 		}
-		const RTPWValue<PWFloat>* RTRawBool::AsRawFloat(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWFloat> RTRawBool::AsRawFloat(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
-			return RTConvValue<PWFloat, NomTypeRef, RTRawFloat>::Get(builder, builder->CreateUIToFP(value.wrapped, FLOATTYPE, "boolToFloat"), GetFloatClassType(), orig == nullptr ? this : orig);
+			return RTConvValue<PWFloat, NomTypeRef, RTRawFloat>::Get(builder, builder->CreateUIToFP(value.wrapped, FLOATTYPE, "boolToFloat"), GetFloatClassType(), orig.Coalesce(this));
 		}
-		const RTPWValue<PWBool>* RTRawBool::AsRawBool(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWBool> RTRawBool::AsRawBool(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			return this;
 		}
-		const RTPWValue<PWRefValue>* RTRawBool::AsRefValue(NomBuilder& builder, RTValuePtr orig) const
+		const RTPWValuePtr<PWRefValue> RTRawBool::AsRefValue(NomBuilder& builder, RTValuePtr orig) const
 		{
-			return RTConvValue<PWRefValue, NomTypeRef, RTRefValue>::Get(builder, PWRefValue(PackBool(builder, value.wrapped)), GetBoolClassType(), orig == nullptr ? this : orig);
+			return RTConvValue<PWRefValue, NomTypeRef, RTRefValue>::Get(builder, PWRefValue(PackBool(builder, value.wrapped)), GetBoolClassType(), orig.Coalesce(this));
 		}
-		const RTPWValue<PWVMPtr>* RTRawBool::AsVMPtr(NomBuilder& builder, RTValuePtr orig) const
+		const RTPWValuePtr<PWVMPtr> RTRawBool::AsVMPtr(NomBuilder& builder, RTValuePtr orig) const
 		{
-			return RTConvValue<PWVMPtr, NomTypeRef, RTVMPtr>::Get(builder, PWVMPtr(builder->CreateIntToPtr(value.Resize<64>(builder), POINTERTYPE)), GetBoolClassType(), orig == nullptr ? this : orig);
+			return RTConvValue<PWVMPtr, NomTypeRef, RTVMPtr>::Get(builder, PWVMPtr(builder->CreateIntToPtr(value.Resize<64>(builder), POINTERTYPE)), GetBoolClassType(), orig.Coalesce(this));
 		}
-		const RTPWValue<PWObject>* RTRawBool::AsObject(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWObject> RTRawBool::AsObject(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
-			return RTConvValue<PWObject, NomTypeRef, RTObject>::Get(builder, PWObject(PackBool(builder, value.wrapped)), GetBoolClassType(), orig == nullptr ? this : orig);
+			return RTConvValue<PWObject, NomTypeRef, RTObject>::Get(builder, PWObject(PackBool(builder, value.wrapped)), GetBoolClassType(), orig.Coalesce(this));
 		}
-		const RTPWValue<PWLambda>* RTRawBool::AsLambda(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWLambda> RTRawBool::AsLambda(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			throw new std::exception();
 		}
-		const RTPWValue<PWPartialApp>* RTRawBool::AsPartialApp(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWPartialApp> RTRawBool::AsPartialApp(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			throw new std::exception();
 		}
-		const RTPWValue<PWRecord>* RTRawBool::AsRecord(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWRecord> RTRawBool::AsRecord(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			throw new std::exception();
 		}
-		const RTPWValue<PWStructVal>* RTRawBool::AsStructVal(NomBuilder& builder, RTValuePtr orig, bool check) const
+		const RTPWValuePtr<PWStructVal> RTRawBool::AsStructVal(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			throw new std::exception();
+		}
+		const RTPWValuePtr<PWPacked> RTRawBool::AsPackedValue(NomBuilder& builder, RTValuePtr orig) const
+		{
+			return nullptr;
+		}
+		int RTRawBool::GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, bool unboxObjects, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight) const
+		{
+			BasicBlock* newBB = BasicBlock::Create(builder->getContext(), "isPrimitiveBool", builder->GetInsertBlock()->getParent());
+			builder->CreateBr(newBB);
+			builder->SetInsertPoint(newBB);
+			onPrimitiveBool(builder, this);
+			return 1;
 		}
 	}
 }

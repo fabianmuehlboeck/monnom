@@ -2,6 +2,7 @@
 #include "PhiNode.h"
 #include "../TypeOperations.h"
 #include <iostream>
+#include "../CompileEnv.h"
 
 using namespace std;
 namespace Nom
@@ -21,9 +22,9 @@ namespace Nom
 			decltype(incCount) incPos = 0;
 			for (auto &i : Incomings)
 			{
-				NomValue nv = (*env)[std::get<0>(i)];
+				auto nv = (*env)[std::get<0>(i)];
 				llvm::PHINode* llvmPHI = static_cast<llvm::PHINode*>(static_cast<llvm::Value*>(nv));
-				auto incVal = EnsureType(builder, env, (*env)[std::get<1>(i)], nv.GetNomType(), llvmPHI->getType());
+				auto incVal = (*env)[std::get<1>(i)]->ForLLVMType(builder, llvmPHI->getType(), false);
 				incPairs[incPos] = std::make_pair(llvmPHI, incVal);
 				incPos++;
 			}

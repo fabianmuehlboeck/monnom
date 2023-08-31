@@ -83,7 +83,7 @@ class Main
 	public static fun Main() : Void
 	{
 		Timer t=new Timer();
-		Int p = Stream.Get(Main.GetPrimes(),9999);
+		Int p = Stream.Get(Main.GetPrimes(),999);
 		t.PrintDifference();
 		"\n".Print();
 		p.ToString().Print();

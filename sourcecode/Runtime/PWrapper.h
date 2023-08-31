@@ -2,6 +2,7 @@
 PUSHDIAGSUPPRESSION
 #include "llvm/IR/Value.h"
 POPDIAGSUPPRESSION
+#include "NomBuilder.h"
 
 namespace Nom
 {
@@ -24,6 +25,10 @@ namespace Nom
 			inline operator T () const
 			{
 				return wrapped;
+			}
+			inline bool IsEmpty() const
+			{
+				return wrapped == nullptr;
 			}
 		};
 		using PWrapper = PWrapperT<llvm::Value*>;

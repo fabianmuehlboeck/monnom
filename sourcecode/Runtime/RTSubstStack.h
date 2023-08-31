@@ -35,11 +35,6 @@ namespace Nom
 
 			void MakeTypeListInvariant(NomBuilder& builder);
 
-			operator llvm::Value* ()
-			{
-				return stack;
-			}
-
 			void MakeReleaseBlocks(NomBuilder& builder, llvm::BasicBlock* targetBlock1, llvm::BasicBlock** newTargetBlock1, llvm::BasicBlock* targetBlock2 = nullptr, llvm::BasicBlock** newTargetBlock2 = nullptr, llvm::BasicBlock* targetBlock3 = nullptr, llvm::BasicBlock** newTargetBlock3 = nullptr);
 			void MakeRelease(NomBuilder& builder);
 		};
