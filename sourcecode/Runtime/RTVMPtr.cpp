@@ -8,6 +8,7 @@
 #include "RTLambdaValue.h"
 #include "RTRecordValue.h"
 #include "RTStructuralValue.h"
+#include "PWAll.h"
 
 namespace Nom
 {
@@ -76,6 +77,10 @@ namespace Nom
 		const RTPWValuePtr<PWPacked> RTVMPtr::AsPackedValue(NomBuilder& builder, RTValuePtr orig) const
 		{
 			return nullptr;
+		}
+		void RTVMPtr::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitVMPtr(this);
 		}
 	}
 }

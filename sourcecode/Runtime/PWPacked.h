@@ -13,6 +13,8 @@ namespace Nom
 
 			}
 			llvm::Value* ReadTypeTag(NomBuilder& builder) const;
+			static llvm::Type* GetLLVMType();
+			static llvm::Type* GetWrappedLLVMType();
 		};
 	}
 }

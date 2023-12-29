@@ -20,7 +20,7 @@ POPDIAGSUPPRESSION
 #include "RTInterface.h"
 #include "RTVTable.h"
 #include "NomRecordCallTag.h"
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include "RefValueHeader.h"
 #include "NomLambdaCallTag.h"
 #include "Metadata.h"
@@ -186,7 +186,7 @@ namespace Nom
 					BasicBlock* bestMatchBlock = BasicBlock::Create(LLVMCONTEXT, "castTypePerfectMatch", fun);
 					BasicBlock* mismatchBlock = BasicBlock::Create(LLVMCONTEXT, "castTypeMismatch", fun);
 
-					auto iface = RTClassType::GenerateReadClassDescriptorLink(builder, structCastType);
+					auto iface = XRTClassType::GenerateReadClassDescriptorLink(builder, structCastType);
 					auto ifaceMatch = CreatePointerEq(builder, iface, method->GetContainer()->GetLLVMElement(mod));
 					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { ifaceMatch, MakeUInt(1,1) });
 					builder->CreateCondBr(ifaceMatch, bestMatchBlock, mismatchBlock, GetLikelyFirstBranchMetadata());
@@ -197,8 +197,8 @@ namespace Nom
 						{
 							builder->CreateCall(GetIncPerfectCallTagTypeMatchesFunction(*fun->getParent()), {});
 						}
-						CastedValueCompileEnv cvce = CastedValueCompileEnv(builder, method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreateGEP(RTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }));
-						auto castResult = RTCast::GenerateCast(builder, &cvce, actualResult, method->GetReturnType());
+						CastedValueCompileEnv cvce = CastedValueCompileEnv(builder, method->GetDirectTypeParameters(), method->GetParent()->GetAllTypeParameters(), fun, 2, argTRTs.size(), builder->CreateGEP(XRTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }));
+						auto castResult = RTCast::GenerateCast(builder, &cvce, RTValue::GetValue(builder, actualResult, NomType::DynamicRef), method->GetReturnType());
 						//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
 						//builder->CreateCondBr(castResult, outBlock, castFailBlock, GetLikelyFirstBranchMetadata());
 						outPHI->addIncoming(castResult, builder->GetInsertBlock());
@@ -213,7 +213,7 @@ namespace Nom
 						}
 						auto typeArgRefStore = builder->CreateAlloca(NLLVMPointer(TYPETYPE), MakeUInt(64, 1));
 						builder->CreateIntrinsic(Intrinsic::lifetime_start, { POINTERTYPE }, { MakeInt<size_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
-						MakeInvariantStore(builder, builder->CreateGEP(RTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), typeArgRefStore, AtomicOrdering::NotAtomic);
+						MakeInvariantStore(builder, builder->CreateGEP(XRTClassType::GetLLVMType(), structCastType, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs) }), typeArgRefStore, AtomicOrdering::NotAtomic);
 						auto invariantID = builder->CreateIntrinsic(Intrinsic::invariant_start, { POINTERTYPE }, { MakeInt<size_t>(GetNomJITDataLayout().getTypeAllocSize(NLLVMPointer(TYPETYPE))), builder->CreatePointerCast(typeArgRefStore, POINTERTYPE) });
 						argbuf--;
 						argbuf[0] = builder->CreatePointerCast(fun, POINTERTYPE);

@@ -1,5 +1,6 @@
 #pragma once
 #include "RTValue.h"
+#include "PWRefValue.h"
 
 namespace Nom
 {
@@ -11,6 +12,7 @@ namespace Nom
 			RTRefValue(PWRefValue _value, NomTypeRef _type, bool _isfc = false);
 		public:
 			static const RTRefValue* Get(NomBuilder& builder, PWRefValue _value, NomTypeRef _type, bool _isfc = false);
+			virtual void Visit(RTValueVisitor visitor) const override;
 			virtual const RTPWValuePtr<PWInt64> AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWFloat> AsRawFloat(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWBool> AsRawBool(NomBuilder& builder, RTValuePtr orig, bool check) const override;

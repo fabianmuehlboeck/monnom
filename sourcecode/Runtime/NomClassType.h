@@ -5,7 +5,7 @@ PUSHDIAGSUPPRESSION
 #include "llvm/Support/Error.h"
 POPDIAGSUPPRESSION
 #include "Context.h"
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include "NomAlloc.h"
 #include "NomNamed.h"
 #include "GloballyNamed.h"
@@ -27,7 +27,7 @@ namespace Nom
 		{
 			friend NomNamed;
 		private:
-			//mutable const RTClassType * rtclst = nullptr;
+			//mutable const XRTClassType * rtclst = nullptr;
 			NomClassType(const NomNamed *named, const llvm::ArrayRef<NomTypeRef> args = {});
 			const uint64_t id;
 			static uint64_t Count() { static uint64_t count = 0; return ++count; }

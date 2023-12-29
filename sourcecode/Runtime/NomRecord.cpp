@@ -223,7 +223,7 @@ namespace Nom
 					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "field:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
+					RTCast::GenerateCast(builder, &scce, RTValue::GetValue(builder, newValue, NomType::DynamicRef), field->GetType());
 					auto writeValue = newValue;
 					writeValue = EnsurePacked(builder, writeValue);
 					field->GenerateWrite(builder, &scce, RTValue::GetValue(builder, thisarg, thisType), RTValue::GetValue(builder, writeValue, field->GetType()));
@@ -315,7 +315,7 @@ namespace Nom
 								curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
 								if (j > meth->GetDirectTypeParametersCount())
 								{
-									curArg = RTCast::GenerateCast(builder, &cvce, curArg, meth->GetArgumentTypes(&nscmc)[j - (meth->GetDirectTypeParametersCount() + 1)]);
+									curArg = RTCast::GenerateCast(builder, &cvce, RTValue::GetValue(builder, curArg, NomType::DynamicRef), meth->GetArgumentTypes(&nscmc)[j - (meth->GetDirectTypeParametersCount() + 1)]);
 								}
 							}
 							curArg = EnsurePackedUnpacked(builder, curArg, expectedType);

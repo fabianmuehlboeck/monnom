@@ -1,5 +1,6 @@
 #pragma once
 #include "RTValue.h"
+#include "PWRecord.h"
 
 namespace Nom
 {
@@ -23,6 +24,7 @@ namespace Nom
 			virtual const RTPWValuePtr<PWPartialApp> AsPartialApp(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWRecord> AsRecord(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWStructVal> AsStructVal(NomBuilder& builder, RTValuePtr orig, bool check) const override;
+			void Visit(RTValueVisitor visitor) const override;
 		};
 	}
 }

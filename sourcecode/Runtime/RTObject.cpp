@@ -1,5 +1,5 @@
 #include "RTObject.h"
-#include "PWObject.h"
+#include "PWAll.h"
 
 namespace Nom
 {
@@ -55,6 +55,10 @@ namespace Nom
 		const RTPWValuePtr<PWPacked> RTObject::AsPackedValue(NomBuilder& builder, RTValuePtr orig) const
 		{
 			return nullptr;
+		}
+		void RTObject::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitObject(this);
 		}
 	}
 }

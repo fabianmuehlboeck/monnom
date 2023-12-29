@@ -213,7 +213,7 @@ namespace Nom
 				else
 				{
 					RTValuePtr nv = CastInstruction::MakeCast(builder, env, value, targetType);
-					nv->AsPackedValue(builder);
+					return nv->AsPackedValue(builder);
 				}
 			}
 			else

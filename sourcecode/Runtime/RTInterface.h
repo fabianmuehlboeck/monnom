@@ -31,7 +31,7 @@ namespace Nom
 		public:
 			static llvm::StructType* GetLLVMType();
 
-			static llvm::Constant* CreateConstant(const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superClassCount, llvm::Constant* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* checkReturnValueFunction, llvm::Constant* instantiationDictionary, llvm::Constant* signature, llvm::Constant* castFunction);
+			static llvm::Constant* CreateConstant(const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superClassCount, llvm::Constant* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* checkReturnValueFunction, llvm::Constant* instantiationDictionary, llvm::Constant* signature);
 			static llvm::Value* GenerateReadSuperInstanceCount(NomBuilder& builder, llvm::Value* descriptorPtr);
 			static llvm::Value* GenerateReadSuperClassCount(NomBuilder& builder, llvm::Value* descriptorPtr);
 			static llvm::Value* GenerateReadSuperInterfaceCount(NomBuilder& builder, llvm::Value* descriptorPtr);
@@ -43,7 +43,6 @@ namespace Nom
 
 			static llvm::Value* GenerateReadFlags(NomBuilder& builder, llvm::Value* descriptorPtr);
 			static llvm::Value* GenerateReadIRPtr(NomBuilder& builder, llvm::Value* descriptorPtr);
-			static llvm::Value* GenerateReadCastFunction(NomBuilder& builder, llvm::Value* descriptorPtr);
 
 		};
 	}

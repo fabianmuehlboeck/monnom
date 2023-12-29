@@ -29,7 +29,9 @@ namespace Nom
 					numtype(TypeKind), //Kind
 					numtype(size_t),   //Hash
 					POINTERTYPE.AsLLVMType(),	   //NomType
-					NLLVMPointer(GetCastFunctionType()).AsLLVMType()
+					NLLVMPointer(GetCastFunctionType()).AsLLVMType(),
+					NLLVMPointer(GetTypeEqFunctionType()).AsLLVMType(),
+					NLLVMPointer(GetSubtypeFunctionType()).AsLLVMType()
 				);
 			}
 			return llvmtype;
@@ -219,7 +221,7 @@ namespace Nom
 			{
 				maybeTypeBlock = BasicBlock::Create(LLVMCONTEXT, "maybeType", fun);
 				builder->SetInsertPoint(maybeTypeBlock);
-				auto nextType = RTMaybeType::GenerateReadPotentialType(builder, typePHI);
+				auto nextType = XRTMaybeType::GenerateReadPotentialType(builder, typePHI);
 				typePHI->addIncoming(nextType, builder->GetInsertBlock());
 				substPHI->addIncoming(substPHI, builder->GetInsertBlock());
 				typeSwitch->addCase(MakeInt<TypeKind>(TypeKind::TKMaybe), maybeTypeBlock);
@@ -382,7 +384,17 @@ namespace Nom
 		}
 		llvm::FunctionType* GetCastFunctionType()
 		{
-			static FunctionType* ft = FunctionType::get(REFTYPE, { TYPETYPE, REFTYPE }, false);
+			static FunctionType* ft = FunctionType::get(REFTYPE, { REFTYPE, TYPETYPE, POINTERTYPE }, false);
+			return ft;
+		}
+		llvm::FunctionType* GetTypeEqFunctionType()
+		{
+			static FunctionType* ft = FunctionType::get(inttype(1), { TYPETYPE, POINTERTYPE, POINTERTYPE }, false);
+			return ft;
+		}
+		llvm::FunctionType* GetSubtypeFunctionType()
+		{
+			static FunctionType* ft = FunctionType::get(inttype(1), { TYPETYPE, POINTERTYPE, POINTERTYPE }, false);
 			return ft;
 		}
 	}

@@ -314,7 +314,7 @@ namespace Nom
 				}
 				auto superInsts = GetSuperInstances(mod, linkage, retgvar, stetype);
 				auto stePointer = ConstantExpr::getGetElementPtr(gvartype, retgvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1), MakeInt32(0), MakeInt32(0) }));
-				auto cnst = RTInterface::CreateConstant(this, flags, MakeInt32(this->GetTypeParametersCount()), MakeInt<size_t>(0), MakeInt<size_t>(instantiations.size() + 1), stePointer, GetCheckReturnTypeFunction(mod, linkage), GetLLVMPointer(&runtimeInstantiations), signature, GetCastFunction(mod, linkage));
+				auto cnst = RTInterface::CreateConstant(this, flags, MakeInt32(this->GetTypeParametersCount()), MakeInt<size_t>(0), MakeInt<size_t>(instantiations.size() + 1), stePointer, GetCheckReturnTypeFunction(mod, linkage), GetLLVMPointer(&runtimeInstantiations), signature);
 				retgvar->setInitializer(ConstantStruct::get(gvartype, { cnst, superInsts }));
 
 				gvar_alias->setAliasee(ConstantExpr::getPointerCast(ret, RTInterface::GetLLVMType()->getPointerTo()));
@@ -628,7 +628,7 @@ namespace Nom
 					else
 					{
 						CastedValueCompileEnvIndirect cvce = CastedValueCompileEnvIndirect(builder, crtp.second->Method->GetDirectTypeParameters(), crtp.second->Method->GetParent()->GetAllTypeParameters(), fun, 3, crtp.second->Method->GetArgumentCount(), typeArgsPtrArg);
-						auto castResult = RTCast::GenerateCast(builder, &cvce, checkValue, crtp.second->Method->GetReturnType(nullptr));
+						auto castResult = RTCast::GenerateCast(builder, &cvce, RTValue::GetValue(builder, checkValue, NomType::DynamicRef), crtp.second->Method->GetReturnType(nullptr));
 						//builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { castResult, MakeUInt(1,1) });
 						//builder->CreateCondBr(castResult, nextBlock, castFailBlock, GetLikelyFirstBranchMetadata());
 						builder->CreateBr(nextBlock);
@@ -641,10 +641,6 @@ namespace Nom
 			}
 
 			return fun;
-		}
-		llvm::Constant* NomInterface::GetCastFunction([[maybe_unused]] llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
-		{
-			return ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 		}
 		llvm::Constant* NomInterface::GetInterfaceDescriptor(llvm::Module& mod) const
 		{

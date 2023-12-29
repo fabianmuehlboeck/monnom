@@ -1,17 +1,19 @@
 #pragma once
 #include "RTValue.h"
+#include "PWStructVal.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
-		class RTStructuralValue : public RTPWTypedValue<PWPartialApp, NomTypeRef>
+		class RTStructuralValue : public RTPWTypedValue<PWStructVal, NomTypeRef>
 		{
 		protected:
-			RTStructuralValue(const PWPartialApp _val, NomTypeRef _type, bool _isfc = false);
+			RTStructuralValue(const PWStructVal _val, NomTypeRef _type, bool _isfc = false);
 		public:
 			virtual ~RTStructuralValue() override {}
-			static RTStructuralValue* Get(NomBuilder& builder, const PWPartialApp _val, NomTypeRef _type, bool _isfc = false);
+			static RTStructuralValue* Get(NomBuilder& builder, const PWStructVal _val, NomTypeRef _type, bool _isfc = false);
+
 			virtual const RTPWValuePtr<PWInt64> AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWFloat> AsRawFloat(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWBool> AsRawBool(NomBuilder& builder, RTValuePtr orig, bool check) const override;
@@ -23,6 +25,7 @@ namespace Nom
 			virtual const RTPWValuePtr<PWPartialApp> AsPartialApp(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWRecord> AsRecord(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWStructVal> AsStructVal(NomBuilder& builder, RTValuePtr orig, bool check) const override;
+			void Visit(RTValueVisitor visitor) const override;
 		};
 	}
 }

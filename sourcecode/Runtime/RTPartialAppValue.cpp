@@ -1,5 +1,5 @@
 #include "RTPartialAppValue.h"
-#include "PWPartialApp.h"
+#include "PWAll.h"
 
 namespace Nom
 {
@@ -7,6 +7,10 @@ namespace Nom
 	{
 		RTPartialAppValue::RTPartialAppValue(const PWPartialApp _val, NomTypeRef _type, bool _isfc) : RTPWTypedValue<PWPartialApp, NomTypeRef>(_val, _type, _isfc)
 		{
+		}
+		void RTPartialAppValue::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitPartialApp(this);
 		}
 		RTPartialAppValue* RTPartialAppValue::Get(NomBuilder& builder, const PWPartialApp _val, NomTypeRef _type, bool _isfc)
 		{

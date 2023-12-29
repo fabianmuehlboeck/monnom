@@ -8,8 +8,8 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		enum class RTDynamicTypeFields : unsigned char { Head = 0 };
-		class RTDynamicType : public ARTRep<RTDynamicType, RTDynamicTypeFields>
+		enum class XRTDynamicTypeFields : unsigned char { Head = 0 };
+		class XRTDynamicType : public ARTRep<XRTDynamicType, XRTDynamicTypeFields>
 		{
 		public:
 			static llvm::StructType* GetLLVMType();

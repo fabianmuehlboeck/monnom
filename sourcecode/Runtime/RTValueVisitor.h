@@ -29,6 +29,7 @@ namespace Nom
 			std::function<void(RTPWValuePtr<PWInt64>)> VisitRawInt = [this](RTPWValuePtr<PWInt64> o) -> void { VisitDefault(o); };
 			std::function<void(RTPWValuePtr<PWFloat>)> VisitRawFloat = [this](RTPWValuePtr<PWFloat> o) -> void { VisitDefault(o); };
 			std::function<void(RTPWValuePtr<PWBool>)> VisitRawBool = [this](RTPWValuePtr<PWBool> o) -> void { VisitDefault(o); };
+			std::function<void(RTPWValuePtr<PWPartialApp>)> VisitPartialApp = [this](RTPWValuePtr<PWPartialApp> o) -> void { VisitDefault(o); };
 
 			RTValueVisitor() {}
 			RTValueVisitor(std::function<void(RTValuePtr)> _defaultVisitor) : VisitDefault(_defaultVisitor) {}

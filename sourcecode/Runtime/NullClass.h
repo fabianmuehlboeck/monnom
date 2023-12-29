@@ -1,7 +1,7 @@
 #pragma once
 #include "NomClass.h"
 #include "RTClass.h"
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include "NomConstants.h"
 #include "RTTypeHead.h"
 #include "AvailableExternally.h"

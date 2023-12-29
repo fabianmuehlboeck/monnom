@@ -7,7 +7,7 @@
 #include "ObjectHeader.h"
 #include "RecordHeader.h"
 #include "LambdaHeader.h"
-#include "RTInstanceType.h"
+#include "XRTInstanceType.h"
 #include "RTOutput.h"
 #include "RTConfig.h"
 #include "RTInterface.h"

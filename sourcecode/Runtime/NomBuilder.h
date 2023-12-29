@@ -50,6 +50,14 @@ namespace Nom
 			{
 				return builder;
 			}
+
+			llvm::Function* GetFunction() {
+				return builder.GetInsertBlock()->getParent();
+			}
+
+			llvm::Module* GetModule() {
+				return GetFunction()->getParent();
+			}
 		};
 	}
 }

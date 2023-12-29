@@ -59,7 +59,7 @@ namespace Nom
 			}
 		}
 
-		llvm::Constant* RTClass::CreateConstant(llvm::GlobalVariable* gvar, llvm::StructType* gvartype, const NomInterface* irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Constant* dynamicDispatcherTable, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superClassCount, llvm::ConstantInt* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* interfaceMethodTable, llvm::Constant* signature, llvm::Constant* castFunction)
+		llvm::Constant* RTClass::CreateConstant(llvm::GlobalVariable* gvar, llvm::StructType* gvartype, const NomInterface* irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Constant* dynamicDispatcherTable, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superClassCount, llvm::ConstantInt* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* interfaceMethodTable, llvm::Constant* signature)
 		{
 			gvar->setAlignment(Align(256));
 			if (gvartype->getNumElements() == 4)
@@ -71,7 +71,7 @@ namespace Nom
 				}
 				auto dynamicDispatcherTableReferences = ConstantArray::get(arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(ddarr, IMTsize));
 				auto ptrToClassInstantiations = ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<Constant*>({MakeInt32(0), MakeInt32(gvartype->getNumElements() - 1), MakeInt32(0), MakeInt32(0) }));
-				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Class, interfaceMethodTable, dynamicDispatcherTableReferences, fieldRead, fieldWrite, MakeInt32(irptr->GetHasRawInvoke()?1:0)), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superClassCount, superInterfaceCount, ptrToClassInstantiations, checkReturnValueFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature, castFunction), fieldCount), dynamicDispatcherTable, superTypeEntries));
+				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Class, interfaceMethodTable, dynamicDispatcherTableReferences, fieldRead, fieldWrite, MakeInt32(irptr->GetHasRawInvoke()?1:0)), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superClassCount, superInterfaceCount, ptrToClassInstantiations, checkReturnValueFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), fieldCount), dynamicDispatcherTable, superTypeEntries));
 			}
 			else
 			{
@@ -89,7 +89,7 @@ namespace Nom
 				auto dynamicDispatcherTableReferences = ConstantArray::get(arrtype(GetDynamicDispatchListEntryType()->getPointerTo(), IMTsize), ArrayRef<Constant*>(ddarr, IMTsize));
 
 				auto ptrToClassInstantiations = ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements() - 1), MakeInt32(0), MakeInt32(0) }));
-				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, ConstantArray::get(arrtype(inttype(64), arrsize), ArrayRef<Constant*>(fillarr, arrsize)), methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Class, interfaceMethodTable, dynamicDispatcherTableReferences, fieldRead, fieldWrite, MakeInt32(irptr->GetHasRawInvoke()?1:0)), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superClassCount, superInterfaceCount, ptrToClassInstantiations, checkReturnValueFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature, castFunction), fieldCount), dynamicDispatcherTable, superTypeEntries));
+				gvar->setInitializer(llvm::ConstantStruct::get(gvartype, ConstantArray::get(arrtype(inttype(64), arrsize), ArrayRef<Constant*>(fillarr, arrsize)), methodTable, llvm::ConstantStruct::get(GetLLVMType(), RTVTable::CreateConstant(RTDescriptorKind::Class, interfaceMethodTable, dynamicDispatcherTableReferences, fieldRead, fieldWrite, MakeInt32(irptr->GetHasRawInvoke()?1:0)), RTInterface::CreateConstant(irptr, RTInterfaceFlags::None, typeArgCount, superClassCount, superInterfaceCount, ptrToClassInstantiations, checkReturnValueFunction, GetLLVMPointer(&irptr->runtimeInstantiations), signature), fieldCount), dynamicDispatcherTable, superTypeEntries));
 			}
 			return ConstantExpr::getGetElementPtr(gvartype, gvar, ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32(gvartype->getNumElements() - 3) }));
 		}

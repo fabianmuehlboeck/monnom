@@ -1,14 +1,14 @@
 #include "RTStructuralValue.h"
-#include "PWStructVal.h"
+#include "PWAll.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
-		RTStructuralValue::RTStructuralValue(const PWPartialApp _val, NomTypeRef _type, bool _isfc) : RTPWTypedValue<PWPartialApp, NomTypeRef>(_val, _type, _isfc)
+		RTStructuralValue::RTStructuralValue(const PWStructVal _val, NomTypeRef _type, bool _isfc) : RTPWTypedValue<PWStructVal, NomTypeRef>(_val, _type, _isfc)
 		{
 		}
-		RTStructuralValue* RTStructuralValue::Get(NomBuilder& builder, const PWPartialApp _val, NomTypeRef _type, bool _isfc)
+		RTStructuralValue* RTStructuralValue::Get(NomBuilder& builder, const PWStructVal _val, NomTypeRef _type, bool _isfc)
 		{
 			return new(builder.Malloc(sizeof(RTStructuralValue))) RTStructuralValue(_val, _type, _isfc);
 		}
@@ -55,6 +55,10 @@ namespace Nom
 		const RTPWValuePtr<PWStructVal> RTStructuralValue::AsStructVal(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			return RTPWValuePtr<PWStructVal>();
+		}
+		void RTStructuralValue::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitStructValue(this);
 		}
 	}
 }

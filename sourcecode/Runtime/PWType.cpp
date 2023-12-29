@@ -3,7 +3,12 @@
 #include "PWNomType.h"
 #include "RTTypeHead.h"
 #include "CompileHelpers.h"
+#include "PWSubstStack.h"
+#include "NomType.h"
+#include "RTTypeEq.h"
 
+using namespace llvm;
+using namespace std;
 namespace Nom
 {
 	namespace Runtime
@@ -34,6 +39,48 @@ namespace Nom
 		PWCastFunction PWType::ReadCastFun(NomBuilder& builder)
 		{
 			return MakeInvariantLoad(builder, RTTypeHead::GetLLVMType(), wrapped, MakeInt32(RTTypeHeadFields::CastFun), "castfun");
+		}
+		PWBool PWType::IsEq(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst, bool optimistic)
+		{
+
+		}
+		PWBool PWType::IsEq(NomBuilder& builder, NomTypeRef other, PWSubstStack ownSubst, PWSubstStack otherSubst, bool optimistic)
+		{
+			BasicBlock* varUnfoldBlock=BasicBlock::Create()
+			auto kind = ReadKind(builder);
+			auto isTypeVar = builder->CreateICmpEQ(kind, MakeIntLike(kind, static_cast<uint64_t>(TypeKind::TKVariable)));
+			builder->CreateCondBr(isTypeVar, )
+			switch (other->GetKind())
+			{
+				case TypeKind::TKClass:
+				case TypeKind::TKInstance:
+				{
+					break;
+				}
+				case TypeKind::TKBottom:
+				{
+					break;
+				}
+				case TypeKind::TKTop:
+				{
+					break;
+				}
+				case TypeKind::TKLambda:
+				case TypeKind::TKRecord:
+				case TypeKind::TKPartialApp:
+				case TypeKind::TKDynamic:
+				{
+					break;
+				}
+				case TypeKind::TKMaybe:
+				{
+					break;
+				}
+				case TypeKind::TKVariable:
+				{
+					break;
+				}
+			}
 		}
 	}
 }

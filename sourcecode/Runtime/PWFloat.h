@@ -12,6 +12,8 @@ namespace Nom
 			{
 
 			}
+			static llvm::Type* GetLLVMType();
+			static llvm::Type* GetWrappedLLVMType();
 		};
 	}
 }

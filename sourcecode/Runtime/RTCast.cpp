@@ -14,7 +14,7 @@
 #include "NomTypeVar.h"
 #include "llvm/ADT/SmallVector.h"
 #include "RTOutput.h"
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include "ObjectClass.h"
 #include "RTConfig.h"
 #include "CastStats.h"
@@ -28,7 +28,7 @@
 #include "CallingConvConf.h"
 #include "NullClass.h"
 #include "NomMaybeType.h"
-#include "RTInstanceType.h"
+#include "XRTInstanceType.h"
 #include "RTMaybeType.h"
 #include "RTCompileConfig.h"
 #include "RTDictionary.h"
@@ -44,6 +44,8 @@
 #include "PWInterface.h"
 #include "PWRefValue.h"
 #include "PWInt.h"
+#include "RTValue.h"
+#include "RTValuePtr.h"
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wswitch-enum"
@@ -123,7 +125,7 @@ namespace Nom
 			}
 		}
 
-		llvm::Value* RTCast::GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, NomValue& value, NomClassTypeRef type)
+		llvm::Value* RTCast::GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, RTValuePtr value, NomClassTypeRef type)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -132,12 +134,6 @@ namespace Nom
 
 			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "MonotonicCastOut", fun);
 			BasicBlock* outTrueBlock = outBlock;
-
-			//PHINode* outPHI;
-			{
-				builder->SetInsertPoint(outBlock);
-				//outPHI = builder->CreatePHI(value->getType(), 2, "castSuccess");
-			}
 
 			BasicBlock* refValueBlock = nullptr, * intBlock = nullptr, * floatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
@@ -359,8 +355,8 @@ namespace Nom
 				}
 				else
 				{
-					targsInObjectSources.push_back(make_tuple(primitiveIntBlock, *value, static_cast<Value*>(ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo()))));
 				}
+					targsInObjectSources.push_back(make_tuple(primitiveIntBlock, *value, static_cast<Value*>(ConstantExpr::getPointerCast(NomIntClass::GetInstance()->GetLLVMElement(*fun->getParent()), RTVTable::GetLLVMType()->getPointerTo()))));
 			}
 
 			if (primitiveFloatBlock != nullptr)
@@ -436,23 +432,23 @@ namespace Nom
 				builder->SetInsertPoint(nominalSubtypingCheck);
 				//auto stackPtr = builder->CreateIntrinsic(Intrinsic::stacksave, {}, {});
 				//builder->CreateIntrinsic(Intrinsic::stackrestore, {}, { stackPtr });
-				auto instanceType = builder->CreateAlloca(RTInstanceType::GetLLVMType(), MakeInt32(1));
+				auto instanceType = builder->CreateAlloca(XRTInstanceType::GetLLVMType(), MakeInt32(1));
 				auto instanceTypeRef = builder->CreatePointerCast(instanceType, POINTERTYPE);
-				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), numtype(size_t)), instanceTypeRef });
-				RTInstanceType::CreateInitialization(builder, *fun->getParent(), instanceType, MakeInt<size_t>(0), ConstantPointerNull::get(POINTERTYPE), ifacePtr, typeArgsPtr);
-				auto instanceInvariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), numtype(size_t)), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(XRTInstanceType::GetLLVMType(), ConstantPointerNull::get(XRTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), numtype(size_t)), instanceTypeRef });
+				XRTInstanceType::CreateInitialization(builder, *fun->getParent(), instanceType, MakeInt<size_t>(0), ConstantPointerNull::get(POINTERTYPE), ifacePtr, typeArgsPtr);
+				auto instanceInvariantID = builder->CreateIntrinsic(llvm::Intrinsic::invariant_start, { POINTERTYPE }, { ConstantExpr::getPtrToInt(ConstantExpr::getGetElementPtr(XRTInstanceType::GetLLVMType(), ConstantPointerNull::get(XRTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), numtype(size_t)), instanceTypeRef });
 				BasicBlock* outBlocks[2] = { outTrueBlock,outFalseBlock };
 
 				auto substStack = GenerateEnvSubstitutions(builder, env, outBlocks, 2, type);
 				RTSubtyping::CreateInlineSubtypingCheck(builder, builder->CreatePointerCast(instanceType, TYPETYPE), nullptr, type, substStack, outBlocks[0], nullptr, outBlocks[1]);
 
 				builder->SetInsertPoint(outBlocks[0]->getTerminator());
-				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
-				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(XRTInstanceType::GetLLVMType(), ConstantPointerNull::get(XRTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(XRTInstanceType::GetLLVMType(), ConstantPointerNull::get(XRTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
 
 				builder->SetInsertPoint(outBlocks[1]->getTerminator());
-				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
-				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(RTInstanceType::GetLLVMType(), ConstantPointerNull::get(RTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::invariant_end, { POINTERTYPE }, { instanceInvariantID, ConstantExpr::getGetElementPtr(XRTInstanceType::GetLLVMType(), ConstantPointerNull::get(XRTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
+				builder->CreateIntrinsic(llvm::Intrinsic::lifetime_end, { POINTERTYPE }, { ConstantExpr::getGetElementPtr(XRTInstanceType::GetLLVMType(), ConstantPointerNull::get(XRTInstanceType::GetLLVMType()->getPointerTo()), MakeInt32(1).wrapped), instanceTypeRef });
 
 			}
 
@@ -460,7 +456,7 @@ namespace Nom
 			return value;
 		}
 
-		llvm::Value* RTCast::GenerateMonotonicCast(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, NomValue& value, llvm::Value* type)
+		llvm::Value* RTCast::GenerateMonotonicCast(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, RTValuePtr value, llvm::Value* type)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -477,7 +473,7 @@ namespace Nom
 		}
 
 
-		llvm::Value* RTCast::GenerateCast(NomBuilder& builder, CompileEnv* env, NomValue value, NomTypeRef type)
+		llvm::Value* RTCast::GenerateCast(NomBuilder& builder, CompileEnv* env, RTValuePtr value, NomTypeRef type)
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -634,10 +630,10 @@ namespace Nom
 			}
 		}
 
-		llvm::Value* RTCast::GenerateCast(NomBuilder& builder, CompileEnv* env, llvm::Value* value, NomTypeRef type)
-		{
-			return GenerateCast(builder, env, NomValue(value, &NomDynamicType::Instance(), false), type);
-		}
+		//llvm::Value* RTCast::GenerateCast(NomBuilder& builder, CompileEnv* env, llvm::Value* value, NomTypeRef type)
+		//{
+		//	return GenerateCast(builder, env, NomValue(value, &NomDynamicType::Instance(), false), type);
+		//}
 		llvm::Function* FailingAdjustFun::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
 			Function* fun = mod.getFunction("RT_NOM_CASTADJUST_FAILING");

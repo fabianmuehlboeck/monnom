@@ -148,7 +148,6 @@ namespace Nom
 			static llvm::Function* GetGetUniqueInstantiationFunction(llvm::Module& mod);
 			virtual llvm::Constant* GetSignature(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 			virtual llvm::Constant* GetCheckReturnTypeFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
-			virtual llvm::Constant* GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const;
 
 			// Inherited via NomNamed
 			virtual llvm::Constant* GetInterfaceDescriptor(llvm::Module& mod) const override;

@@ -166,8 +166,25 @@ namespace Nom
 
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
-			RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, receiver, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
-
+			receiver->GenerateRefOrPrimitiveValueSwitch(builder,
+				[](NomBuilder& builder, RTPWValuePtr<PWRefValue>) -> void {},
+				[](NomBuilder& builder, RTPWValuePtr<PWPacked>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Integers have no dictionary fields to write to!", builder->GetInsertBlock()); 
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWPacked>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Floats have no dictionary fields to write to!", builder->GetInsertBlock());
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWInt64>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Integers have no dictionary fields to write to!", builder->GetInsertBlock());
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWFloat>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Floats have no dictionary fields to write to!", builder->GetInsertBlock());
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWBool>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Booleans have no dictionary fields to write to!", builder->GetInsertBlock());
+				},
+				100, 10, 10);
+			
 			if (refValueBlock != nullptr)
 			{
 				builder->SetInsertPoint(refValueBlock);

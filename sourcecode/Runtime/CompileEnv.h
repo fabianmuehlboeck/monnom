@@ -18,6 +18,7 @@ POPDIAGSUPPRESSION
 #include "NomBuilder.h"
 #include "PWTypeArr.h"
 #include "RTValue.h"
+#include "RTValuePtr.h"
 
 namespace Nom
 {

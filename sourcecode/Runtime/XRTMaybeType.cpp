@@ -15,7 +15,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		llvm::StructType* RTMaybeType::GetLLVMType()
+		llvm::StructType* XRTMaybeType::GetLLVMType()
 		{
 			static llvm::StructType* llvmtype = llvm::StructType::create(LLVMCONTEXT, "LLVMRTMaybeType");
 			static bool dontrepeat = true;
@@ -65,7 +65,7 @@ namespace Nom
 				builder->CreateRet(castValue);
 
 				builder->SetInsertPoint(recurseBlock);
-				auto ptype = RTMaybeType::GenerateReadPotentialType(builder, self);
+				auto ptype = XRTMaybeType::GenerateReadPotentialType(builder, self);
 				auto castfun = RTTypeHead::GenerateReadCastFun(builder, ptype);
 				auto recurseCall = builder->CreateCall(GetCastFunctionType(), castfun, { ptype, castValue, ConstantPointerNull::get(POINTERTYPE), ConstantPointerNull::get(POINTERTYPE) });
 				recurseCall->setCallingConv(NOMCC);
@@ -74,15 +74,15 @@ namespace Nom
 			}
 			return fun;
 		}
-		llvm::Constant* RTMaybeType::GetConstant(llvm::Module& mod, const NomMaybeType* mbt)
+		llvm::Constant* XRTMaybeType::GetConstant(llvm::Module& mod, const NomMaybeType* mbt)
 		{
 			return ConstantStruct::get(GetLLVMType(), RTTypeHead::GetConstant(TypeKind::TKMaybe, MakeInt<size_t>(mbt->GetHashCode()), mbt, GetMaybeTypeCastFunction(mod)), mbt->PotentialType->GetLLVMElement(mod));
 		}
-		uint64_t RTMaybeType::HeadOffset()
+		uint64_t XRTMaybeType::HeadOffset()
 		{
-			static const uint64_t offset = GetLLVMLayout()->getElementOffset(static_cast<unsigned char>(RTMaybeTypeFields::Head)); return offset;
+			static const uint64_t offset = GetLLVMLayout()->getElementOffset(static_cast<unsigned char>(XRTMaybeTypeFields::Head)); return offset;
 		}
-		llvm::Value* RTMaybeType::GenerateReadPotentialType(NomBuilder& builder, llvm::Value* type)
+		llvm::Value* XRTMaybeType::GenerateReadPotentialType(NomBuilder& builder, llvm::Value* type)
 		{
 			return PWMaybeType(type).ReadPotentialType(builder);
 		}

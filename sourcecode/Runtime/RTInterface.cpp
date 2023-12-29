@@ -35,14 +35,13 @@ namespace Nom
 					NLLVMPointer(SuperInstanceEntryType()),				//superinterfaces
 					NLLVMPointer(GetCheckReturnValueFunctionType()),	//method ensure function, untyped version
 					POINTERTYPE,										//pointer to type instantiations dictionary
-					NLLVMPointer(RTSignature::GetLLVMType()),			//signature of lambda method if present, otherwise null
-					NLLVMPointer(GetCastFunctionType())					//cast function for run-time class-type instantiations
+					NLLVMPointer(RTSignature::GetLLVMType())			//signature of lambda method if present, otherwise null
 					});
 			}
 			return rtit;
 		}
 
-		llvm::Constant* RTInterface::CreateConstant(const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superClassCount, llvm::Constant* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* checkReturnValueFunction, llvm::Constant* instantiationDictionary, llvm::Constant* signature, llvm::Constant* castFunction)
+		llvm::Constant* RTInterface::CreateConstant(const NomInterface* irptr, RTInterfaceFlags flags, llvm::Constant* typeArgCount, llvm::Constant* superClassCount, llvm::Constant* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* checkReturnValueFunction, llvm::Constant* instantiationDictionary, llvm::Constant* signature)
 		{
 			auto STEs = ConstantExpr::getPointerCast(superTypeEntries, SuperInstanceEntryType()->getPointerTo());
 			return ConstantStruct::get(GetLLVMType(), 
@@ -56,8 +55,7 @@ namespace Nom
 				ConstantExpr::getGetElementPtr(SuperInstanceEntryType(), STEs, ArrayRef<Constant*>({ superClassCount })), 
 				checkReturnValueFunction, 
 				instantiationDictionary, 
-				(signature == nullptr ? ConstantPointerNull::get(RTSignature::GetLLVMType()->getPointerTo()) : signature), 
-				castFunction);
+				(signature == nullptr ? ConstantPointerNull::get(RTSignature::GetLLVMType()->getPointerTo()) : signature));
 		}
 
 		llvm::Value* RTInterface::GenerateReadSignature(NomBuilder& builder, llvm::Value* descriptorPtr)
@@ -99,10 +97,6 @@ namespace Nom
 		llvm::Value* RTInterface::GenerateReadIRPtr(NomBuilder& builder, llvm::Value* descriptorPtr)
 		{
 			return PWInterface(descriptorPtr).ReadIRPtr(builder);
-		}
-		llvm::Value* RTInterface::GenerateReadCastFunction(NomBuilder& builder, llvm::Value* descriptorPtr)
-		{
-			return PWInterface(descriptorPtr).ReadCastFunction(builder);
 		}
 	}
 }

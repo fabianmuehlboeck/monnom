@@ -16,5 +16,13 @@ namespace Nom
 			return builder->CreateTrunc(builder->CreatePtrToInt(MakeLoad(builder, 
 				RefValueHeader::GetLLVMType(), wrapped, MakeInt32(RefValueHeaderFields::InterfaceTable)), numtype(intptr_t)), IntegerType::get(LLVMCONTEXT, 3));
 		}
+		llvm::Type* PWPacked::GetLLVMType()
+		{
+			return RefValueHeader::GetLLVMType();
+		}
+		llvm::Type* PWPacked::GetWrappedLLVMType()
+		{
+			return NLLVMPointer(GetLLVMType());
+		}
 	}
 }

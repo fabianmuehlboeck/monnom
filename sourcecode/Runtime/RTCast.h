@@ -4,6 +4,7 @@
 #include "NomBuilder.h"
 #include "AvailableExternally.h"
 #include "RTSubstStack.h"
+#include "RTValuePtr.h"
 
 namespace Nom
 {
@@ -17,11 +18,11 @@ namespace Nom
 		private:
 		public:
 			static llvm::FunctionType* GetAdjustFunctionType();
-			static llvm::Value* GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, NomValue &value, NomClassTypeRef type);
-			static llvm::Value* GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, NomValue& value, llvm::Value* type);
+			static llvm::Value* GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, RTValuePtr value, NomClassTypeRef type);
+			static llvm::Value* GenerateMonotonicCast(NomBuilder& builder, CompileEnv* env, RTValuePtr value, llvm::Value* type);
 			static uint64_t nextCastSiteID();
-			static llvm::Value* GenerateCast(NomBuilder& builder, CompileEnv* env, NomValue value, NomTypeRef type);
-			static llvm::Value* GenerateCast(NomBuilder& builder, CompileEnv* env, llvm::Value* value, NomTypeRef type);
+			static llvm::Value* GenerateCast(NomBuilder& builder, CompileEnv* env, RTValuePtr value, NomTypeRef type);
+			//static llvm::Value* GenerateCast(NomBuilder& builder, CompileEnv* env, llvm::Value* value, NomTypeRef type);
 		};
 
 		class FailingAdjustFun : public AvailableExternally<llvm::Function>

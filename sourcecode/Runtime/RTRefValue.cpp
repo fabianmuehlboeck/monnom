@@ -1,5 +1,5 @@
 #include "RTRefValue.h"
-#include "PWRefValue.h"
+#include "PWAll.h"
 
 namespace Nom
 {
@@ -12,6 +12,10 @@ namespace Nom
 		const RTRefValue* RTRefValue::Get(NomBuilder& builder, PWRefValue _value, NomTypeRef _type, bool _isfc)
 		{
 			return new(builder.Malloc(sizeof(RTRefValue))) RTRefValue(_value, _type, _isfc);
+		}
+		void RTRefValue::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitRefValue(this);
 		}
 		const RTPWValuePtr<PWInt64> RTRefValue::AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{

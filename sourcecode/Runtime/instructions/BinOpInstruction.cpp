@@ -21,6 +21,10 @@ POPDIAGSUPPRESSION
 #include "../PWFloat.h"
 #include "../PWInt.h"
 #include "../PWObject.h"
+#include "../RTRawInt.h"
+#include "../RTRawBool.h"
+#include "../RTRawFloat.h"
+#include "../NomDynamicType.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wswitch-enum"
@@ -97,7 +101,7 @@ namespace Nom
 				RegisterValue(env, RTValue::GetValue(builder, builder->CreateICmpEQ(builder->CreatePtrToInt(left, numtype(intptr_t)), builder->CreatePtrToInt(right, numtype(intptr_t)), "isRefEqual"), GetBoolClassType()));
 				return;
 			}
-			else if(this->Operation == BinaryOperation::Equals)
+			else if(this->Operation == BinaryOperation::Equals || this->Operation == BinaryOperation::RefEquals)
 			{
 				auto inttype = NomIntClass::GetInstance()->GetType();
 				auto floattype = NomFloatClass::GetInstance()->GetType();
@@ -114,14 +118,14 @@ namespace Nom
 					if (left->getType() == REFTYPE)
 					{
 						auto baseeq = builder->CreateICmpEQ(builder->CreatePtrToInt(left, INTTYPE, "leftAddr"), builder->CreatePtrToInt(right, INTTYPE, "rightaddr"), "refequal");
-						if (lefttype->IsDisjoint(righttype) || (lefttype->IsDisjoint(inttype) && lefttype->IsDisjoint(floattype)) || (righttype->IsDisjoint(inttype) && righttype->IsDisjoint(floattype)))
+						if (this->Operation==BinaryOperation::RefEquals)
 						{
 							RegisterValue(env, RTValue::GetValue(builder, baseeq, NomBoolClass::GetInstance()->GetType()));
 							return;
 						}
-						llvm::BasicBlock* nrefeqblock = llvm::BasicBlock::Create(LLVMCONTEXT, "NREFEQ", env->Function);
-						neqblock = llvm::BasicBlock::Create(LLVMCONTEXT, "NEQ", env->Function);
-						eqblock = llvm::BasicBlock::Create(LLVMCONTEXT, "EQ", env->Function);
+						llvm::BasicBlock* nrefeqblock = llvm::BasicBlock::Create(builder->getContext(), "NREFEQ", env->Function);
+						neqblock = llvm::BasicBlock::Create(builder->getContext(), "NEQ", env->Function);
+						eqblock = llvm::BasicBlock::Create(builder->getContext(), "EQ", env->Function);
 						builder->CreateCondBr(baseeq, eqblock, nrefeqblock);
 						builder->SetInsertPoint(nrefeqblock);
 					}
@@ -146,636 +150,72 @@ namespace Nom
 						throw new std::exception();
 					}
 				}
+				else if (this->Operation == BinaryOperation::RefEquals)
+				{
+					RegisterValue(env, RTValue::GetValue(builder, NomBoolObjects::GetFalse(*builder->GetInsertBlock()->getParent()->getParent()), NomBoolClass::GetInstance()->GetType()));
+					return;
+				}
 				if (neqblock == nullptr)
 				{
-					neqblock = llvm::BasicBlock::Create(LLVMCONTEXT, "NEQ", env->Function);
+					neqblock = llvm::BasicBlock::Create(builder->getContext(), "NEQ", env->Function);
 				}
 				if (eqblock == nullptr)
 				{
-					eqblock = llvm::BasicBlock::Create(LLVMCONTEXT, "EQ", env->Function);
+					eqblock = llvm::BasicBlock::Create(builder->getContext(), "EQ", env->Function);
 				}
 				BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operands for primitive operation!");
 
-				PWRefValue leftrv = left->AsRefValue(builder)->value;
-				PWRefValue rightrv = right->AsRefValue(builder)->value;
-				llvm::BasicBlock* startBlock = builder->GetInsertBlock();
-				llvm::BasicBlock* outblock = llvm::BasicBlock::Create(LLVMCONTEXT, "REFEQOUT", env->Function);
-
-				NomValue ret;
-
-				llvm::BasicBlock* leftRefValueBlock = nullptr, * leftIntBlock = nullptr, * leftFloatBlock = nullptr, * leftPrimitiveIntBlock = nullptr, * leftPrimitiveFloatBlock = nullptr, * leftPrimitiveBoolBlock = nullptr;
-				llvm::Value* leftPrimitiveInt = nullptr, * leftPrimitiveFloat = nullptr, * leftPrimitiveBool = nullptr;
-				RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, left, &leftRefValueBlock, &leftIntBlock, &leftFloatBlock, false, &leftPrimitiveIntBlock, &leftPrimitiveInt, &leftPrimitiveFloatBlock, &leftPrimitiveFloat, &leftPrimitiveBoolBlock, &leftPrimitiveBool);
-
-				if (leftRefValueBlock != nullptr)
-				{
-					builder->SetInsertPoint(leftRefValueBlock);
-					llvm::BasicBlock* rightRefValueBlock = nullptr, * rightIntBlock = nullptr, * rightFloatBlock = nullptr, * rightPrimitiveIntBlock = nullptr, * rightPrimitiveFloatBlock = nullptr, * rightPrimitiveBoolBlock = nullptr;
-					llvm::Value* rightPrimitiveInt = nullptr, * rightPrimitiveFloat = nullptr, * rightPrimitiveBool = nullptr;
-					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, right, &rightRefValueBlock, &rightIntBlock, &rightFloatBlock, false, &rightPrimitiveIntBlock, &rightPrimitiveInt, &rightPrimitiveFloatBlock, &rightPrimitiveFloat, &rightPrimitiveBoolBlock, &rightPrimitiveBool);
-
-					if (rightRefValueBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightRefValueBlock);
-
-						BasicBlock* vtableMatchBlock = BasicBlock::Create(LLVMCONTEXT, "vtablesMatchForEq", env->Function);
-						BasicBlock* vtableMisMatchBlock = neqblock;
-						if (!((lefttype->IsDisjoint(NomIntClass::GetInstance()->GetType()) && righttype->IsDisjoint(NomIntClass::GetInstance()->GetType())) ||
-							(lefttype->IsDisjoint(NomFloatClass::GetInstance()->GetType()) && righttype->IsDisjoint(NomFloatClass::GetInstance()->GetType()))))
-						{
-							vtableMisMatchBlock = BasicBlock::Create(LLVMCONTEXT, "vtablesMismatchForEq", env->Function);
-						}
-						auto leftvtable = leftrv.ReadVTable(builder);
-						auto rightvtable = rightrv.ReadVTable(builder);
-						auto vtablesEq = CreatePointerEq(builder, leftvtable, rightvtable);
-						Value* leftIsInt = nullptr;
-						Value* leftIsFloat = nullptr;
-						if (!lefttype->IsDisjoint(NomIntClass::GetInstance()->GetType()))
-						{
-							leftIsInt = CreatePointerEq(builder, leftvtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-						}
-						else
-						{
-							leftIsFloat = CreatePointerEq(builder, leftvtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-						}
-						CreateExpect(builder, vtablesEq, MakeIntLike(vtablesEq, 1));
-						builder->CreateCondBr(vtablesEq, vtableMatchBlock, vtableMisMatchBlock, GetLikelyFirstBranchMetadata());
-
-						builder->SetInsertPoint(vtableMatchBlock);
-						{
-							if (leftIsInt != nullptr)
-							{
-								BasicBlock* boxedIntBlock = BasicBlock::Create(LLVMCONTEXT, "boxedInts", env->Function);
-								BasicBlock* notBoxedIntBlock = neqblock;
-								if (!lefttype->IsDisjoint(NomFloatClass::GetInstance()->GetType()))
-								{
-									notBoxedIntBlock = BasicBlock::Create(LLVMCONTEXT, "notBoxedInts", env->Function);
-								}
-								builder->CreateCondBr(leftIsInt, boxedIntBlock, notBoxedIntBlock);
-
-								builder->SetInsertPoint(boxedIntBlock);
-								{
-									auto leftInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE);
-									auto rightInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE);
-									builder->CreateCondBr(builder->CreateICmpEQ(leftInt, rightInt), eqblock, neqblock);
-								}
-
-								builder->SetInsertPoint(notBoxedIntBlock);
-							}
-							if (!lefttype->IsDisjoint(NomFloatClass::GetInstance()->GetType()))
-							{
-								BasicBlock* boxedFloatBlock = BasicBlock::Create(LLVMCONTEXT, "boxedFloats", env->Function);
-								if (leftIsFloat == nullptr)
-								{
-									leftIsFloat = CreatePointerEq(builder, leftvtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-								}
-								CreateExpect(builder, leftIsFloat, MakeIntLike(leftIsFloat, 1));
-								builder->CreateCondBr(leftIsFloat, boxedFloatBlock, neqblock, GetLikelyFirstBranchMetadata());
-
-								builder->SetInsertPoint(boxedFloatBlock);
-								{
-									auto leftFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-									auto rightFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE), FLOATTYPE);
-									builder->CreateCondBr(builder->CreateFCmpOEQ(leftFloat, rightFloat), eqblock, neqblock);
-								}
-							}
-						}
-						if (vtableMisMatchBlock != neqblock)
-						{
-							builder->SetInsertPoint(vtableMisMatchBlock);
-							if (leftIsInt != nullptr)
-							{
-								BasicBlock* boxedIntBlock = BasicBlock::Create(LLVMCONTEXT, "leftBoxedInt", env->Function);
-								BasicBlock* notBoxedIntBlock = neqblock;
-								if (!lefttype->IsDisjoint(NomFloatClass::GetInstance()->GetType()))
-								{
-									notBoxedIntBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotBoxedInt", env->Function);
-								}
-								builder->CreateCondBr(leftIsInt, boxedIntBlock, notBoxedIntBlock);
-
-								builder->SetInsertPoint(boxedIntBlock);
-								{
-									BasicBlock* rightBoxedFloatBlock = BasicBlock::Create(LLVMCONTEXT, "rightBoxedFloat", env->Function);
-									auto rightIsFloat = CreatePointerEq(builder, rightvtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-									builder->CreateCondBr(rightIsFloat, rightBoxedFloatBlock, neqblock);
-
-									builder->SetInsertPoint(rightBoxedFloatBlock);
-									auto leftFloat = builder->CreateSIToFP(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-									auto rightFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE), FLOATTYPE);
-									builder->CreateCondBr(builder->CreateFCmpOEQ(leftFloat, rightFloat), eqblock, neqblock);
-								}
-
-								builder->SetInsertPoint(notBoxedIntBlock);
-							}
-							if (!lefttype->IsDisjoint(NomFloatClass::GetInstance()->GetType()))
-							{
-								BasicBlock* boxedFloatBlock = BasicBlock::Create(LLVMCONTEXT, "leftBoxedFloat", env->Function);
-								if (leftIsFloat == nullptr)
-								{
-									leftIsFloat = CreatePointerEq(builder, leftvtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-								}
-								auto rightIsInt = CreatePointerEq(builder, rightvtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-								auto floatAndInt = builder->CreateAnd(leftIsFloat, rightIsInt);
-								CreateExpect(builder, floatAndInt, MakeIntLike(leftIsFloat, 1));
-								builder->CreateCondBr(floatAndInt, boxedFloatBlock, neqblock, GetLikelyFirstBranchMetadata());
-
-								builder->SetInsertPoint(boxedFloatBlock);
-								{
-									auto leftFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-									auto rightFloat = builder->CreateSIToFP(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE), FLOATTYPE);
-									builder->CreateCondBr(builder->CreateFCmpOEQ(leftFloat, rightFloat), eqblock, neqblock);
-								}
-							}
-						}
-					}
-
-					if (rightIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightIntBlock);
-						if (!lefttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightInt", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightInt", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							leftPrimitiveInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE);
-							auto intEq = builder->CreateICmpEQ(leftPrimitiveInt, UnpackMaskedInt(builder, right));
-							builder->CreateCondBr(intEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						if (!lefttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightInt", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightInt", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							leftPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-							auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, builder->CreateSIToFP(UnpackMaskedInt(builder, right), FLOATTYPE));
-							builder->CreateCondBr(floatEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						builder->CreateBr(neqblock);
-					}
-					if (rightFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightFloatBlock);
-						if (!lefttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightFloat", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightFloat", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							leftPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-							auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, UnpackMaskedFloat(builder, right));
-							builder->CreateCondBr(floatEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						if (!lefttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightFloat", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightFloat", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							leftPrimitiveFloat = builder->CreateSIToFP(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-							auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, UnpackMaskedFloat(builder, right));
-							builder->CreateCondBr(floatEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						builder->CreateBr(neqblock);
-					}
-					if (rightPrimitiveIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveIntBlock);
-						if (!lefttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightPrimitiveInt", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightPrimitiveInt", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							leftPrimitiveInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE);
-							auto intEq = builder->CreateICmpEQ(leftPrimitiveInt, rightPrimitiveInt);
-							builder->CreateCondBr(intEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						if (!lefttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightPrimitiveInt", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotFloatObjRightPrimitiveInt", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							leftPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-							auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, builder->CreateSIToFP(rightPrimitiveInt, FLOATTYPE));
-							builder->CreateCondBr(floatEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						builder->CreateBr(neqblock);
-					}
-					if (rightPrimitiveFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveFloatBlock);
-						if (!lefttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatObjRightPrimitiveFloat", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotFloatObjRightPrimitiveFloat", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							leftPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-							auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, rightPrimitiveFloat);
-							builder->CreateCondBr(floatEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						if (!lefttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntObjRightPrimitiveFloat", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftNotIntRightPrimitiveFloat", env->Function);
-							auto vtable = leftrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							leftPrimitiveFloat = builder->CreateSIToFP(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, left, 0, false), INTTYPE), FLOATTYPE);
-							auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, rightPrimitiveFloat);
-							builder->CreateCondBr(floatEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						builder->CreateBr(neqblock);
-
-					}
-
-					if (rightPrimitiveBoolBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveBoolBlock);
-						auto boolEq = CreatePointerEq(builder, left, NomBoolObjects::PackBool(builder, rightPrimitiveBool));
-						builder->CreateCondBr(boolEq, eqblock, neqblock);
-					}
-				}
-
-				if (leftIntBlock != nullptr)
-				{
-					builder->SetInsertPoint(leftIntBlock);
-					llvm::BasicBlock* rightRefValueBlock = nullptr, * rightFloatBlock = nullptr, * rightPrimitiveIntBlock = nullptr, * rightPrimitiveFloatBlock = nullptr;
-					llvm::Value* rightPrimitiveInt = nullptr, * rightPrimitiveFloat = nullptr, * rightPrimitiveBool = nullptr;
-					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, right, &rightRefValueBlock, &neqblock, &rightFloatBlock, false, &rightPrimitiveIntBlock, &rightPrimitiveInt, &rightPrimitiveFloatBlock, &rightPrimitiveFloat, &errorBlock, &rightPrimitiveBool, 30, 100, 20, 1);
-
-					if (rightRefValueBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightRefValueBlock);
-						if (!righttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightIntObj", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotIntObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							if (rightPrimitiveIntBlock != nullptr)
-							{
-								std::cout << "Internal error: wrong primitive case generation!";
-								throw new std::exception();
-							}
-							rightPrimitiveIntBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightPrimitiveInt", env->Function);
-							rightPrimitiveInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE);
-							builder->CreateBr(rightPrimitiveIntBlock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						if (!righttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightFloatObj", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotFloatObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							if (rightPrimitiveFloatBlock != nullptr)
-							{
-								std::cout << "Internal error: wrong primitive case generation!";
-								throw new std::exception();
-							}
-							rightPrimitiveFloatBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightPrimitiveFloat", env->Function);
-							rightPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE), FLOATTYPE);
-							builder->CreateBr(rightPrimitiveFloatBlock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						builder->CreateBr(neqblock);
-					}
-					if (rightFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightFloatBlock);
-						auto leftFloat = builder->CreateSIToFP(UnpackMaskedInt(builder, builder->CreatePtrToInt(left, INTTYPE)), FLOATTYPE);
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, UnpackMaskedFloat(builder, builder->CreatePtrToInt(right, INTTYPE)));
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightPrimitiveIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveIntBlock);
-						auto leftInt = UnpackMaskedInt(builder, builder->CreatePtrToInt(left, INTTYPE));
-						auto intEq = builder->CreateICmpEQ(leftInt, rightPrimitiveInt);
-						builder->CreateCondBr(intEq, eqblock, neqblock);
-					}
-					if (rightPrimitiveFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveFloatBlock);
-						auto leftFloat = builder->CreateSIToFP(UnpackMaskedInt(builder, builder->CreatePtrToInt(left, INTTYPE)), FLOATTYPE);
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, rightPrimitiveFloat);
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-				}
-
-				if (leftFloatBlock != nullptr)
-				{
-					builder->SetInsertPoint(leftFloatBlock);
-					llvm::BasicBlock* rightRefValueBlock = nullptr, * rightIntBlock = nullptr, * rightFloatBlock = nullptr, * rightPrimitiveIntBlock = nullptr, * rightPrimitiveFloatBlock = nullptr;
-					llvm::Value* rightPrimitiveInt = nullptr, * rightPrimitiveFloat = nullptr, * rightPrimitiveBool = nullptr;
-					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, right, &rightRefValueBlock, &rightIntBlock, &rightFloatBlock, false, &rightPrimitiveIntBlock, &rightPrimitiveInt, &rightPrimitiveFloatBlock, &rightPrimitiveFloat, &errorBlock, &rightPrimitiveBool, 30, 20, 100, 1);
-
-					if (rightRefValueBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightRefValueBlock);
-						if (!righttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightFloatObj", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightNotFloatObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							if (rightPrimitiveFloatBlock != nullptr)
-							{
-								std::cout << "Floaternal error: wrong primitive case generation!";
-								throw new std::exception();
-							}
-							rightPrimitiveFloatBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightPrimitiveFloat", env->Function);
-							rightPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE), FLOATTYPE);
-							builder->CreateBr(rightPrimitiveFloatBlock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						if (!righttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightIntObj", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightNotIntObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							if (rightPrimitiveIntBlock != nullptr)
-							{
-								std::cout << "Internal error: wrong primitive case generation!";
-								throw new std::exception();
-							}
-							rightPrimitiveIntBlock = BasicBlock::Create(LLVMCONTEXT, "leftFloatRightPrimitiveInt", env->Function);
-							rightPrimitiveInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE);
-							builder->CreateBr(rightPrimitiveIntBlock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						builder->CreateBr(neqblock);
-					}
-					if (rightIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightIntBlock);
-						auto leftFloat = UnpackMaskedFloat(builder, builder->CreatePtrToInt(left, INTTYPE));
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, builder->CreateSIToFP(UnpackMaskedInt(builder, builder->CreatePtrToInt(right, INTTYPE)), FLOATTYPE));
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightFloatBlock);
-						auto leftFloat = UnpackMaskedFloat(builder, builder->CreatePtrToInt(left, INTTYPE));
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, UnpackMaskedFloat(builder, builder->CreatePtrToInt(right, INTTYPE)));
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightPrimitiveIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveIntBlock);
-						auto leftFloat = UnpackMaskedFloat(builder, builder->CreatePtrToInt(left, INTTYPE));
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, builder->CreateSIToFP(rightPrimitiveInt, FLOATTYPE));
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightPrimitiveFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveFloatBlock);
-						auto leftFloat = UnpackMaskedFloat(builder, builder->CreatePtrToInt(left, INTTYPE));
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, rightPrimitiveFloat);
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-				}
-
-				if (leftPrimitiveIntBlock != nullptr)
-				{
-					builder->SetInsertPoint(leftPrimitiveIntBlock);
-					llvm::BasicBlock* rightRefValueBlock = nullptr, * rightFloatBlock = nullptr, * rightIntBlock = nullptr, * rightPrimitiveFloatBlock = nullptr;
-					llvm::Value* rightPrimitiveInt = nullptr, * rightPrimitiveFloat = nullptr, * rightPrimitiveBool = nullptr;
-					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, right, &rightRefValueBlock, &rightIntBlock, &rightFloatBlock, false, &neqblock, &rightPrimitiveInt, &rightPrimitiveFloatBlock, &rightPrimitiveFloat, &errorBlock, &rightPrimitiveBool, 30, 100, 20, 1);
-
-					if (rightRefValueBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightRefValueBlock);
-						if (!righttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightIntObj", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotIntObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							rightPrimitiveInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE);
-							auto intEq = builder->CreateICmpEQ(rightPrimitiveInt, leftPrimitiveInt);
-							builder->CreateCondBr(intEq, eqblock, neqblock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						if (!righttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightFloatObj", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightNotFloatObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							if (rightPrimitiveFloatBlock != nullptr)
-							{
-								std::cout << "Internal error: wrong primitive case generation!";
-								throw new std::exception();
-							}
-							rightPrimitiveFloatBlock = BasicBlock::Create(LLVMCONTEXT, "leftIntRightPrimitiveFloat", env->Function);
-							rightPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE), FLOATTYPE);
-							builder->CreateBr(rightPrimitiveFloatBlock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						builder->CreateBr(neqblock);
-					}
-					if (rightFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightFloatBlock);
-						auto leftFloat = builder->CreateSIToFP(leftPrimitiveInt, FLOATTYPE);
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, UnpackMaskedFloat(builder, builder->CreatePtrToInt(right, INTTYPE)));
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightIntBlock);
-						auto rightInt = UnpackMaskedInt(builder, builder->CreatePtrToInt(right, INTTYPE));
-						auto intEq = builder->CreateICmpEQ(rightInt, leftPrimitiveInt);
-						builder->CreateCondBr(intEq, eqblock, neqblock);
-					}
-					if (rightPrimitiveFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveFloatBlock);
-						auto leftFloat = builder->CreateSIToFP(leftPrimitiveInt, FLOATTYPE);
-						auto floatEq = builder->CreateFCmpOEQ(leftFloat, rightPrimitiveFloat);
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-				}
-
-				if (leftPrimitiveFloatBlock != nullptr)
-				{
-					builder->SetInsertPoint(leftPrimitiveFloatBlock);
-					llvm::BasicBlock* rightRefValueBlock = nullptr, * rightFloatBlock = nullptr, * rightIntBlock = nullptr, * rightPrimitiveIntBlock = nullptr, * rightPrimitiveFloatBlock = nullptr;
-					llvm::Value* rightPrimitiveInt = nullptr, * rightPrimitiveFloat = nullptr, * rightPrimitiveBool = nullptr;
-					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, right, &rightRefValueBlock, &rightIntBlock, &rightFloatBlock, false, &rightPrimitiveIntBlock, &rightPrimitiveInt, &rightPrimitiveFloatBlock, &rightPrimitiveFloat, &errorBlock, &rightPrimitiveBool, 30, 20, 100, 1);
-
-					if (rightRefValueBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightRefValueBlock);
-						if (!righttype->IsDisjoint(floattype))
-						{
-							BasicBlock* floatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightFloatObj", env->Function);
-							BasicBlock* notFloatObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightNotFloatObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isFloat = CreatePointerEq(builder, vtable, NomFloatClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isFloat, MakeIntLike(isFloat, 1));
-							builder->CreateCondBr(isFloat, floatObjBlock, notFloatObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(floatObjBlock);
-							if (rightPrimitiveFloatBlock != nullptr)
-							{
-								std::cout << "Floaternal error: wrong primitive case generation!";
-								throw new std::exception();
-							}
-							rightPrimitiveFloatBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightPrimitiveFloat", env->Function);
-							rightPrimitiveFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE), FLOATTYPE);
-							builder->CreateBr(rightPrimitiveFloatBlock);
-
-							builder->SetInsertPoint(notFloatObjBlock);
-						}
-						if (!righttype->IsDisjoint(inttype))
-						{
-							BasicBlock* intObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightIntObj", env->Function);
-							BasicBlock* notIntObjBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightNotIntObj", env->Function);
-							auto vtable = rightrv.ReadVTable(builder);
-							auto isInt = CreatePointerEq(builder, vtable, NomIntClass::GetInstance()->GetType()->GetLLVMElement(*env->Module));
-							CreateExpect(builder, isInt, MakeIntLike(isInt, 1));
-							builder->CreateCondBr(isInt, intObjBlock, notIntObjBlock, GetLikelyFirstBranchMetadata());
-
-							builder->SetInsertPoint(intObjBlock);
-							if (rightPrimitiveIntBlock != nullptr)
-							{
-								std::cout << "Internal error: wrong primitive case generation!";
-								throw new std::exception();
-							}
-							rightPrimitiveIntBlock = BasicBlock::Create(LLVMCONTEXT, "leftPrimitiveFloatRightPrimitiveInt", env->Function);
-							rightPrimitiveInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, right, 0, false), INTTYPE);
-							builder->CreateBr(rightPrimitiveIntBlock);
-
-							builder->SetInsertPoint(notIntObjBlock);
-						}
-						builder->CreateBr(neqblock);
-					}
-					if (rightFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightFloatBlock);
-						auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, UnpackMaskedFloat(builder, builder->CreatePtrToInt(right, INTTYPE)));
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightIntBlock);
-						auto rightFloat = builder->CreateSIToFP(UnpackMaskedInt(builder, builder->CreatePtrToInt(right, INTTYPE)), FLOATTYPE);
-						auto floatEq = builder->CreateFCmpOEQ(rightFloat, leftPrimitiveFloat);
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightPrimitiveIntBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveIntBlock);
-						auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, builder->CreateSIToFP(rightPrimitiveFloat, FLOATTYPE));
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-					if (rightPrimitiveFloatBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightPrimitiveFloatBlock);
-						auto floatEq = builder->CreateFCmpOEQ(leftPrimitiveFloat, rightPrimitiveFloat);
-						builder->CreateCondBr(floatEq, eqblock, neqblock);
-					}
-				}
-
-				if (leftPrimitiveBoolBlock != nullptr)
-				{
-					builder->SetInsertPoint(leftPrimitiveBoolBlock);
-					llvm::BasicBlock* rightRefValueBlock = nullptr;
-					llvm::Value* rightPrimitiveInt = nullptr, * rightPrimitiveFloat = nullptr;
-					RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, right, &rightRefValueBlock, &neqblock, &neqblock, false, &neqblock, &rightPrimitiveInt, &neqblock, &rightPrimitiveFloat, nullptr, nullptr, 30, 1, 1, 100);
-
-					if (rightRefValueBlock != nullptr)
-					{
-						builder->SetInsertPoint(rightRefValueBlock);
-						auto boolEq = CreatePointerEq(builder, right, NomBoolObjects::PackBool(builder, leftPrimitiveBool));
-						builder->CreateCondBr(boolEq, eqblock, neqblock);
-					}
-				}
-
+				left->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+					[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> lval) -> void {
+						builder->CreateBr(errorBlock);
+					},
+					[right, eqblock, neqblock, errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[lval,eqblock,neqblock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
+								builder->CreateCondBr(builder->CreateICmpEQ(lval, rval, "isIntEq"), eqblock, neqblock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
+								builder->CreateBr(errorBlock);
+							}, true);
+					},
+					[right, eqblock, neqblock, errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[lval, eqblock, neqblock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
+								builder->CreateCondBr(builder->CreateFCmpOEQ(lval, rval, "isIntEq"), eqblock, neqblock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
+								builder->CreateBr(errorBlock);
+							}, true);
+					},
+					[right, eqblock, neqblock, errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[lval, eqblock, neqblock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
+								builder->CreateCondBr(builder->CreateICmpEQ(lval, rval, "isBoolEq"), eqblock, neqblock);
+							}, true);
+					},
+					true);
+				BasicBlock* outblock = BasicBlock::Create(builder->getContext(), "eqOut", env->Function);
 				builder->SetInsertPoint(eqblock);
 				builder->CreateBr(outblock);
 
@@ -791,124 +231,104 @@ namespace Nom
 			}
 			else
 			{
-				auto leftVal = (*env)[Left];
+				BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operands for primitive operation!");
+				auto inttype = NomIntClass::GetInstance()->GetType();
+				auto floattype = NomFloatClass::GetInstance()->GetType();
+				auto left = (*env)[Left];
+				auto right = (*env)[Right];
 
-				BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-				Value* leftIntValue = nullptr, * leftFloatValue = nullptr, * leftBoolValue = nullptr;
-				Function* fun = builder->GetInsertBlock()->getParent();
+				auto lefttype = left.GetNomType();
+				auto righttype = right.GetNomType();
 
-				auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, leftVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &leftIntValue, &primitiveFloatBlock, &leftFloatValue, &primitiveBoolBlock, &leftBoolValue);
+				RTValuePtr* retVals = makealloca(RTValuePtr, 16);
+				llvm::BasicBlock** retBlocks = makealloca(llvm::BasicBlock*, 16);
+				int retCount = 0;
 
-				if (refValueBlock != nullptr)
+				left->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+					[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> lval) -> void {
+						builder->CreateBr(errorBlock);
+					},
+					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWInt64> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
+								retVals[retCount] = CompileIntInt(builder, env, lineno, lval, rval);
+								retBlocks[retCount] = builder->GetInsertBlock();
+								retCount++;
+							},
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
+								retVals[retCount] = CompileFloatFloat(builder, env, lineno, builder->CreateSIToFP(lval, FLOATTYPE, "leftToFloat"), rval);
+								retBlocks[retCount] = builder->GetInsertBlock();
+								retCount++;
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
+								builder->CreateBr(errorBlock);
+							}, true);
+					},
+					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWFloat> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
+								retVals[retCount] = CompileFloatFloat(builder, env, lineno, lval, builder->CreateSIToFP(lval, FLOATTYPE, "rightToFloat"));
+								retBlocks[retCount] = builder->GetInsertBlock();
+								retCount++;
+							},
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
+								retVals[retCount] = CompileFloatFloat(builder, env, lineno, lval, rval);
+								retBlocks[retCount] = builder->GetInsertBlock();
+								retCount++;
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
+								builder->CreateBr(errorBlock);
+							}, true);
+					},
+					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWBool> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
+						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
+								builder->CreateBr(errorBlock);
+							},
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
+								retVals[retCount] = CompileBoolBool(builder, env, lineno, lval, rval);
+								retBlocks[retCount] = builder->GetInsertBlock();
+								retCount++;
+							}, true);
+					},
+					true);
+
+				if (retCount > 1)
 				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-					cases--;
+					BasicBlock* outBlock = BasicBlock::Create(builder->getContext(), "binOpOut", env->Function);
+					builder->SetInsertPoint(outBlock);
+					PWPhi<PWPacked> phi = PWPhi<PWPacked>::CreatePtr(builder, retCount, "binOpPhi");
+					for (int i = 0; i < retCount; i++)
+					{
+						builder->SetInsertPoint(retBlocks[i]);
+						auto packed = retVals[i]->AsPackedValue(builder);
+						builder->CreateBr(outBlock);
+						phi->addIncoming(packed, builder->GetInsertBlock());
+					}
+					RegisterValue(env, RTValue::GetValue(builder, phi, NomDynamicType::DynamicRef));
+					builder->SetInsertPoint(outBlock);
 				}
-
-				if (cases == 0)
+				else if (retCount <= 0)
 				{
 					throw new std::exception();
 				}
-
-				BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut", fun);
-				PHINode* outPHI = nullptr;
-				RTValuePtr outValue;
-				if (cases > 1)
+				else
 				{
-					builder->SetInsertPoint(outBlock);
-					outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult");
-					outValue = RTValue::GetValue(builder, outPHI);
+					builder->SetInsertPoint(retBlocks[0]);
+					RegisterValue(env, retVals[0]);
 				}
-				if (primitiveIntBlock != nullptr)
-				{
-					builder->SetInsertPoint(primitiveIntBlock);
-					auto retVal = CompileLeftInt(builder, env, lineno, leftIntValue);
-					if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-					{
-						if (builder->GetInsertBlock()->getTerminator() == nullptr)
-						{
-							BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-							builder->CreateBr(invalidBlock);
-						}
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-					}
-					else
-					{
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-						else
-						{
-							outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-						}
-						builder->CreateBr(outBlock);
-					}
-				}
-				if (primitiveFloatBlock != nullptr)
-				{
-					builder->SetInsertPoint(primitiveFloatBlock);
-					auto retVal = CompileLeftFloat(builder, env, lineno, leftFloatValue);
-					if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-					{
-						if (builder->GetInsertBlock()->getTerminator() == nullptr)
-						{
-							BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-							builder->CreateBr(invalidBlock);
-						}
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-					}
-					else
-					{
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-						else
-						{
-							outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-						}
-						builder->CreateBr(outBlock);
-					}
-				}
-				if (primitiveBoolBlock != nullptr)
-				{
-					builder->SetInsertPoint(primitiveBoolBlock);
-					auto retVal = CompileLeftBool(builder, env, lineno, leftBoolValue);
-					if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-					{
-						if (builder->GetInsertBlock()->getTerminator() == nullptr)
-						{
-							BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-							builder->CreateBr(invalidBlock);
-						}
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-					}
-					else
-					{
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-						else
-						{
-							outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-						}
-						builder->CreateBr(outBlock);
-					}
-				}
-
-				builder->SetInsertPoint(outBlock);
-				RegisterValue(env, outValue);
 			}
 		}
 
@@ -926,280 +346,7 @@ namespace Nom
 		{
 		}
 
-		RTValuePtr BinOpInstruction::CompileLeftInt(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left)
-		{
-			auto rightVal = (*env)[Right];
-
-			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-			Value* rightIntValue = nullptr, * rightFloatValue = nullptr, * rightBoolValue = nullptr;
-			Function* fun = builder->GetInsertBlock()->getParent();
-
-			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, rightVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &rightIntValue, &primitiveFloatBlock, &rightFloatValue, &primitiveBoolBlock, &rightBoolValue);
-
-			if (refValueBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-				cases--;
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Integers and Booleans!", primitiveBoolBlock);
-				cases--;
-			}
-			if (cases == 0)
-			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
-			}
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftInt", fun);
-			PHINode* outPHI = nullptr;
-			RTValuePtr outValue;
-			if (cases > 1)
-			{
-				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftInt");
-				outValue = RTValue::GetValue(builder, outPHI);
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveIntBlock);
-				auto retVal = CompileIntInt(builder, env, lineno, left, rightIntValue);
-				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveFloatBlock);
-				auto retVal = CompileFloatFloat(builder, env, lineno, builder->CreateSIToFP(left, FLOATTYPE, "leftAsFloat"), rightFloatValue);
-				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			builder->SetInsertPoint(outBlock);
-			return outValue;
-		}
-		RTValuePtr BinOpInstruction::CompileLeftFloat(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
-		{
-			auto rightVal = (*env)[Right];
-
-			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-			Value* rightIntValue = nullptr, * rightFloatValue = nullptr, * rightBoolValue = nullptr;
-			Function* fun = builder->GetInsertBlock()->getParent();
-
-			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, rightVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &rightIntValue, &primitiveFloatBlock, &rightFloatValue, &primitiveBoolBlock, &rightBoolValue);
-
-			if (refValueBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-				cases--;
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Floats and Booleans!", primitiveBoolBlock);
-				cases--;
-			}
-			if (cases == 0)
-			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
-			}
-
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftFloat", fun);
-			PHINode* outPHI = nullptr;
-			RTValuePtr outValue;
-			if (cases > 1)
-			{
-				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftFloat");
-				outValue = RTValue::GetValue(builder, outPHI);
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveIntBlock);
-				auto retVal = CompileFloatFloat(builder, env, lineno, left, builder->CreateSIToFP(rightIntValue, FLOATTYPE, "rightAsFloat"));
-				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveFloatBlock);
-				auto retVal = CompileFloatFloat(builder, env, lineno, left, rightFloatValue);
-				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-				{
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			builder->SetInsertPoint(outBlock);
-			return outValue;
-		}
-		RTValuePtr BinOpInstruction::CompileLeftBool(NomBuilder& builder, CompileEnv* env, size_t lineno, llvm::Value* left)
-		{
-			auto rightVal = (*env)[Right];
-
-			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-			Value* rightIntValue = nullptr, * rightFloatValue = nullptr, * rightBoolValue = nullptr;
-			Function* fun = builder->GetInsertBlock()->getParent();
-
-			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, rightVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &rightIntValue, &primitiveFloatBlock, &rightFloatValue, &primitiveBoolBlock, &rightBoolValue);
-
-			if (refValueBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-				cases--;
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Booleans and Integers!", primitiveIntBlock);
-				cases--;
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Booleans and Floats!", primitiveFloatBlock);
-				cases--;
-			}
-
-			if (cases == 0)
-			{
-				//auto nullVal = GetLLVMRef(nullptr);
-				//nullVal->setName("INVALID_VALUE");
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return RTValue::GetValue(builder, nullVal, NomType::AnythingRef);
-			}
-
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftBool", fun);
-			PHINode* outPHI = nullptr;
-			RTValuePtr outValue;
-			if (cases > 1)
-			{
-				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftBool");
-				outValue = RTValue::GetValue(builder, outPHI);
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveBoolBlock);
-				auto retVal = CompileBoolBool(builder, env, lineno, left, rightBoolValue);
-				if (retVal.operator llvm::Value * ()->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						outPHI->addIncoming((retVal->AsPackedValue(builder)), builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			builder->SetInsertPoint(outBlock);
-			return outValue;
-		}
-		RTValuePtr BinOpInstruction::CompileLeftPointer([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, [[maybe_unused]] llvm::Value* left)
-		{
-			return RTValue::GetValue(builder, GetLLVMRef(nullptr), NomType::AnythingRef);
-		}
+	
 		RTValuePtr BinOpInstruction::CompileIntInt(NomBuilder& builder, [[maybe_unused]] CompileEnv* env, [[maybe_unused]] size_t lineno, llvm::Value* left, llvm::Value* right)
 		{
 			switch (Operation)

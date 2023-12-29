@@ -7,10 +7,10 @@ PUSHDIAGSUPPRESSION
 #include "llvm/IR/Verifier.h"
 POPDIAGSUPPRESSION
 #include "RTTypeHead.h"
-#include "RTClassType.h"
-#include "RTTypeVar.h"
+#include "XRTClassType.h"
+#include "XRTTypeVar.h"
 #include "NomClassType.h"
-#include "RTInstanceType.h"
+#include "XRTInstanceType.h"
 #include "RTDisjointness.h"
 #include "NomInterface.h"
 #include <iostream>
@@ -134,7 +134,7 @@ namespace Nom
 				builder->CreateCondBr(success, superOfNullBlock, failBlock, GetLikelyFirstBranchMetadata());
 
 				builder->SetInsertPoint(superOfNullBlock);
-				auto superOfOther = builder->CreateCall(fun, { RTMaybeType::GenerateReadPotentialType(builder, leftPHI), right, leftSubstPHI, rightsubst });
+				auto superOfOther = builder->CreateCall(fun, { XRTMaybeType::GenerateReadPotentialType(builder, leftPHI), right, leftSubstPHI, rightsubst });
 				superOfOther->setCallingConv(NOMCC);
 				success = builder->CreateICmpEQ(superOfOther, MakeUInt(2, 3));
 				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { success, MakeUInt(1,1) });
@@ -173,16 +173,16 @@ namespace Nom
 				if (leftClassTypeBlock != nullptr)
 				{
 					builder->SetInsertPoint(leftClassTypeBlock);
-					leftTypeArgsPHI->addIncoming(RTClassType::GetTypeArgumentsPtr(builder, leftPHI), builder->GetInsertBlock());
-					leftIfacePHI->addIncoming(RTClassType::GenerateReadClassDescriptorLink(builder, leftPHI), builder->GetInsertBlock());
+					leftTypeArgsPHI->addIncoming(XRTClassType::GetTypeArgumentsPtr(builder, leftPHI), builder->GetInsertBlock());
+					leftIfacePHI->addIncoming(XRTClassType::GenerateReadClassDescriptorLink(builder, leftPHI), builder->GetInsertBlock());
 					builder->CreateBr(leftClsMergeBlock);
 
 				}
 				if (leftInstanceTypeBlock != nullptr)
 				{
 					builder->SetInsertPoint(leftInstanceTypeBlock);
-					leftTypeArgsPHI->addIncoming(RTInstanceType::GetTypeArgumentsPtr(builder, leftPHI), builder->GetInsertBlock());
-					leftIfacePHI->addIncoming(RTInstanceType::GenerateReadClassDescriptorLink(builder, leftPHI), builder->GetInsertBlock());
+					leftTypeArgsPHI->addIncoming(XRTInstanceType::GetTypeArgumentsPtr(builder, leftPHI), builder->GetInsertBlock());
+					leftIfacePHI->addIncoming(XRTInstanceType::GenerateReadClassDescriptorLink(builder, leftPHI), builder->GetInsertBlock());
 					builder->CreateBr(leftClsMergeBlock);
 				}
 				PWInterface leftIface = leftIfacePHI;
@@ -222,7 +222,7 @@ namespace Nom
 					builder->CreateCondBr(success, successBlock, notSubOfNullBlock, GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(notSubOfNullBlock);
-					auto subOfOther = builder->CreateCall(fun, { leftPHI,  RTMaybeType::GenerateReadPotentialType(builder, rightPHI), leftSubstPHI, rightSubstPHI });
+					auto subOfOther = builder->CreateCall(fun, { leftPHI,  XRTMaybeType::GenerateReadPotentialType(builder, rightPHI), leftSubstPHI, rightSubstPHI });
 					subOfOther->setCallingConv(NOMCC);
 					success = builder->CreateICmpEQ(subOfOther, MakeUInt(2, 3));
 					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { success, MakeUInt(1,1) });
@@ -237,16 +237,16 @@ namespace Nom
 				if (rightClassTypeBlock != nullptr)
 				{
 					builder->SetInsertPoint(rightClassTypeBlock);
-					rightTypeArgsPHI->addIncoming(RTClassType::GetTypeArgumentsPtr(builder, rightPHI), builder->GetInsertBlock());
-					rightIfacePHI->addIncoming(RTClassType::GenerateReadClassDescriptorLink(builder, rightPHI), builder->GetInsertBlock());
+					rightTypeArgsPHI->addIncoming(XRTClassType::GetTypeArgumentsPtr(builder, rightPHI), builder->GetInsertBlock());
+					rightIfacePHI->addIncoming(XRTClassType::GenerateReadClassDescriptorLink(builder, rightPHI), builder->GetInsertBlock());
 					builder->CreateBr(rightClsMergeBlock);
 
 				}
 				if (rightInstanceTypeBlock != nullptr)
 				{
 					builder->SetInsertPoint(rightInstanceTypeBlock);
-					rightTypeArgsPHI->addIncoming(RTInstanceType::GetTypeArgumentsPtr(builder, rightPHI), builder->GetInsertBlock());
-					rightIfacePHI->addIncoming(RTInstanceType::GenerateReadClassDescriptorLink(builder, rightPHI), builder->GetInsertBlock());
+					rightTypeArgsPHI->addIncoming(XRTInstanceType::GetTypeArgumentsPtr(builder, rightPHI), builder->GetInsertBlock());
+					rightIfacePHI->addIncoming(XRTInstanceType::GenerateReadClassDescriptorLink(builder, rightPHI), builder->GetInsertBlock());
 					builder->CreateBr(rightClsMergeBlock);
 				}
 
@@ -475,16 +475,16 @@ namespace Nom
 				if (classTypeBlock != nullptr)
 				{
 					builder->SetInsertPoint(classTypeBlock);
-					typeArgsPHI->addIncoming(RTClassType::GetTypeArgumentsPtr(builder, leftTypePHI), builder->GetInsertBlock());
-					ifacePHI->addIncoming(RTClassType::GenerateReadClassDescriptorLink(builder, leftTypePHI), builder->GetInsertBlock());
+					typeArgsPHI->addIncoming(XRTClassType::GetTypeArgumentsPtr(builder, leftTypePHI), builder->GetInsertBlock());
+					ifacePHI->addIncoming(XRTClassType::GenerateReadClassDescriptorLink(builder, leftTypePHI), builder->GetInsertBlock());
 					builder->CreateBr(clsMergeBlock);
 
 				}
 				if (instanceTypeBlock != nullptr)
 				{
 					builder->SetInsertPoint(instanceTypeBlock);
-					typeArgsPHI->addIncoming(RTInstanceType::GetTypeArgumentsPtr(builder, leftTypePHI), builder->GetInsertBlock());
-					ifacePHI->addIncoming(RTInstanceType::GenerateReadClassDescriptorLink(builder, leftTypePHI), builder->GetInsertBlock());
+					typeArgsPHI->addIncoming(XRTInstanceType::GetTypeArgumentsPtr(builder, leftTypePHI), builder->GetInsertBlock());
+					ifacePHI->addIncoming(XRTInstanceType::GenerateReadClassDescriptorLink(builder, leftTypePHI), builder->GetInsertBlock());
 					builder->CreateBr(clsMergeBlock);
 				}
 

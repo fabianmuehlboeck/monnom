@@ -316,8 +316,7 @@ namespace Nom
 					GetMethodTable(mod, linkage),
 					ConstantPointerNull::get(GetCheckReturnValueFunctionType()->getPointerTo()),
 					GetInterfaceTableLookup(mod, linkage),
-					GetSignature(mod, linkage),
-					GetCastFunction(mod, linkage));
+					GetSignature(mod, linkage));
 				new GlobalVariable(mod, ret->getType(), true, linkage, ret, "NOM_CDREF_" + this->GetName()->ToStdString());
 
 				RegisterGlobalForAddressLookup(nameref.str());
@@ -494,7 +493,7 @@ namespace Nom
 						curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
 						if (j > method->GetDirectTypeParametersCount())
 						{
-							curArg = RTCast::GenerateCast(builder, &cvce, curArg, method->GetArgumentTypes(&nscmc)[j - (method->GetDirectTypeParametersCount() + 1)]);
+							curArg = RTCast::GenerateCast(builder, &cvce, RTValue::GetValue(builder, curArg, NomType::DynamicRef), method->GetArgumentTypes(&nscmc)[j - (method->GetDirectTypeParametersCount() + 1)]);
 						}
 					}
 					curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
@@ -613,7 +612,7 @@ namespace Nom
 					BasicBlock* fieldBlock = BasicBlock::Create(LLVMCONTEXT, "field:" + fieldName, fun);
 					nameSwitch->addCase(MakeInt<size_t>(NomNameRepository::Instance().GetNameID(fieldName)), fieldBlock);
 					builder->SetInsertPoint(fieldBlock);
-					RTCast::GenerateCast(builder, &scce, newValue, field->GetType());
+					RTCast::GenerateCast(builder, &scce, RTValue::GetValue(builder, newValue, NomType::DynamicRef), field->GetType());
 					auto writeValue = newValue;
 					if (field->GetType()->IsSubtype(NomIntClass::GetInstance()->GetType(), false))
 					{
@@ -675,11 +674,6 @@ namespace Nom
 		llvm::Constant* NomClass::GetInterfaceDescriptor(llvm::Module& mod) const
 		{
 			return RTClass::GetInterfaceReference(GetLLVMElement(mod));
-		}
-
-		llvm::Constant* NomClass::GetCastFunction([[maybe_unused]] llvm::Module& mod, [[maybe_unused]] llvm::GlobalValue::LinkageTypes linkage) const
-		{
-			return ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 		}
 
 		llvm::Constant* NomClass::GetDynamicDispatcherLookup(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage, llvm::StructType* stype) const
@@ -778,7 +772,7 @@ namespace Nom
 							curArg = EnsurePackedUnpacked(builder, curArg, REFTYPE);
 							if (j > meth->GetDirectTypeParametersCount())
 							{
-								curArg = RTCast::GenerateCast(builder, &cvce, curArg, meth->GetArgumentTypes(&nscmc)[j - (meth->GetDirectTypeParametersCount() + 1)]);
+								curArg = RTCast::GenerateCast(builder, &cvce, RTValue::GetValue(builder, curArg, NomType::DynamicRef), meth->GetArgumentTypes(&nscmc)[j - (meth->GetDirectTypeParametersCount() + 1)]);
 							}
 						}
 						curArg = EnsurePackedUnpacked(builder, curArg, expectedType);
@@ -865,7 +859,12 @@ namespace Nom
 						}
 					}
 				}
-
+				auto mvar = mod.getGlobalVariable("MONNOM_RT_IMT_" + *GetSymbolName() + "_" + std::to_string(i));
+				if (mvar != nullptr)
+				{
+					retarr[i] = mvar;
+					continue;
+				}
 				auto fun = Function::Create(GetIMTFunctionType(), linkage, "MONNOM_RT_IMT_" + *GetSymbolName() + "_" + std::to_string(i), mod);
 				fun->setCallingConv(NOMCC);
 				BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);

@@ -247,7 +247,7 @@ namespace Nom
 					FPM.add(createLICMPass());
 					FPM.add(createLoopUnrollPass(2, false, false, -1, -1, -1, -1, -1, 2));
 					FPM.add(createLICMPass());
-					FPM.add(createInductiveRangeCheckEliminationPass());
+					//FPM.add(createInductiveRangeCheckEliminationPass());
 					FPM.add(createTailCallEliminationPass());
 
 					if (RTConfig_AdditionalOptPasses)

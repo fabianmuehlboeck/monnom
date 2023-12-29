@@ -1,11 +1,13 @@
 #pragma once
 #include "PWTypeArr.h"
 #include "NomBuilder.h"
+#include "PWType.h"
 
 namespace Nom
 {
 	namespace Runtime
 	{
+		class PWSubstStack;
 		class PWInterface;
 		class PWClassType : public PWType
 		{
@@ -17,7 +19,13 @@ namespace Nom
 
 			}
 			PWInterface ReadClassDescriptorLink(NomBuilder& builder);
-			PWTypeArr TypeArgumentsPointer(NomBuilder& builder);
+			PWTypeArr TypeArgumentsPointer(NomBuilder& builder);			
+			
+			PWBool IsEq(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst);
+
+			PWBool IsSubtype(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst, bool optimistic = false);
+
+			PWBool IsSupertype(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst, bool optimistic = false);
 		};
 	}
 }

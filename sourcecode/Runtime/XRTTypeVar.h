@@ -12,15 +12,15 @@ namespace Nom
 	namespace Runtime
 	{
 		class NomTypeVar;
-		enum class RTTypeVarFields : unsigned char { Head = 0, Index = 1, LowerBound = 2, UpperBound = 3 };
-		class RTTypeVar : public RTConcreteType, public ARTRep<RTTypeVar, RTTypeVarFields>
+		enum class XRTTypeVarFields : unsigned char { Head = 0, Index = 1, LowerBound = 2, UpperBound = 3 };
+		class XRTTypeVar : public RTConcreteType, public ARTRep<XRTTypeVar, XRTTypeVarFields>
 		{
 		public:
 			static llvm::StructType *GetLLVMType();
-			RTTypeVar(const char * entry) : ARTRep<RTTypeVar, RTTypeVarFields>(entry)
+			XRTTypeVar(const char * entry) : ARTRep<XRTTypeVar, XRTTypeVarFields>(entry)
 			{
 			}
-			RTTypeVar(const void * entry) : ARTRep<RTTypeVar, RTTypeVarFields>(entry)
+			XRTTypeVar(const void * entry) : ARTRep<XRTTypeVar, XRTTypeVarFields>(entry)
 			{
 			}
 			static llvm::Constant *GetConstant(size_t index, llvm::Constant *lowerBound, llvm::Constant *upperBound, const NomTypeVar *type);

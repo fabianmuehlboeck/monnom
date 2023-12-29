@@ -96,10 +96,10 @@ namespace Nom
 		}
 		llvm::Constant * NomTypeVar::createLLVMElement(llvm::Module & mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			auto var = new llvm::GlobalVariable(mod, RTTypeVar::GetLLVMType(), true, linkage, nullptr, GetGlobalName());
-			auto cnst = RTTypeVar::GetConstant(GetIndex(), GetLowerBound()->GetLLVMElement(mod), GetUpperBound()->GetLLVMElement(mod), this);
+			auto var = new llvm::GlobalVariable(mod, XRTTypeVar::GetLLVMType(), true, linkage, nullptr, GetGlobalName());
+			auto cnst = XRTTypeVar::GetConstant(GetIndex(), GetLowerBound()->GetLLVMElement(mod), GetUpperBound()->GetLLVMElement(mod), this);
 			var->setInitializer(cnst);
-			return llvm::ConstantExpr::getGetElementPtr(cnst->getType(), var, llvm::ArrayRef<llvm::Constant*>({MakeInt32(0), MakeInt32((RTTypeVarFields::Head))}));
+			return llvm::ConstantExpr::getGetElementPtr(cnst->getType(), var, llvm::ArrayRef<llvm::Constant*>({MakeInt32(0), MakeInt32((XRTTypeVarFields::Head))}));
 		}
 		llvm::Constant * NomTypeVar::findLLVMElement(llvm::Module & mod) const
 		{
@@ -108,7 +108,7 @@ namespace Nom
 			{
 				return var;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(RTTypeVar::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTTypeVarFields::Head)) }));
+			return llvm::ConstantExpr::getGetElementPtr(XRTTypeVar::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((XRTTypeVarFields::Head)) }));
 		}
 		uintptr_t NomTypeVar::GetRTElement() const
 		{

@@ -9,7 +9,7 @@
 #include "NomJIT.h"
 #include "NomBottomType.h"
 #include "Util.h"
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include "CompileHelpers.h"
 #include "IntClass.h"
 #include "FloatClass.h"
@@ -72,7 +72,7 @@ namespace Nom
 			Function *fun = mod.getFunction("RT_NOM_ClassTypeInitializer");
 			if (fun == nullptr)
 			{
-				FunctionType *funtype = llvm::FunctionType::get(RTTypeHead::GetLLVMType()->getPointerTo(), {RTClassType::GetLLVMType()->getPointerTo(), RTClass::GetLLVMType()->getPointerTo(), numtype(size_t), POINTERTYPE, numtype(int), RTTypeHead::GetLLVMType()->getPointerTo()->getPointerTo()}, false);
+				FunctionType *funtype = llvm::FunctionType::get(RTTypeHead::GetLLVMType()->getPointerTo(), {XRTClassType::GetLLVMType()->getPointerTo(), RTClass::GetLLVMType()->getPointerTo(), numtype(size_t), POINTERTYPE, numtype(int), RTTypeHead::GetLLVMType()->getPointerTo()->getPointerTo()}, false);
 				fun = llvm::Function::Create(funtype, (&mod == initializerModule) ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::AvailableExternallyLinkage, "RT_NOM_ClassTypeInitializer", &mod);
 				NomBuilder builder;
 				auto argiter = fun->arg_begin();
@@ -89,10 +89,10 @@ namespace Nom
 				BasicBlock *retBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 
 				builder->SetInsertPoint(mainBlock);
-				MakeStore(builder, MakeInt((TypeKind::TKClass)), builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)), MakeInt32((RTTypeHeadFields::Kind)) }));
-				MakeStore(builder, hash, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)), MakeInt32((RTTypeHeadFields::Hash)) }));
-				MakeStore(builder, nomtype, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)), MakeInt32((RTTypeHeadFields::NomType)) }));
-				MakeStore(builder, clspointer, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Class)) }));
+				MakeStore(builder, MakeInt((TypeKind::TKClass)), builder->CreateGEP(XRTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)), MakeInt32((RTTypeHeadFields::Kind)) }));
+				MakeStore(builder, hash, builder->CreateGEP(XRTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)), MakeInt32((RTTypeHeadFields::Hash)) }));
+				MakeStore(builder, nomtype, builder->CreateGEP(XRTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)), MakeInt32((RTTypeHeadFields::NomType)) }));
+				MakeStore(builder, clspointer, builder->CreateGEP(XRTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Class)) }));
 				builder->CreateBr(loopHead);
 
 				builder->SetInsertPoint(loopHead);
@@ -104,11 +104,11 @@ namespace Nom
 				Value *index = builder->CreateSub(phi, MakeInt<int>(1));
 				phi->addIncoming(index, loop);
 				LoadInst *load = MakeLoad(builder,TYPETYPE, builder->CreateGEP(arrtype(TYPETYPE,0), argsarr, index));
-				MakeStore(builder, load, builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, {MakeInt32(0), MakeInt32((RTClassTypeFields::TypeArgs)), builder->CreateNeg(phi)}));
+				MakeStore(builder, load, builder->CreateGEP(XRTClassType::GetLLVMType(), ctypepointer, {MakeInt32(0), MakeInt32((RTClassTypeFields::TypeArgs)), builder->CreateNeg(phi)}));
 				builder->CreateBr(loopHead);
 
 				builder->SetInsertPoint(retBlock);
-				builder->CreateRet(builder->CreateGEP(RTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)) }));
+				builder->CreateRet(builder->CreateGEP(XRTClassType::GetLLVMType(), ctypepointer, { MakeInt32(0), MakeInt32((RTClassTypeFields::Head)) }));
 			}
 			return fun;
 		}
@@ -270,12 +270,16 @@ namespace Nom
 
 		llvm::Constant * NomClassType::createLLVMElement(llvm::Module &mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			llvm::StructType * ttt = RTClassType::GetLLVMType(this->Arguments.size());
+			llvm::StructType * ttt = XRTClassType::GetLLVMType(this->Arguments.size());
 			llvm::GlobalVariable * gv = new llvm::GlobalVariable(mod, ttt, true, linkage, nullptr, GetGlobalName());
 
 			Constant* funptr;
+
+			//Function* eqFun = Function::Create(GetTypeEqFunctionType(), linkage, "MONNOM_RT_TYPECASTFUN_CLS_" + GetGlobalName());
+				 
 			if (!this->ContainsVariables())
 			{
+
 				Function* fun = Function::Create(GetCastFunctionType(), linkage, "MONNOM_RT_TYPECASTFUN_CLS_" + GetGlobalName(), mod);
 				funptr = fun;
 				{
@@ -462,7 +466,7 @@ namespace Nom
 			{
 				funptr = ConstantPointerNull::get(GetCastFunctionType()->getPointerTo());
 			}
-			gv->setInitializer(RTClassType::GetConstant(mod, this, funptr));
+			gv->setInitializer(XRTClassType::GetConstant(mod, this, funptr));
 			return llvm::ConstantExpr::getGetElementPtr(ttt, gv, llvm::ArrayRef<llvm::Constant *>({ MakeInt32(0), MakeInt32((RTClassTypeFields::Head)) }));
 		}
 
@@ -491,7 +495,7 @@ namespace Nom
 		}
 		llvm::Constant * NomClassType::findLLVMElement(llvm::Module & mod) const
 		{
-			llvm::StructType* ttt = RTClassType::GetLLVMType(this->Arguments.size());
+			llvm::StructType* ttt = XRTClassType::GetLLVMType(this->Arguments.size());
 			llvm::SmallVector<char, 32> buf;
 			auto var = mod.getGlobalVariable(GetGlobalName());
 			if (var == nullptr)

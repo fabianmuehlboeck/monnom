@@ -1,5 +1,5 @@
 #include "RTRecordValue.h"
-#include "PWRecord.h"
+#include "PWAll.h"
 
 namespace Nom
 {
@@ -55,6 +55,10 @@ namespace Nom
 		const RTPWValuePtr<PWStructVal> RTRecordValue::AsStructVal(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			return nullptr;
+		}
+		void RTRecordValue::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitRecord(this);
 		}
 	}
 }

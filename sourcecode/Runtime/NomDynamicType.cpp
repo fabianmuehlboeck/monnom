@@ -3,7 +3,7 @@
 #include "NomClassType.h"
 #include "NomTopType.h"
 #include "NomBottomType.h"
-#include "RTDynamicType.h"
+#include "XRTDynamicType.h"
 #include "CompileHelpers.h"
 #include "NomMaybeType.h"
 #include "RTTypeHead.h"
@@ -46,8 +46,8 @@ namespace Nom
 				argiter++;
 				builder->CreateRet(argiter);
 			}
-			auto gv = new GlobalVariable(mod, RTDynamicType::GetLLVMType(), true, linkage, RTDynamicType::CreateConstant(fun), "RT_NOM_DynamicType");
-			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTDynamicTypeFields::Head)) }));
+			auto gv = new GlobalVariable(mod, XRTDynamicType::GetLLVMType(), true, linkage, XRTDynamicType::CreateConstant(fun), "RT_NOM_DynamicType");
+			return llvm::ConstantExpr::getGetElementPtr(XRTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((XRTDynamicTypeFields::Head)) }));
 		}
 		Constant* NomDynamicType::findLLVMElement(llvm::Module& mod) const
 		{
@@ -56,7 +56,7 @@ namespace Nom
 			{
 				return gv;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(RTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTDynamicTypeFields::Head)) }));
+			return llvm::ConstantExpr::getGetElementPtr(XRTDynamicType::GetLLVMType(), gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((XRTDynamicTypeFields::Head)) }));
 		}
 		bool NomDynamicType::ContainsVariables() const
 		{

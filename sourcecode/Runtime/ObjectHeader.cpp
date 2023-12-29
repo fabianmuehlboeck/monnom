@@ -7,13 +7,13 @@ PUSHDIAGSUPPRESSION
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
 POPDIAGSUPPRESSION
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include "NomJIT.h"
 #include "NomClass.h"
 #include <iostream>
 #include "GlobalNameAddressLookupList.h"
 #include "StringClass.h"
-#include "RTInstanceType.h"
+#include "XRTInstanceType.h"
 #include "FloatClass.h"
 #include "IntClass.h"
 #include "BoolClass.h"

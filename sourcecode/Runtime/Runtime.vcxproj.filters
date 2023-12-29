@@ -88,6 +88,9 @@
     <Filter Include="Values">
       <UniqueIdentifier>{9fb4c0e9-475d-4561-ae1a-4a1c9dbcd992}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Types">
+      <UniqueIdentifier>{b22e49ef-07e3-4e72-a354-dc9c476f9ce6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="instructions\CallCheckedStaticMethod.cpp">
@@ -393,22 +396,22 @@
     <ClCompile Include="RTVTable.cpp">
       <Filter>Runtime Data\VTables</Filter>
     </ClCompile>
-    <ClCompile Include="RTClassType.cpp">
+    <ClCompile Include="XRTClassType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
     <ClCompile Include="RTTypeHead.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTDynamicType.cpp">
+    <ClCompile Include="XRTDynamicType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTInstanceType.cpp">
+    <ClCompile Include="XRTInstanceType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTMaybeType.cpp">
+    <ClCompile Include="XRTMaybeType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTTypeVar.cpp">
+    <ClCompile Include="XRTTypeVar.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
     <ClCompile Include="StructuralValueHeader.cpp">
@@ -680,6 +683,18 @@
     </ClCompile>
     <ClCompile Include="RTStructuralValue.cpp">
       <Filter>Values</Filter>
+    </ClCompile>
+    <ClCompile Include="RTValueVisitor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RTType.cpp">
+      <Filter>Types</Filter>
+    </ClCompile>
+    <ClCompile Include="RTTypePtr.cpp">
+      <Filter>Types</Filter>
+    </ClCompile>
+    <ClCompile Include="RTClassType.cpp">
+      <Filter>Types</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1028,22 +1043,22 @@
     <ClInclude Include="RTVTable.h">
       <Filter>Runtime Data\VTables</Filter>
     </ClInclude>
-    <ClInclude Include="RTClassType.h">
+    <ClInclude Include="XRTClassType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
     <ClInclude Include="RTTypeHead.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTDynamicType.h">
+    <ClInclude Include="XRTDynamicType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTInstanceType.h">
+    <ClInclude Include="XRTInstanceType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTMaybeType.h">
+    <ClInclude Include="XRTMaybeType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTTypeVar.h">
+    <ClInclude Include="XRTTypeVar.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
     <ClInclude Include="StructuralValueHeader.h">
@@ -1336,6 +1351,24 @@
     </ClInclude>
     <ClInclude Include="RTStructuralValue.h">
       <Filter>Values</Filter>
+    </ClInclude>
+    <ClInclude Include="RTValueVisitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PWAll.h">
+      <Filter>Wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="SwitchMerger.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="RTType.h">
+      <Filter>Types</Filter>
+    </ClInclude>
+    <ClInclude Include="RTTypePtr.h">
+      <Filter>Types</Filter>
+    </ClInclude>
+    <ClInclude Include="RTClassType.h">
+      <Filter>Types</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

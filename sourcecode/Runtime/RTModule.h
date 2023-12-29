@@ -17,7 +17,7 @@ namespace Nom
 		{
 		private:
 			std::forward_list<RTClass> classes;
-			std::forward_list<RTClassType> classTypes;
+			std::forward_list<XRTClassType> classTypes;
 			std::unique_ptr<llvm::Module> theModule;
 			static std::forward_list<void*> &structRecords();
 			static std::forward_list<void*> &lambdaRecords();

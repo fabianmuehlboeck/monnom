@@ -85,7 +85,7 @@ llvm::Function* GetClassTypeAlloc(llvm::Module* mod)
 	Function* ret = mod->getFunction("CPP_NOM_STRUCTALLOC");
 	if (ret == nullptr)
 	{
-		FunctionType* allocFunType = FunctionType::get(RTClassType::GetLLVMType()->getPointerTo(), { INTTYPE }, false);
+		FunctionType* allocFunType = FunctionType::get(XRTClassType::GetLLVMType()->getPointerTo(), { INTTYPE }, false);
 		ret = Function::Create(allocFunType, Function::ExternalLinkage, "CPP_NOM_CLASSTYPEALLOC", mod);
 	}
 	return ret;
@@ -155,7 +155,7 @@ extern "C" DLLEXPORT void* CPP_NOM_CLASSTYPEALLOC(size_t numtargs)
 	{
 		RT_NOM_STATS_IncAllocations(AllocationType::ClassType);
 	}
-	auto ret = reinterpret_cast<void*>((reinterpret_cast<char**>(gcalloc(GetNomJITDataLayout().getTypeAllocSize(RTClassType::GetLLVMType()).getFixedValue() + (sizeof(char*) * (numtargs))))) + numtargs);
+	auto ret = reinterpret_cast<void*>((reinterpret_cast<char**>(gcalloc(GetNomJITDataLayout().getTypeAllocSize(XRTClassType::GetLLVMType()).getFixedValue() + (sizeof(char*) * (numtargs))))) + numtargs);
 	return ret;
 }
 

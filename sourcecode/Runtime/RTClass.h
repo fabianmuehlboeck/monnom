@@ -29,7 +29,7 @@ namespace Nom
 
 			static llvm::StructType* GetLLVMType();
 			static llvm::StructType* GetConstantType(size_t offset, llvm::Type* methodTableType, llvm::StructType* ddtype, llvm::StructType* stetype);
-			static llvm::Constant* CreateConstant(llvm::GlobalVariable* gvar, llvm::StructType* gvartype, const NomInterface* irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Constant* dynamicDispatcherTable, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superClassCount, llvm::ConstantInt* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* interfaceMethodTable, llvm::Constant* signature, llvm::Constant* castFunction);
+			static llvm::Constant* CreateConstant(llvm::GlobalVariable* gvar, llvm::StructType* gvartype, const NomInterface* irptr, llvm::Function* fieldRead, llvm::Function* fieldWrite, llvm::Constant* dynamicDispatcherTable, llvm::ConstantInt* fieldCount, llvm::ConstantInt* typeArgCount, llvm::ConstantInt* superClassCount, llvm::ConstantInt* superInterfaceCount, llvm::Constant* superTypeEntries, llvm::Constant* methodTable, llvm::Constant* checkReturnValueFunction, llvm::Constant* interfaceMethodTable, llvm::Constant* signature);
 			static llvm::Constant* FindConstant(llvm::Module& mod, const llvm::StringRef name);
 
 			static llvm::Value* GenerateReadFieldCount(NomBuilder& builder, llvm::Value* descriptorPtr);

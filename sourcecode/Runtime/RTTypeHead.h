@@ -19,12 +19,14 @@ namespace Nom
 		class RTConcreteType;
 		class RTUnionType;
 		class RTIsectType;
-		class RTClassType;
-		class RTTypeVar;
+		class XRTClassType;
+		class XRTTypeVar;
 		class NomType;
 		enum class RTTypeHeadFields : unsigned char { Kind = 0, Hash = 1, NomType = 2, CastFun = 3 };
 
 		llvm::FunctionType* GetCastFunctionType();
+		llvm::FunctionType* GetTypeEqFunctionType();
+		llvm::FunctionType* GetSubtypeFunctionType();
 
 		class RTTypeHead : public ARTRep<RTTypeHead, RTTypeHeadFields>
 		{

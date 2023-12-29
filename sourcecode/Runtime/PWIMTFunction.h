@@ -8,7 +8,7 @@ namespace Nom
 		class PWIMTFunction : public PWrapper
 		{
 		public:
-			PWIMTFunction(llvm::Value* _wrapped) : PWrapper(_wrapped)
+			PWIMTFunction(llvm::Value* _wrapped=nullptr) : PWrapper(_wrapped)
 			{
 
 			}

@@ -1,4 +1,4 @@
-#include "RTTypeVar.h"
+#include "XRTTypeVar.h"
 #include "NomTypeVar.h"
 #include "CompileHelpers.h"
 PUSHDIAGSUPPRESSION
@@ -12,7 +12,7 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		llvm::StructType * RTTypeVar::GetLLVMType()
+		llvm::StructType * XRTTypeVar::GetLLVMType()
 		{
 			static llvm::StructType *llvmtype = llvm::StructType::create(LLVMCONTEXT, "LLVMRTTypeVar");
 			static bool dontrepeat = true;
@@ -28,12 +28,12 @@ namespace Nom
 			}
 			return llvmtype;
 		}
-		llvm::Constant * RTTypeVar::GetConstant(size_t index, llvm::Constant * lowerBound, llvm::Constant * upperBound, const NomTypeVar * type)
+		llvm::Constant * XRTTypeVar::GetConstant(size_t index, llvm::Constant * lowerBound, llvm::Constant * upperBound, const NomTypeVar * type)
 		{
 			return llvm::ConstantStruct::get(GetLLVMType(), RTTypeHead::GetConstant(TypeKind::TKVariable, MakeInt(type->GetHashCode()), type, ConstantPointerNull::get(GetCastFunctionType()->getPointerTo())), MakeInt(index), lowerBound, upperBound);
 		}
 
-		llvm::Value* RTTypeVar::GenerateLoadIndex(NomBuilder& builder, llvm::Value* type)
+		llvm::Value* XRTTypeVar::GenerateLoadIndex(NomBuilder& builder, llvm::Value* type)
 		{
 			return PWTypeVar(type).ReadIndex(builder);
 		}

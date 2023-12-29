@@ -1,5 +1,6 @@
 #pragma once
 #include "RTValue.h"
+#include "PWPartialApp.h"
 
 namespace Nom
 {
@@ -11,6 +12,7 @@ namespace Nom
 			RTPartialAppValue(const PWPartialApp _val, NomTypeRef _type, bool _isfc=false);
 		public:
 			virtual ~RTPartialAppValue() override {}
+			virtual void Visit(RTValueVisitor visitor) const override;
 			static RTPartialAppValue* Get(NomBuilder& builder, const PWPartialApp _val, NomTypeRef _type, bool _isfc = false);
 			virtual const RTPWValuePtr<PWInt64> AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const override;
 			virtual const RTPWValuePtr<PWFloat> AsRawFloat(NomBuilder& builder, RTValuePtr orig, bool check) const override;

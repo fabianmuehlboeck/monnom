@@ -1,5 +1,5 @@
 #include "RTLambdaValue.h"
-#include "PWLambda.h"
+#include "PWAll.h"
 
 using namespace llvm;
 namespace Nom
@@ -13,6 +13,10 @@ namespace Nom
 		RTLambdaValue* RTLambdaValue::Get(NomBuilder& builder, const PWLambda _val, NomTypeRef _type, bool _isfc)
 		{
 			return new(builder.Malloc(sizeof(RTLambdaValue))) RTLambdaValue(_val, _type, _isfc);
+		}
+		void RTLambdaValue::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitLambda(this);
 		}
 		const RTPWValuePtr<PWInt64> RTLambdaValue::AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
@@ -58,7 +62,7 @@ namespace Nom
 		{
 			return nullptr;
 		}
-		int RTLambdaValue::GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, bool unboxObjects, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight) const
+		unsigned int RTLambdaValue::GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, bool unboxObjects, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight) const
 		{
 			BasicBlock* newBB = BasicBlock::Create(builder->getContext(), "isLambda", builder->GetInsertBlock()->getParent());
 			builder->CreateBr(newBB);

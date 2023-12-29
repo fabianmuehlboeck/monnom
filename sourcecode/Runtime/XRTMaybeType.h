@@ -7,8 +7,8 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		enum class RTMaybeTypeFields : unsigned char { Head = 0, PotentialType = 1 };
-		class RTMaybeType : public ARTRep<RTMaybeType,RTMaybeTypeFields>
+		enum class XRTMaybeTypeFields : unsigned char { Head = 0, PotentialType = 1 };
+		class XRTMaybeType : public ARTRep<XRTMaybeType,XRTMaybeTypeFields>
 		{
 		public:
 			static llvm::StructType* GetLLVMType();

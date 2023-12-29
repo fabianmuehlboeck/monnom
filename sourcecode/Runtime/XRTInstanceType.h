@@ -6,8 +6,8 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		enum class RTInstanceTypeFields : unsigned char { Head = 0, Class = 1, TypeArgs = 2 };
-		class RTInstanceType : public ARTRep<RTInstanceType, RTInstanceTypeFields>
+		enum class XRTInstanceTypeFields : unsigned char { Head = 0, Class = 1, TypeArgs = 2 };
+		class XRTInstanceType : public ARTRep<XRTInstanceType, XRTInstanceTypeFields>
 		{
 		private:
 

@@ -12,13 +12,17 @@ namespace Nom
 {
 	namespace Runtime
 	{
-		const RTRawBool* RTRawBool::Get(NomBuilder& builder, const PWBool _value, bool _isfc = false)
+		const RTRawBool* RTRawBool::Get(NomBuilder& builder, const PWBool _value, bool _isfc)
 		{
 			return new(builder.Malloc(sizeof(RTRawBool))) RTRawBool(_value, GetBoolClassType(), _isfc);
 		}
 		NomTypeRef RTRawBool::GetNomType() const
 		{
 			return GetBoolClassType();
+		}
+		void RTRawBool::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitRawBool(this);
 		}
 		const RTPWValuePtr<PWInt64> RTRawBool::AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
@@ -64,7 +68,12 @@ namespace Nom
 		{
 			return nullptr;
 		}
-		int RTRawBool::GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, bool unboxObjects, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight) const
+		unsigned int RTRawBool::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedInt, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedFloat, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, [[maybe_unused]] uint64_t refWeight, [[maybe_unused]] uint64_t intWeight, [[maybe_unused]] uint64_t floatWeight) const
+		{
+			onPrimitiveBool(builder, this);
+			return 1;
+		}
+		unsigned int RTRawBool::GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, bool unboxObjects, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight) const
 		{
 			BasicBlock* newBB = BasicBlock::Create(builder->getContext(), "isPrimitiveBool", builder->GetInsertBlock()->getParent());
 			builder->CreateBr(newBB);

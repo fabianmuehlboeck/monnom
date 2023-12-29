@@ -39,10 +39,10 @@ namespace Nom
 		}
 		llvm::Constant* NomMaybeType::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const
 		{
-			llvm::StructType* ttt = RTMaybeType::GetLLVMType();
+			llvm::StructType* ttt = XRTMaybeType::GetLLVMType();
 			llvm::GlobalVariable* gv = new llvm::GlobalVariable(mod, ttt, true, linkage, nullptr, GetGlobalName());
-			gv->setInitializer(RTMaybeType::GetConstant(mod, this));
-			return llvm::ConstantExpr::getGetElementPtr(ttt, gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)) }));
+			gv->setInitializer(XRTMaybeType::GetConstant(mod, this));
+			return llvm::ConstantExpr::getGetElementPtr(ttt, gv, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((XRTMaybeTypeFields::Head)) }));
 		}
 		llvm::Constant* NomMaybeType::findLLVMElement(llvm::Module& mod) const
 		{
@@ -52,7 +52,7 @@ namespace Nom
 			{
 				return var;
 			}
-			return llvm::ConstantExpr::getGetElementPtr(RTMaybeType::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)) }));
+			return llvm::ConstantExpr::getGetElementPtr(XRTMaybeType::GetLLVMType(), var, llvm::ArrayRef<llvm::Constant*>({ MakeInt32(0), MakeInt32((XRTMaybeTypeFields::Head)) }));
 		}
 		bool NomMaybeType::ContainsVariables() const
 		{
@@ -175,7 +175,7 @@ namespace Nom
 			}
 			if (auto var = NomJIT::Instance().lookup(GetGlobalName())->getValue())
 			{
-				auto ret = (var)+RTMaybeType::HeadOffset();
+				auto ret = (var)+XRTMaybeType::HeadOffset();
 				head = RTTypeHead(reinterpret_cast<void*>(ret));
 				return ret;
 			}
@@ -184,7 +184,7 @@ namespace Nom
 			{
 				throw new std::exception();
 			}
-			void* rtct = reinterpret_cast<void*>(makenmalloc(RTMaybeType, 1));
+			void* rtct = reinterpret_cast<void*>(makenmalloc(XRTMaybeType, 1));
 			auto initfun = GetCPPInitializerFunction();
 			return reinterpret_cast<uintptr_t>(initfun(rtct, reinterpret_cast<void*>(this->PotentialType->GetRTElement()), this->GetHashCode(), this));
 		}
@@ -214,7 +214,7 @@ namespace Nom
 			Function* fun = mod.getFunction("RT_NOM_MaybeTypeInitializer");
 			if (fun == nullptr)
 			{
-				FunctionType* funtype = llvm::FunctionType::get(RTTypeHead::GetLLVMType()->getPointerTo(), { RTMaybeType::GetLLVMType()->getPointerTo(), RTTypeHead::GetLLVMType()->getPointerTo(), numtype(size_t), POINTERTYPE }, false);
+				FunctionType* funtype = llvm::FunctionType::get(RTTypeHead::GetLLVMType()->getPointerTo(), { XRTMaybeType::GetLLVMType()->getPointerTo(), RTTypeHead::GetLLVMType()->getPointerTo(), numtype(size_t), POINTERTYPE }, false);
 				fun = llvm::Function::Create(funtype, (&mod == initializerModule) ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::AvailableExternallyLinkage, "RT_NOM_MaybeTypeInitializer", &mod);
 				NomBuilder builder;
 				auto argiter = fun->arg_begin();
@@ -226,12 +226,12 @@ namespace Nom
 				BasicBlock* mainBlock = BasicBlock::Create(LLVMCONTEXT, "", fun);
 
 				builder->SetInsertPoint(mainBlock);
-				MakeStore(builder, MakeInt((TypeKind::TKClass)), builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::Kind)) }));
-				MakeStore(builder, hash, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::Hash)) }));
-				MakeStore(builder, nomtype, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::NomType)) }));
-				MakeStore(builder, ptypepointer, builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::PotentialType)) }));
+				MakeStore(builder, MakeInt((TypeKind::TKClass)), builder->CreateGEP(XRTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((XRTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::Kind)) }));
+				MakeStore(builder, hash, builder->CreateGEP(XRTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((XRTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::Hash)) }));
+				MakeStore(builder, nomtype, builder->CreateGEP(XRTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((XRTMaybeTypeFields::Head)), MakeInt32((RTTypeHeadFields::NomType)) }));
+				MakeStore(builder, ptypepointer, builder->CreateGEP(XRTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((XRTMaybeTypeFields::PotentialType)) }));
 
-				builder->CreateRet(builder->CreateGEP(RTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((RTMaybeTypeFields::Head)) }));
+				builder->CreateRet(builder->CreateGEP(XRTMaybeType::GetLLVMType(), mbtypepointer, { MakeInt32(0), MakeInt32((XRTMaybeTypeFields::Head)) }));
 			}
 			return fun;
 		}

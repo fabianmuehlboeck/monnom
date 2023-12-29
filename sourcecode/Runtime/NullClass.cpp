@@ -1,6 +1,6 @@
 #include "NullClass.h"
 #include "NomClassType.h"
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include "NomType.h"
 #include "ObjectHeader.h"
 #include "NomJIT.h"

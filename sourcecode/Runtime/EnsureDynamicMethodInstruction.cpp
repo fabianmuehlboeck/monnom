@@ -24,6 +24,7 @@ POPDIAGSUPPRESSION
 #include "Metadata.h"
 #include "PWRefValue.h"
 #include "PWDispatchPair.h"
+#include "PWAll.h"
 
 using namespace std;
 using namespace llvm;
@@ -43,76 +44,47 @@ namespace Nom
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
+			BasicBlock* retBlock = nullptr;
+			llvm::Value* retVal = nullptr;
 
-			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
+			receiver->GenerateRefOrPrimitiveValueSwitch(builder,
+				[fun, receiver, &retBlock, &retVal](NomBuilder& builder, RTPWValuePtr<PWRefValue> val) -> void {
+					BasicBlock* packPairBlock = BasicBlock::Create(LLVMCONTEXT, "packRawInvokeDispatcherPair", fun);
+					BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Given value is not invokable!");
+					PWRefValue rv = PWRefValue(receiver);
+					auto vtable = rv.ReadVTable(builder);
+					auto hasRawInvoke = vtable.ReadHasRawInvoke(builder);
+					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasRawInvoke, MakeUInt(1,1) });
+					builder->CreateCondBr(hasRawInvoke, packPairBlock, errorBlock, GetLikelyFirstBranchMetadata());
 
-			unsigned int mergeBlocks = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, receiver, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, nullptr, &primitiveFloatBlock, nullptr, &primitiveBoolBlock, nullptr);
+					builder->SetInsertPoint(packPairBlock);
+					auto rawInvokePtr = RefValueHeader::GenerateReadRawInvoke(builder, receiver);
+					retVal = PWDispatchPair::Get(builder, rawInvokePtr, receiver);
+					retBlock = builder->GetInsertBlock();
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke integer values!", builder->GetInsertBlock());
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke float values!", builder->GetInsertBlock());
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWInt64> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke integer values!", builder->GetInsertBlock());
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWFloat> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke float values!", builder->GetInsertBlock());
+				},
+				[](NomBuilder& builder, RTPWValuePtr<PWBool> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke boolean values!", builder->GetInsertBlock());
+				}, 200, 10, 10);
 
-			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge", fun);
-			PHINode* mergePHI = nullptr;
-			Value* returnVal = nullptr;
-
-			if (mergeBlocks == 0)
+			if (retBlock == nullptr)
 			{
 				throw new std::exception();
 			}
-			if (mergeBlocks > 1)
-			{
-				builder->SetInsertPoint(mergeBlock);
-				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), static_cast<unsigned int>(mergeBlocks));
-				returnVal = mergePHI;
-			}
 
-			if (refValueBlock != nullptr)
-			{
-				builder->SetInsertPoint(refValueBlock);
-				BasicBlock* packPairBlock = BasicBlock::Create(LLVMCONTEXT, "packRawInvokeDispatcherPair", fun);
-				BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Given value is not invokable!");
-				PWRefValue rv = PWRefValue(receiver);
-				auto vtable = rv.ReadVTable(builder);
-				auto hasRawInvoke = vtable.ReadHasRawInvoke(builder);
-				builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasRawInvoke, MakeUInt(1,1) });
-				builder->CreateCondBr(hasRawInvoke, packPairBlock, errorBlock, GetLikelyFirstBranchMetadata());
-
-				builder->SetInsertPoint(packPairBlock);
-				auto rawInvokePtr = builder->CreatePointerCast(RefValueHeader::GenerateReadRawInvoke(builder, receiver), GetIMTFunctionType()->getPointerTo());
-				auto partialPair = builder->CreateInsertValue(UndefValue::get(GetDynamicDispatcherLookupResultType()), rawInvokePtr, { 0 });
-				auto returnVal2 = builder->CreateInsertValue(partialPair, builder->CreatePointerCast(receiver, POINTERTYPE), { 1 });
-
-				if (mergePHI != nullptr)
-				{
-					mergePHI->addIncoming(returnVal2, builder->GetInsertBlock());
-				}
-				else
-				{
-					returnVal = returnVal2;
-				}
-				builder->CreateBr(mergeBlock);
-			}
-
-			if (packedIntBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke integer values!", packedIntBlock);
-			}
-			if (packedFloatBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke float values!", packedFloatBlock);
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke integer values!", primitiveIntBlock);
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke float values!", primitiveFloatBlock);
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke boolean values!", primitiveBoolBlock);
-			}
-
-			builder->SetInsertPoint(mergeBlock);
-			return returnVal;
+			builder->SetInsertPoint(retBlock);
+			return retVal;
 		}
 
 		void EnsureDynamicMethodInstruction::Compile(NomBuilder& builder, CompileEnv* env, [[maybe_unused]] size_t lineno)
@@ -138,121 +110,66 @@ namespace Nom
 				builder->CreateCall(GetIncDynamicMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
 
-			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-			Value* primitiveIntVal, * primitiveFloatVal, * primitiveBoolVal;
+			BasicBlock** retBlocks = makealloca(BasicBlock*, 6);
+			PWDispatchPair* retValues = makealloca(PWDispatchPair, 6);
+			unsigned int retCount = 0;
 
-			unsigned int mergeBlocks = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, receiver, &refValueBlock, &packedIntBlock, &packedFloatBlock, false, &primitiveIntBlock, &primitiveIntVal, &primitiveFloatBlock, &primitiveFloatVal, &primitiveBoolBlock, &primitiveBoolVal);
-
-			BasicBlock* mergeBlock = BasicBlock::Create(LLVMCONTEXT, "ddLookupMerge", fun);
-			PHINode* mergePHI = nullptr;
-			Value* returnVal = nullptr;
-
-			if (mergeBlocks == 0)
+			receiver->GenerateRefOrPrimitiveValueSwitch(builder,
+				[&methodName, retBlocks, retValues, &retCount](NomBuilder& builder, RTPWValuePtr<PWRefValue> val) -> void {
+					auto vtable = val->value.ReadVTable(builder);
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val, vtable, NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = builder->GetInsertBlock();
+					retCount++;
+				},
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val, NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = builder->GetInsertBlock();
+					retCount++;
+				},
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = builder->GetInsertBlock();
+					retCount++; 
+				},
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWInt64> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val->AsPackedValue(builder) , NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = builder->GetInsertBlock();
+					retCount++;
+				},
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWFloat> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val->AsPackedValue(builder), NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = builder->GetInsertBlock();
+					retCount++;
+				},
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWBool> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val->AsPackedValue(builder), NomBoolClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = builder->GetInsertBlock();
+					retCount++;
+				},
+				100, 20, 10);
+			
+			if (retCount == 0)
 			{
 				throw new std::exception();
 			}
-			if (mergeBlocks > 1)
+			if (retCount > 1)
 			{
+				BasicBlock* mergeBlock = BasicBlock::Create(builder->getContext(), "ensureDynDispatcherMerge", fun);
 				builder->SetInsertPoint(mergeBlock);
-				mergePHI = builder->CreatePHI(GetDynamicDispatcherLookupResultType(), static_cast<unsigned int>(mergeBlocks));
-				returnVal = mergePHI;
+				PWPhi<PWDispatchPair> phi = PWPhi<PWDispatchPair>::Create(builder, retCount, "dynDispatcherPairPHI");
+				for (unsigned int i = 0; i < retCount; i++)
+				{
+					builder->SetInsertPoint(retBlocks[i]);
+					builder->CreateBr(mergeBlock);
+					phi->addIncoming(retValues[i], retBlocks[i]);
+				}
+				builder->SetInsertPoint(mergeBlock);
 			}
-
-			if (refValueBlock != nullptr)
+			else
 			{
-				builder->SetInsertPoint(refValueBlock);
-				PWRefValue rv = PWRefValue(receiver);
-				auto vtable = rv.ReadVTable(builder);
-				auto returnVal2 = RTVTable::GenerateFindDynamicDispatcherPair(builder, receiver, vtable, NomNameRepository::Instance().GetNameID(methodName));
-
-				if (mergePHI != nullptr)
-				{
-					mergePHI->addIncoming(returnVal2, builder->GetInsertBlock());
-				}
-				else
-				{
-					returnVal = returnVal2;
-				}
-				builder->CreateBr(mergeBlock);
+				builder->SetInsertPoint(retBlocks[0]);
+				env->PushDispatchPair(retValues[0]);
 			}
-
-			if (packedIntBlock != nullptr)
-			{
-				builder->SetInsertPoint(packedIntBlock);
-				auto intDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, receiver, NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-				if (mergePHI != nullptr)
-				{
-					mergePHI->addIncoming(intDispatcher, builder->GetInsertBlock());
-				}
-				else
-				{
-					returnVal = intDispatcher;
-				}
-				builder->CreateBr(mergeBlock);
-
-			}
-			if (packedFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(packedFloatBlock);
-				auto floatDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, receiver, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-				if (mergePHI != nullptr)
-				{
-					mergePHI->addIncoming(floatDispatcher, builder->GetInsertBlock());
-				}
-				else
-				{
-					returnVal = floatDispatcher;
-				}
-				builder->CreateBr(mergeBlock);
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveIntBlock);
-				auto packedInt = PackInt(builder, receiver);
-				auto intDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, packedInt, NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-				if (mergePHI != nullptr)
-				{
-					mergePHI->addIncoming(intDispatcher, builder->GetInsertBlock());
-				}
-				else
-				{
-					returnVal = intDispatcher;
-				}
-				builder->CreateBr(mergeBlock);
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveFloatBlock);
-				auto packedFloat = PackFloat(builder, receiver);
-				auto floatDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, packedFloat, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-				if (mergePHI != nullptr)
-				{
-					mergePHI->addIncoming(floatDispatcher, builder->GetInsertBlock());
-				}
-				else
-				{
-					returnVal = floatDispatcher;
-				}
-				builder->CreateBr(mergeBlock);
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveBoolBlock);
-				auto packedBool = PackBool(builder, receiver);
-				auto boolDispatcher = RTVTable::GenerateFindDynamicDispatcherPair(builder, packedBool, NomBoolClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-				if (mergePHI != nullptr)
-				{
-					mergePHI->addIncoming(boolDispatcher, builder->GetInsertBlock());
-				}
-				else
-				{
-					returnVal = boolDispatcher;
-				}
-				builder->CreateBr(mergeBlock);
-			}
-
-			builder->SetInsertPoint(mergeBlock);
-			env->PushDispatchPair(returnVal);
 		}
 		void EnsureDynamicMethodInstruction::Print(bool resolve)
 		{

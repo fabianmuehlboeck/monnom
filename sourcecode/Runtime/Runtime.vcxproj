@@ -138,8 +138,8 @@
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">EnableAllWarnings</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">EnableAllWarnings</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level1</WarningLevel>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Wno-unused-variable -Wno-c++98-compat -Wno-c++98-compat-pedantic -ferror-limit=0</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Wno-unused-variable -Wno-c++98-compat -Wno-c++98-compat-pedantic -ferror-limit=0</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Wno-unused-variable -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unsafe-buffer-usage -ferror-limit=0</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Wno-unused-variable -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unsafe-buffer-usage -ferror-limit=0</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">-ferror-limit=0</AdditionalOptions>
       <ExternalWarningLevel Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">Level3</ExternalWarningLevel>
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Diagnostics.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
@@ -338,13 +338,14 @@
     <ClCompile Include="RTCast.cpp" />
     <ClCompile Include="RTClass.cpp" />
     <ClCompile Include="RTClassType.cpp" />
+    <ClCompile Include="XRTClassType.cpp" />
     <ClCompile Include="RTDictionary.cpp" />
     <ClCompile Include="RTDisjointness.cpp" />
-    <ClCompile Include="RTDynamicType.cpp" />
-    <ClCompile Include="RTInstanceType.cpp" />
+    <ClCompile Include="XRTDynamicType.cpp" />
+    <ClCompile Include="XRTInstanceType.cpp" />
     <ClCompile Include="RTInterface.cpp" />
     <ClCompile Include="RTLambdaValue.cpp" />
-    <ClCompile Include="RTMaybeType.cpp" />
+    <ClCompile Include="XRTMaybeType.cpp" />
     <ClCompile Include="RTObject.cpp" />
     <ClCompile Include="RTPackedValue.cpp" />
     <ClCompile Include="RTPartialAppValue.cpp" />
@@ -357,7 +358,9 @@
     <ClCompile Include="RTConfig.cpp" />
     <ClCompile Include="RTStructuralValue.cpp" />
     <ClCompile Include="RTSubstStack.cpp" />
+    <ClCompile Include="RTType.cpp" />
     <ClCompile Include="RTTypeEq.cpp" />
+    <ClCompile Include="RTTypePtr.cpp" />
     <ClCompile Include="RTValue.cpp" />
     <ClCompile Include="RTValuePtr.cpp" />
     <ClCompile Include="RTValueVisitor.cpp" />
@@ -371,7 +374,7 @@
     <ClCompile Include="RTRecord.cpp" />
     <ClCompile Include="RTSubtyping.cpp" />
     <ClCompile Include="RTTypeHead.cpp" />
-    <ClCompile Include="RTTypeVar.cpp" />
+    <ClCompile Include="XRTTypeVar.cpp" />
     <ClCompile Include="Runtime.cpp" />
     <ClCompile Include="SourcePos.cpp" />
     <ClCompile Include="StringClass.cpp" />
@@ -479,6 +482,7 @@
     <ClInclude Include="Path.h" />
     <ClInclude Include="pugixml\pugiconfig.hpp" />
     <ClInclude Include="pugixml\pugixml.hpp" />
+    <ClInclude Include="PWAll.h" />
     <ClInclude Include="PWArr.h" />
     <ClInclude Include="PWCastData.h" />
     <ClInclude Include="PWCastFunction.h" />
@@ -517,15 +521,16 @@
     <ClInclude Include="RTCast.h" />
     <ClInclude Include="RTClass.h" />
     <ClInclude Include="RTClassType.h" />
+    <ClInclude Include="XRTClassType.h" />
     <ClInclude Include="RTCompileConfig.h" />
     <ClInclude Include="RTConfig_LambdaOpt.h" />
     <ClInclude Include="RTDictionary.h" />
     <ClInclude Include="RTDisjointness.h" />
-    <ClInclude Include="RTDynamicType.h" />
-    <ClInclude Include="RTInstanceType.h" />
+    <ClInclude Include="XRTDynamicType.h" />
+    <ClInclude Include="XRTInstanceType.h" />
     <ClInclude Include="RTInterface.h" />
     <ClInclude Include="RTLambdaValue.h" />
-    <ClInclude Include="RTMaybeType.h" />
+    <ClInclude Include="XRTMaybeType.h" />
     <ClInclude Include="RTObject.h" />
     <ClInclude Include="RTPackedValue.h" />
     <ClInclude Include="RTPartialAppValue.h" />
@@ -538,7 +543,9 @@
     <ClInclude Include="RTConfig.h" />
     <ClInclude Include="RTStructuralValue.h" />
     <ClInclude Include="RTSubstStack.h" />
+    <ClInclude Include="RTType.h" />
     <ClInclude Include="RTTypeEq.h" />
+    <ClInclude Include="RTTypePtr.h" />
     <ClInclude Include="RTValue.h" />
     <ClInclude Include="RTValuePtr.h" />
     <ClInclude Include="RTValueVisitor.h" />
@@ -553,7 +560,7 @@
     <ClInclude Include="RTSubtyping.h" />
     <ClInclude Include="RTTypeHead.h" />
     <ClInclude Include="Singleton.h" />
-    <ClInclude Include="RTTypeVar.h" />
+    <ClInclude Include="XRTTypeVar.h" />
     <ClInclude Include="SourcePos.h" />
     <ClInclude Include="StringDict.h" />
     <ClInclude Include="instructions\ArgumentInstruction.h" />
@@ -598,6 +605,7 @@
     <ClInclude Include="StringClass.h" />
     <ClInclude Include="RecordHeader.h" />
     <ClInclude Include="StructuralValueHeader.h" />
+    <ClInclude Include="SwitchMerger.h" />
     <ClInclude Include="TimerClass.h" />
     <ClInclude Include="NomTypeRegistry.h" />
     <ClInclude Include="TypeOperations.h" />

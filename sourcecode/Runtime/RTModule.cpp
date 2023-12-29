@@ -19,7 +19,7 @@ POPDIAGSUPPRESSION
 #include "RTLambda.h"
 #include "BoolClass.h"
 #include "NomMaybeType.h"
-#include "RTClassType.h"
+#include "XRTClassType.h"
 #include <fstream>
 #include <iostream>
 
@@ -64,7 +64,7 @@ namespace Nom
 			llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { {POINTERTYPE, POINTERTYPE} }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_PRINT_LOAD", theModule.get());
 			NomClassType::GetInitializerFunction(*(theModule.get()));
 			NomMaybeType::GetInitializerFunction(*(theModule.get()));
-			RTClassType::Instance().GetLLVMElement(*(theModule.get()));
+			XRTClassType::Instance().GetLLVMElement(*(theModule.get()));
 			auto& ifaces = mod->GetInterfaces();
 			auto& clses = mod->GetClasses();
 			for (auto& iface : ifaces)

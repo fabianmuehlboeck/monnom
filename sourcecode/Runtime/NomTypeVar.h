@@ -1,6 +1,6 @@
 #pragma once
 #include "NomType.h"
-#include "RTTypeVar.h"
+#include "XRTTypeVar.h"
 #include "GloballyNamed.h"
 #include "NomBuilder.h"
 

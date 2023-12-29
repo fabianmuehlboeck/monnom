@@ -1,7 +1,7 @@
 #include "RTSubstStack.h"
 #include "RTSubtyping.h"
 #include "CompileHelpers.h"
-#include "RTTypeVar.h"
+#include "XRTTypeVar.h"
 #include "PWSubstStack.h"
 #include "PWTypeVar.h"
 PUSHDIAGSUPPRESSION

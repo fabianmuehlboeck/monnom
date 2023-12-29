@@ -27,6 +27,10 @@ namespace Nom
 		{
 			return new(builder.Malloc(sizeof(RTPackedValue))) RTPackedValue(_val, _type, _isfc);
 		}
+		void RTPackedValue::Visit(RTValueVisitor visitor) const
+		{
+			visitor.VisitPackedValue(this);
+		}
 		const RTPWValuePtr<PWInt64> RTPackedValue::AsRawInt(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			BasicBlock* returnBlock = BasicBlock::Create(builder->getContext(), "ensuredIntBlock", builder->GetInsertBlock()->getParent());
@@ -144,8 +148,8 @@ namespace Nom
 		const RTPWValuePtr<PWStructVal> RTPackedValue::AsStructVal(NomBuilder& builder, RTValuePtr orig, bool check) const
 		{
 			return AsRefValue(builder, orig)->AsStructVal(builder, orig, check);
-		}
-		int RTPackedValue::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedInt, std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedFloat, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight) const
+		}			
+		unsigned int RTPackedValue::GenerateRefOrPrimitiveValueSwitch(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedInt, std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedFloat, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, uint64_t refWeight, uint64_t intWeight , uint64_t floatWeight) const
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -220,7 +224,7 @@ namespace Nom
 
 			return cases;
 		}
-		int RTPackedValue::GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, bool unboxObjects, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight) const
+		unsigned int RTPackedValue::GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(NomBuilder& builder, std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt, std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat, std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool, bool unboxObjects, uint64_t refWeight, uint64_t intWeight, uint64_t floatWeight, uint64_t boolWeight) const
 		{
 			BasicBlock* origBlock = builder->GetInsertBlock();
 			Function* fun = origBlock->getParent();
@@ -237,11 +241,15 @@ namespace Nom
 					[onPrimitiveInt](NomBuilder& _b, RTPWValuePtr<PWPacked> _iv) -> void
 					{
 						onPrimitiveInt(_b, _iv->AsRawInt(_b));
-					} : static_cast<std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)>>(nullptr),
+					} : static_cast<std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> >(nullptr),
 						pFloatFunPresent ?
 						[onPrimitiveFloat](NomBuilder& _b, RTPWValuePtr<PWPacked> _fv) -> void
 					{
-					} : static_cast<std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)>>(nullptr),
+							onPrimitiveFloat(_b, _fv->AsRawFloat(_b));
+					} : static_cast<std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> >(nullptr),
+						static_cast<std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)>>(nullptr),
+						static_cast<std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)>>(nullptr),
+						static_cast<std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)>>(nullptr),
 						refWeight, intWeight, floatWeight);
 			}
 			BasicBlock* intBlock = nullptr;
@@ -388,6 +396,9 @@ namespace Nom
 					}
 					b->CreateBr(floatBlock);
 				},
+				nullptr,
+				nullptr,
+				nullptr,
 				refWeight, intWeight, floatWeight);
 		}
 	}

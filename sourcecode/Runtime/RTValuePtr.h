@@ -30,6 +30,10 @@ namespace Nom
 			NomTypeRef GetNomType() const;
 			llvm::Type* getType() const;
 			RTValuePtr Coalesce(RTValuePtr other) const;
+			bool IsEmpty() const
+			{
+				return value == nullptr;
+			}
 		};
 
 		template<typename T> class RTPWValuePtr : public RTValuePtr

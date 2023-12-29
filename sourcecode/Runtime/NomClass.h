@@ -102,7 +102,6 @@ namespace Nom
 
 			static llvm::FunctionType* GetInterfaceTableLookupType();
 			virtual llvm::Constant* GetInterfaceDescriptor(llvm::Module& mod) const override;
-			virtual llvm::Constant* GetCastFunction(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 			virtual size_t GetSuperClassCount() const override;
 
 		protected:
