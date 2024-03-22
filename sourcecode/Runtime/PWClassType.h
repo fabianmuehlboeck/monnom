@@ -21,7 +21,7 @@ namespace Nom
 			PWInterface ReadClassDescriptorLink(NomBuilder& builder);
 			PWTypeArr TypeArgumentsPointer(NomBuilder& builder);			
 			
-			PWBool IsEq(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst);
+			PWBool IsEq(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst, bool optimistic = false, bool checkPtrEq = true);
 
 			PWBool IsSubtype(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst, bool optimistic = false);
 

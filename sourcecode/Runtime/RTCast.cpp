@@ -29,7 +29,7 @@
 #include "NullClass.h"
 #include "NomMaybeType.h"
 #include "XRTInstanceType.h"
-#include "RTMaybeType.h"
+#include "XRTMaybeType.h"
 #include "RTCompileConfig.h"
 #include "RTDictionary.h"
 #include "StructuralValueHeader.h"

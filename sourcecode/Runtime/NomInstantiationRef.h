@@ -24,6 +24,8 @@ namespace Nom
 					throw new std::exception();
 				}
 			}
+			NomInstantiationRef(const NomInstantiationRef<T>& other) = default;
+			NomInstantiationRef(NomInstantiationRef<T>&& other) = default;
 			bool HasElem() const {
 				return Elem != nullptr;
 			}

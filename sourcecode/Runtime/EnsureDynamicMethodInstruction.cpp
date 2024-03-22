@@ -48,34 +48,34 @@ namespace Nom
 			llvm::Value* retVal = nullptr;
 
 			receiver->GenerateRefOrPrimitiveValueSwitch(builder,
-				[fun, receiver, &retBlock, &retVal](NomBuilder& builder, RTPWValuePtr<PWRefValue> val) -> void {
+				[fun, receiver, &retBlock, &retVal](NomBuilder& b, [[maybe_unused]] RTPWValuePtr<PWRefValue> val) -> void {
 					BasicBlock* packPairBlock = BasicBlock::Create(LLVMCONTEXT, "packRawInvokeDispatcherPair", fun);
-					BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Given value is not invokable!");
+					BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(b, "Given value is not invokable!");
 					PWRefValue rv = PWRefValue(receiver);
-					auto vtable = rv.ReadVTable(builder);
-					auto hasRawInvoke = vtable.ReadHasRawInvoke(builder);
-					builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasRawInvoke, MakeUInt(1,1) });
-					builder->CreateCondBr(hasRawInvoke, packPairBlock, errorBlock, GetLikelyFirstBranchMetadata());
+					auto vtable = rv.ReadVTable(b);
+					auto hasRawInvoke = vtable.ReadHasRawInvoke(b);
+					b->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { hasRawInvoke, MakeUInt(1,1) });
+					b->CreateCondBr(hasRawInvoke, packPairBlock, errorBlock, GetLikelyFirstBranchMetadata());
 
-					builder->SetInsertPoint(packPairBlock);
-					auto rawInvokePtr = RefValueHeader::GenerateReadRawInvoke(builder, receiver);
-					retVal = PWDispatchPair::Get(builder, rawInvokePtr, receiver);
-					retBlock = builder->GetInsertBlock();
+					b->SetInsertPoint(packPairBlock);
+					auto rawInvokePtr = RefValueHeader::GenerateReadRawInvoke(b, receiver);
+					retVal = PWDispatchPair::Get(b, rawInvokePtr, receiver);
+					retBlock = b->GetInsertBlock();
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke integer values!", builder->GetInsertBlock());
+				[](NomBuilder& b, [[maybe_unused]] RTPWValuePtr<PWPacked> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Cannot invoke integer values!", b->GetInsertBlock());
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke float values!", builder->GetInsertBlock());
+				[](NomBuilder& b, [[maybe_unused]] RTPWValuePtr<PWPacked> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Cannot invoke float values!", b->GetInsertBlock());
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWInt64> val) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke integer values!", builder->GetInsertBlock());
+				[](NomBuilder& b, [[maybe_unused]] RTPWValuePtr<PWInt64> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Cannot invoke integer values!", b->GetInsertBlock());
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWFloat> val) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke float values!", builder->GetInsertBlock());
+				[](NomBuilder& b, [[maybe_unused]] RTPWValuePtr<PWFloat> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Cannot invoke float values!", b->GetInsertBlock());
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWBool> val) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Cannot invoke boolean values!", builder->GetInsertBlock());
+				[](NomBuilder& b, [[maybe_unused]] RTPWValuePtr<PWBool> val) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Cannot invoke boolean values!", b->GetInsertBlock());
 				}, 200, 10, 10);
 
 			if (retBlock == nullptr)
@@ -115,35 +115,35 @@ namespace Nom
 			unsigned int retCount = 0;
 
 			receiver->GenerateRefOrPrimitiveValueSwitch(builder,
-				[&methodName, retBlocks, retValues, &retCount](NomBuilder& builder, RTPWValuePtr<PWRefValue> val) -> void {
-					auto vtable = val->value.ReadVTable(builder);
-					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val, vtable, NomNameRepository::Instance().GetNameID(methodName));
-					retBlocks[retCount] = builder->GetInsertBlock();
+				[&methodName, retBlocks, retValues, &retCount](NomBuilder& b, RTPWValuePtr<PWRefValue> val) -> void {
+					auto vtable = val->value.ReadVTable(b);
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(b, val, vtable, NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = b->GetInsertBlock();
 					retCount++;
 				},
-				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
-					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val, NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-					retBlocks[retCount] = builder->GetInsertBlock();
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& b, RTPWValuePtr<PWPacked> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(b, val, NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = b->GetInsertBlock();
 					retCount++;
 				},
-				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
-					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-					retBlocks[retCount] = builder->GetInsertBlock();
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& b, RTPWValuePtr<PWPacked> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(b, val, NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = b->GetInsertBlock();
 					retCount++; 
 				},
-				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWInt64> val) -> void {
-					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val->AsPackedValue(builder) , NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-					retBlocks[retCount] = builder->GetInsertBlock();
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& b, RTPWValuePtr<PWInt64> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(b, val->AsPackedValue(b) , NomIntClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = b->GetInsertBlock();
 					retCount++;
 				},
-				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWFloat> val) -> void {
-					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val->AsPackedValue(builder), NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-					retBlocks[retCount] = builder->GetInsertBlock();
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& b, RTPWValuePtr<PWFloat> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(b, val->AsPackedValue(b), NomFloatClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = b->GetInsertBlock();
 					retCount++;
 				},
-				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& builder, RTPWValuePtr<PWBool> val) -> void {
-					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(builder, val->AsPackedValue(builder), NomBoolClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
-					retBlocks[retCount] = builder->GetInsertBlock();
+				[&methodName, retBlocks, retValues, &retCount, env](NomBuilder& b, RTPWValuePtr<PWBool> val) -> void {
+					retValues[retCount] = RTVTable::GenerateFindDynamicDispatcherPair(b, val->AsPackedValue(b), NomBoolClass::GetInstance()->GetLLVMElement(*env->Module), NomNameRepository::Instance().GetNameID(methodName));
+					retBlocks[retCount] = b->GetInsertBlock();
 					retCount++;
 				},
 				100, 20, 10);

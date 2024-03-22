@@ -97,6 +97,10 @@ namespace Nom
 			{
 				return this->wrapped;
 			}
+			operator const PWInt<S>() const
+			{
+				return this->wrapped;
+			}
 			PWCInt<S> Add(const PWCInt<S> other) const
 			{
 				return PWCInt<S>(llvm::ConstantExpr::getAdd((this->wrapped), (other.wrapped)));
@@ -137,6 +141,7 @@ namespace Nom
 
 		typedef PWInt<1> PWBool;
 		typedef PWInt<2> PWInt2;
+		typedef PWInt2 PWTri;
 		typedef PWInt<3> PWInt3;
 		typedef PWInt<4> PWInt4;
 		typedef PWInt<8> PWInt8;
@@ -146,6 +151,7 @@ namespace Nom
 		typedef PWInt<64> PWInt64;
 		typedef PWCInt<1> PWCBool;
 		typedef PWCInt<2> PWCInt2;
+		typedef PWCInt2 PWCTri;
 		typedef PWCInt<3> PWCInt3;
 		typedef PWCInt<4> PWCInt4;
 		typedef PWCInt<8> PWCInt8;
@@ -158,5 +164,27 @@ namespace Nom
 		static inline PWCInt32 MakePWUInt32(uint64_t v) { return PWCInt32(v); }
 		static inline PWCInt64 MakePWInt64(int64_t v) { return PWCInt64(v); }
 		static inline PWCInt64 MakePWUInt64(uint64_t v) { return PWCInt64(v); }
+
+		class PWBoolOrTri : PWrapper
+		{
+		public:
+			PWBoolOrTri(llvm::Value* _wrapped);
+			static PWBoolOrTri BoolTrue(NomBuilder& builder);
+			static PWBoolOrTri BoolFalse(NomBuilder& builder);
+			static PWBoolOrTri TriTrue(NomBuilder& builder);
+			static PWBoolOrTri TriFalse(NomBuilder& builder);
+			static PWBoolOrTri TriOptTrue(NomBuilder& builder);
+
+			bool IsBool() const;
+			bool IsTri() const;
+
+			PWBoolOrTri And(NomBuilder& builder, PWBoolOrTri other) const;
+			PWBoolOrTri Or(NomBuilder& builder, PWBoolOrTri other) const;
+
+			PWBoolOrTri Not(NomBuilder& builder) const;
+
+			PWBool AsOptimisticBool(NomBuilder& builder) const;
+			PWBool AsPessimisticBool(NomBuilder& builder) const;
+		};
 	}
 }

@@ -28,7 +28,7 @@ namespace Nom
 		{
 			return builder->CreateGEP(GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(RTClassTypeFields::TypeArgs), MakeInt32(0) }, "typeArgs");
 		}
-		PWBool PWClassType::IsEq(NomBuilder& builder, PWType other, PWSubstStack ownSubst, PWSubstStack otherSubst)
+		PWBool PWClassType::IsEq(NomBuilder& builder, PWType other, [[maybe_unused]] PWSubstStack ownSubst, [[maybe_unused]] PWSubstStack otherSubst)
 		{
 			BasicBlock* headerBlock = BasicBlock::Create(builder->getContext(), "typeEqHead", builder.GetFunction());
 			BasicBlock* origBlock = builder->GetInsertBlock();
@@ -45,6 +45,7 @@ namespace Nom
 			kswtch->addCase(MakeIntLike(otherkind, static_cast<uint64_t>(TypeKind::TKInstance)), instanceTypeBlock);
 			kswtch->addCase(MakeIntLike(otherkind, static_cast<uint64_t>(TypeKind::TKVariable)), varBlock);
 			kswtch->addCase(MakeIntLike(otherkind, static_cast<uint64_t>(TypeKind::TKClass)), classTypeBlock);
+			throw new std::exception();
 		}
 	}
 }

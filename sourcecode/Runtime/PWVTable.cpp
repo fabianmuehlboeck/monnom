@@ -35,7 +35,7 @@ namespace Nom
 				return builder->CreateICmpEQ(builder->CreateAnd(flags, MakeIntLike(flags, 1)), MakeIntLike(flags, 1));
 			}
 		}
-		llvm::Value* PWVTable::ReadMethodPointer(NomBuilder& builder, PWInt32 index) const
+		llvm::Value* PWVTable::ReadMethodPointer(NomBuilder& builder, const PWInt32 index) const
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, { MakeInt32(0), MakeInt32(RTVTableFields::MethodTable), builder->CreateSub(MakeInt32(-1), index) }, "MethodPointer", AtomicOrdering::NotAtomic);
 		}
@@ -43,7 +43,7 @@ namespace Nom
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, MakeInt32(RTVTableFields::Kind), "VTableKind", AtomicOrdering::NotAtomic);
 		}
-		PWIMTFunction PWVTable::ReadIMTEntry(NomBuilder& builder, PWInt32 index) const
+		PWIMTFunction PWVTable::ReadIMTEntry(NomBuilder& builder, const PWInt32 index) const
 		{
 			return MakeInvariantLoad(builder, GetLLVMType(), wrapped, {MakeInt32(RTVTableFields::InterfaceMethodTable), index}, "IMTEntry", AtomicOrdering::NotAtomic);
 		}

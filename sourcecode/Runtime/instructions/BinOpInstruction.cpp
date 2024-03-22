@@ -166,52 +166,52 @@ namespace Nom
 				BasicBlock* errorBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operands for primitive operation!");
 
 				left->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-					[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> lval) -> void {
-						builder->CreateBr(errorBlock);
+					[errorBlock](NomBuilder& b, [[maybe_unused]] RTPWValuePtr<PWRefValue> lval) -> void {
+						b->CreateBr(errorBlock);
 					},
-					[right, eqblock, neqblock, errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> lval) -> void {
-						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
-								builder->CreateBr(errorBlock);
+					[right, eqblock, neqblock, errorBlock](NomBuilder& b, RTPWValuePtr<PWInt64> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(b,
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWRefValue> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[lval,eqblock,neqblock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
-								builder->CreateCondBr(builder->CreateICmpEQ(lval, rval, "isIntEq"), eqblock, neqblock);
+							[lval,eqblock,neqblock](NomBuilder& bb, RTPWValuePtr<PWInt64> rval) -> void {
+								bb->CreateCondBr(bb->CreateICmpEQ(lval, rval, "isIntEq"), eqblock, neqblock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWFloat> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWBool> rval) -> void {
+								bb->CreateBr(errorBlock);
 							}, true);
 					},
-					[right, eqblock, neqblock, errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> lval) -> void {
-						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
-								builder->CreateBr(errorBlock);
+					[right, eqblock, neqblock, errorBlock](NomBuilder& b, RTPWValuePtr<PWFloat> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(b,
+						[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWRefValue> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWInt64> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[lval, eqblock, neqblock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
-								builder->CreateCondBr(builder->CreateFCmpOEQ(lval, rval, "isIntEq"), eqblock, neqblock);
+							[lval, eqblock, neqblock](NomBuilder& bb, RTPWValuePtr<PWFloat> rval) -> void {
+								bb->CreateCondBr(bb->CreateFCmpOEQ(lval, rval, "isIntEq"), eqblock, neqblock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWBool> rval) -> void {
+								bb->CreateBr(errorBlock);
 							}, true);
 					},
-					[right, eqblock, neqblock, errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> lval) -> void {
-						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
-								builder->CreateBr(errorBlock);
+					[right, eqblock, neqblock, errorBlock](NomBuilder& b, RTPWValuePtr<PWBool> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(b,
+						[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWRefValue> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWInt64> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWFloat> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[lval, eqblock, neqblock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
-								builder->CreateCondBr(builder->CreateICmpEQ(lval, rval, "isBoolEq"), eqblock, neqblock);
+							[lval, eqblock, neqblock](NomBuilder& bb, RTPWValuePtr<PWBool> rval) -> void {
+								bb->CreateCondBr(bb->CreateICmpEQ(lval, rval, "isBoolEq"), eqblock, neqblock);
 							}, true);
 					},
 					true);
@@ -242,64 +242,64 @@ namespace Nom
 
 				RTValuePtr* retVals = makealloca(RTValuePtr, 16);
 				llvm::BasicBlock** retBlocks = makealloca(llvm::BasicBlock*, 16);
-				int retCount = 0;
+				unsigned int retCount = 0;
 
 				left->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-					[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> lval) -> void {
-						builder->CreateBr(errorBlock);
+					[errorBlock](NomBuilder& b, RTPWValuePtr<PWRefValue>) -> void {
+						b->CreateBr(errorBlock);
 					},
-					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWInt64> lval) -> void {
-						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
-								builder->CreateBr(errorBlock);
+					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& b, RTPWValuePtr<PWInt64> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(b,
+						[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWRefValue> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
-								retVals[retCount] = CompileIntInt(builder, env, lineno, lval, rval);
-								retBlocks[retCount] = builder->GetInsertBlock();
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& bb, RTPWValuePtr<PWInt64> rval) -> void {
+								retVals[retCount] = CompileIntInt(bb, env, lineno, lval, rval);
+								retBlocks[retCount] = bb->GetInsertBlock();
 								retCount++;
 							},
-							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
-								retVals[retCount] = CompileFloatFloat(builder, env, lineno, builder->CreateSIToFP(lval, FLOATTYPE, "leftToFloat"), rval);
-								retBlocks[retCount] = builder->GetInsertBlock();
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& bb, RTPWValuePtr<PWFloat> rval) -> void {
+								retVals[retCount] = CompileFloatFloat(bb, env, lineno, bb->CreateSIToFP(lval, FLOATTYPE, "leftToFloat"), rval);
+								retBlocks[retCount] = bb->GetInsertBlock();
 								retCount++;
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWBool> rval) -> void {
+								bb->CreateBr(errorBlock);
 							}, true);
 					},
-					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWFloat> lval) -> void {
-						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
-								builder->CreateBr(errorBlock);
+					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& b, RTPWValuePtr<PWFloat> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(b,
+						[errorBlock](NomBuilder& bb, RTPWValuePtr<PWRefValue>) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
-								retVals[retCount] = CompileFloatFloat(builder, env, lineno, lval, builder->CreateSIToFP(lval, FLOATTYPE, "rightToFloat"));
-								retBlocks[retCount] = builder->GetInsertBlock();
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWInt64> rval) -> void {
+								retVals[retCount] = CompileFloatFloat(bb, env, lineno, lval, bb->CreateSIToFP(lval, FLOATTYPE, "rightToFloat"));
+								retBlocks[retCount] = bb->GetInsertBlock();
 								retCount++;
 							},
-							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
-								retVals[retCount] = CompileFloatFloat(builder, env, lineno, lval, rval);
-								retBlocks[retCount] = builder->GetInsertBlock();
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& bb, RTPWValuePtr<PWFloat> rval) -> void {
+								retVals[retCount] = CompileFloatFloat(bb, env, lineno, lval, rval);
+								retBlocks[retCount] = bb->GetInsertBlock();
 								retCount++;
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWBool> rval) -> void {
+								bb->CreateBr(errorBlock);
 							}, true);
 					},
-					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWBool> lval) -> void {
-						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(builder,
-						[errorBlock](NomBuilder& builder, RTPWValuePtr<PWRefValue> rval) -> void {
-								builder->CreateBr(errorBlock);
+					[right, retVals, retBlocks, &retCount, errorBlock, env, lineno, this](NomBuilder& b, RTPWValuePtr<PWBool> lval) -> void {
+						right->GenerateRefOrPrimitiveValueSwitchUnpackPrimitives(b,
+						[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWRefValue> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWInt64> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWInt64> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[errorBlock](NomBuilder& builder, RTPWValuePtr<PWFloat> rval) -> void {
-								builder->CreateBr(errorBlock);
+							[errorBlock](NomBuilder& bb, [[maybe_unused]] RTPWValuePtr<PWFloat> rval) -> void {
+								bb->CreateBr(errorBlock);
 							},
-							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& builder, RTPWValuePtr<PWBool> rval) -> void {
-								retVals[retCount] = CompileBoolBool(builder, env, lineno, lval, rval);
-								retBlocks[retCount] = builder->GetInsertBlock();
+							[lval, retVals, retBlocks, &retCount, env, lineno, this](NomBuilder& bb, RTPWValuePtr<PWBool> rval) -> void {
+								retVals[retCount] = CompileBoolBool(bb, env, lineno, lval, rval);
+								retBlocks[retCount] = bb->GetInsertBlock();
 								retCount++;
 							}, true);
 					},
@@ -310,7 +310,7 @@ namespace Nom
 					BasicBlock* outBlock = BasicBlock::Create(builder->getContext(), "binOpOut", env->Function);
 					builder->SetInsertPoint(outBlock);
 					PWPhi<PWPacked> phi = PWPhi<PWPacked>::CreatePtr(builder, retCount, "binOpPhi");
-					for (int i = 0; i < retCount; i++)
+					for (unsigned int i = 0; i < retCount; i++)
 					{
 						builder->SetInsertPoint(retBlocks[i]);
 						auto packed = retVals[i]->AsPackedValue(builder);

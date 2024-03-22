@@ -1,6 +1,6 @@
 #include "PWTypeVar.h"
 #include "CompileHelpers.h"
-#include "RTMaybeType.h"
+#include "XRTMaybeType.h"
 #include "PWMaybeType.h"
 
 namespace Nom

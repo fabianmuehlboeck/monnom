@@ -217,7 +217,9 @@ namespace Nom
 				argarr -= 1;
 				argarr[0] = builder->CreatePointerCast(NomInterfaceCallTag::GetMethodKey(method.Elem)->GetLLVMElement(*env->Module), POINTERTYPE);
 
-				Value* methodptr = PWRefValue((*env)[Receiver]).GetIMTFunction(builder, MakeInt32(method.Elem->GetIMTIndex()), lineno);
+				auto recv = (*env)[Receiver];
+
+				Value* methodptr = recv->GetIMTFunction(builder, MakeInt32(method.Elem->GetIMTIndex()), lineno);
 
 				auto call = builder->CreateCall(GetIMTFunctionType(), methodptr, llvm::ArrayRef<llvm::Value*>(argarr, RTConfig_NumberOfVarargsArguments + 2));
 				call->setName("calling " + method.Elem->GetName());

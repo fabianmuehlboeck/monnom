@@ -22,7 +22,16 @@
 #include "PWRefValue.h"
 #include "PWStructVal.h"
 #include "PWPacked.h"
+#include "PWIMTFunction.h"
+#include "IntClass.h"
+#include "BoolClass.h"
+#include "FloatClass.h"
+#include "PWClass.h"
+#include "SwitchMerger.h"
 
+
+using namespace std;
+using namespace llvm;
 namespace Nom
 {
 	namespace Runtime
@@ -221,6 +230,47 @@ namespace Nom
 				RTValuePtr nv = CastInstruction::MakeCast(builder, env, value, targetType);
 				return nv->AsPackedValue(builder);
 			}
+		}
+		const PWIMTFunction RTValue::GetIMTFunction(NomBuilder& builder, PWCInt32 idx, size_t lineno) const
+		{
+			SwitchMerger<PWIMTFunction, 6> merger;
+			GenerateRefOrPrimitiveValueSwitch(builder,
+				[idx, lineno,&merger](NomBuilder& b, RTPWValuePtr<PWRefValue> val) -> void {
+					auto imt = val->GetIMTFunction(b, idx, lineno);
+					auto block = b->GetInsertBlock();
+					merger.AddResult(b, imt);
+				},
+				[idx, lineno, &merger](NomBuilder& b, RTPWValuePtr<PWPacked>) -> void {
+					PWClass cls = NomIntClass::GetInstance()->GetLLVMElement(*b.GetModule());
+					auto imt = cls.ReadIMTEntry(b, idx);
+					auto block = b->GetInsertBlock();
+					merger.AddResult(b, imt);
+				},
+				[idx, lineno, &merger](NomBuilder& b, RTPWValuePtr<PWPacked>) -> void {
+					PWClass cls = NomFloatClass::GetInstance()->GetLLVMElement(*b.GetModule());
+					auto imt = cls.ReadIMTEntry(b, idx);
+					auto block = b->GetInsertBlock();
+					merger.AddResult(b, imt);
+				},
+				[idx, lineno, &merger](NomBuilder& b, RTPWValuePtr<PWInt64>) -> void {
+					PWClass cls = NomIntClass::GetInstance()->GetLLVMElement(*b.GetModule());
+					auto imt = cls.ReadIMTEntry(b, idx);
+					auto block = b->GetInsertBlock();
+					merger.AddResult(b, imt);
+				},
+				[idx, lineno, &merger](NomBuilder& b, RTPWValuePtr<PWFloat>) -> void {
+					PWClass cls = NomFloatClass::GetInstance()->GetLLVMElement(*b.GetModule());
+					auto imt = cls.ReadIMTEntry(b, idx);
+					auto block = b->GetInsertBlock();
+					merger.AddResult(b, imt);
+				},
+				[idx, lineno, &merger](NomBuilder& b, RTPWValuePtr<PWBool>) -> void {
+					PWClass cls = NomBoolClass::GetInstance()->GetLLVMElement(*b.GetModule());
+					auto imt = cls.ReadIMTEntry(b, idx);
+					auto block = b->GetInsertBlock();
+					merger.AddResult(b, imt);
+				});
+			return merger.Merge(builder);
 		}
 	}
 }

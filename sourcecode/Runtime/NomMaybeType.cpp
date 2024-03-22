@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include "CompileHelpers.h"
 #include "Defs.h"
-#include "RTMaybeType.h"
+#include "XRTMaybeType.h"
 #include "NomJIT.h"
 
 namespace Nom

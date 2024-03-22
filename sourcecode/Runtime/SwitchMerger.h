@@ -4,6 +4,7 @@ PUSHDIAGSUPPRESSION
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/ADT/SmallVector.h"
 POPDIAGSUPPRESSION
 #include "PWPhi.h"
 
@@ -14,9 +15,7 @@ namespace Nom
 		template<typename T, unsigned int size>
 		class SwitchMerger
 		{
-			T results[size];
-			llvm::BasicBlock* blocks[size];
-			unsigned int count = 0;
+			llvm::SmallVector<std::pair<T, llvm::BasicBlock*>, size> data;
 
 		public:
 			SwitchMerger() {
@@ -24,30 +23,28 @@ namespace Nom
 			}
 			void AddResult(NomBuilder& builder, T val)
 			{
-				results[count] = val;
-				blocks[count] = builder->GetInsertBlock();
-				count++;
+				data.push_back(std::make_pair(val, builder->GetInsertBlock()));
 			}
 			T Merge(NomBuilder& builder, llvm::Twine mergeName = "merge")
 			{
-				if (count == 0)
+				if (data.size() == 0)
 				{
 					throw new std::exception();
 				}
-				if (count == 1)
+				if (data.size() == 1)
 				{
-					builder->SetInsertPoint(blocks[0]);
-					return results[0];
+					builder->SetInsertPoint(data[0].second);
+					return data[0].first;
 				}
 				else
 				{
 					llvm::BasicBlock* mergeBlock = llvm::BasicBlock::Create(builder->getContext(), mergeName, builder.GetFunction());
 					builder->SetInsertPoint(mergeBlock);
-					PWPhi<T> phi = PWPhi<T>::Create(builder, count, mergeName.concat("Phi"));
-					for (unsigned int i = 0; i < count; i++)
+					PWPhi<T> phi = PWPhi<T>::Create(builder, static_cast<unsigned int>(data.size()), mergeName.concat("Phi"));
+					for (size_t i = 0; i < data.size(); i++)
 					{
-						phi->addIncoming(results[i], blocks[i]);
-						builder->SetInsertPoint(blocks[i]);
+						phi->addIncoming(data[i].first, data[i].second);
+						builder->SetInsertPoint(data[i].second);
 						builder->CreateBr(mergeBlock);
 					}
 					builder->SetInsertPoint(mergeBlock);

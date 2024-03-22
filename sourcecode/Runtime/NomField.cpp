@@ -167,21 +167,21 @@ namespace Nom
 			BasicBlock* refValueBlock = nullptr, * packedIntBlock = nullptr, * packedFloatBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 
 			receiver->GenerateRefOrPrimitiveValueSwitch(builder,
-				[](NomBuilder& builder, RTPWValuePtr<PWRefValue>) -> void {},
-				[](NomBuilder& builder, RTPWValuePtr<PWPacked>) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Integers have no dictionary fields to write to!", builder->GetInsertBlock()); 
+				[](NomBuilder&, RTPWValuePtr<PWRefValue>) -> void {},
+				[](NomBuilder& b, RTPWValuePtr<PWPacked>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Integers have no dictionary fields to write to!", b->GetInsertBlock()); 
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWPacked>) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Floats have no dictionary fields to write to!", builder->GetInsertBlock());
+				[](NomBuilder& b, RTPWValuePtr<PWPacked>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Floats have no dictionary fields to write to!", b->GetInsertBlock());
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWInt64>) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Integers have no dictionary fields to write to!", builder->GetInsertBlock());
+				[](NomBuilder& b, RTPWValuePtr<PWInt64>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Integers have no dictionary fields to write to!", b->GetInsertBlock());
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWFloat>) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Floats have no dictionary fields to write to!", builder->GetInsertBlock());
+				[](NomBuilder& b, RTPWValuePtr<PWFloat>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Floats have no dictionary fields to write to!", b->GetInsertBlock());
 				},
-				[](NomBuilder& builder, RTPWValuePtr<PWBool>) -> void {
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Booleans have no dictionary fields to write to!", builder->GetInsertBlock());
+				[](NomBuilder& b, RTPWValuePtr<PWBool>) -> void {
+					RTOutput_Fail::MakeBlockFailOutputBlock(b, "Booleans have no dictionary fields to write to!", b->GetInsertBlock());
 				},
 				100, 10, 10);
 			

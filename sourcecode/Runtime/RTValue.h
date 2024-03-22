@@ -17,6 +17,7 @@ namespace Nom
 		class PWStructVal;
 		class PWType;
 		class CompileEnv;
+		class PWIMTFunction;
 		template <typename V> class RTPWValue;
 		class RTValue
 		{
@@ -51,6 +52,7 @@ namespace Nom
 			virtual PWBool InstanceOf(NomBuilder& builder, CompileEnv* env, PWType type, bool tryCast = true, bool optimistic = false) const = 0;
 			virtual PWBool InstanceOf(NomBuilder& builder, CompileEnv* env, NomTypeRef type, bool tryCast = true, bool optimistic = false) const = 0;
 
+			virtual const PWIMTFunction GetIMTFunction(NomBuilder& builder, PWCInt32 idx, [[maybe_unused]] size_t lineno) const;
 			virtual unsigned int GenerateRefOrPrimitiveValueSwitch([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedInt = nullptr, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWPacked>)> onPackedFloat = nullptr, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt = nullptr, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat = nullptr, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool = nullptr, [[maybe_unused]] uint64_t refWeight = 100, [[maybe_unused]] uint64_t intWeight = 50, [[maybe_unused]] uint64_t floatWeight = 30) const { throw new std::exception(); }
 			virtual unsigned int GenerateRefOrPrimitiveValueSwitchUnpackPrimitives([[maybe_unused]] NomBuilder& builder, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWRefValue>)> onRefValue, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWInt64>)> onPrimitiveInt = nullptr, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWFloat>)> onPrimitiveFloat = nullptr, [[maybe_unused]] std::function<void(NomBuilder&, RTPWValuePtr<PWBool>)> onPrimitiveBool = nullptr, [[maybe_unused]] bool unboxObjects = false, [[maybe_unused]] uint64_t refWeight = 100, [[maybe_unused]] uint64_t intWeight = 50, [[maybe_unused]] uint64_t floatWeight = 30, [[maybe_unused]] uint64_t boolWeight = 10) const { throw new std::exception(); }
 		};

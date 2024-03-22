@@ -595,34 +595,34 @@ namespace Nom
 			SwitchMerger<PWIMTFunction, 6> merger;
 
 			recreg->GenerateRefOrPrimitiveValueSwitch(builder,
-				[&merger, index](NomBuilder& builder, RTPWValuePtr<PWRefValue> val) ->
+				[&merger, index](NomBuilder& b, RTPWValuePtr<PWRefValue> val) ->
 				void {
 					PWRefValue refval = val->operator const Nom::Runtime::PWRefValue();
-					auto vtable = refval.ReadVTable(builder);
-					auto result = vtable.ReadIMTEntry(builder, index);
-					merger.AddResult(builder, result);
+					auto vtable = refval.ReadVTable(b);
+					auto result = vtable.ReadIMTEntry(b, index);
+					merger.AddResult(b, result);
 				},
-				[&merger, index](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
-					auto imtarr = NomIntClass::GetInstance()->GetInterfaceTableLookup(*builder.GetModule(), static_cast<llvm::GlobalValue*>(NomIntClass::GetInstance()->GetLLVMElement(*builder.GetModule()))->getLinkage());
+				[&merger, index](NomBuilder& b, RTPWValuePtr<PWPacked>) -> void {
+					auto imtarr = NomIntClass::GetInstance()->GetInterfaceTableLookup(*b.GetModule(), static_cast<llvm::GlobalValue*>(NomIntClass::GetInstance()->GetLLVMElement(*b.GetModule()))->getLinkage());
 					PWIMTFunction result = imtarr->getAggregateElement(index);
-					merger.AddResult(builder, result);
+					merger.AddResult(b, result);
 				},
-				[&merger, index](NomBuilder& builder, RTPWValuePtr<PWPacked> val) -> void {
-					auto imtarr = NomFloatClass::GetInstance()->GetInterfaceTableLookup(*builder.GetModule(), static_cast<llvm::GlobalValue*>(NomFloatClass::GetInstance()->GetLLVMElement(*builder.GetModule()))->getLinkage());
+				[&merger, index](NomBuilder& b, RTPWValuePtr<PWPacked>) -> void {
+					auto imtarr = NomFloatClass::GetInstance()->GetInterfaceTableLookup(*b.GetModule(), static_cast<llvm::GlobalValue*>(NomFloatClass::GetInstance()->GetLLVMElement(*b.GetModule()))->getLinkage());
 					PWIMTFunction result = imtarr->getAggregateElement(index);
-					merger.AddResult(builder, result); },
-				[&merger, index](NomBuilder& builder, RTPWValuePtr<PWInt64> val) -> void {
-					auto imtarr = NomIntClass::GetInstance()->GetInterfaceTableLookup(*builder.GetModule(), static_cast<llvm::GlobalValue*>(NomIntClass::GetInstance()->GetLLVMElement(*builder.GetModule()))->getLinkage());
+					merger.AddResult(b, result); },
+				[&merger, index](NomBuilder& b, RTPWValuePtr<PWInt64>) -> void {
+					auto imtarr = NomIntClass::GetInstance()->GetInterfaceTableLookup(*b.GetModule(), static_cast<llvm::GlobalValue*>(NomIntClass::GetInstance()->GetLLVMElement(*b.GetModule()))->getLinkage());
 					PWIMTFunction result = imtarr->getAggregateElement(index);
-					merger.AddResult(builder, result); },
-				[&merger, index](NomBuilder& builder, RTPWValuePtr<PWFloat> val) -> void {
-					auto imtarr = NomFloatClass::GetInstance()->GetInterfaceTableLookup(*builder.GetModule(), static_cast<llvm::GlobalValue*>(NomFloatClass::GetInstance()->GetLLVMElement(*builder.GetModule()))->getLinkage());
+					merger.AddResult(b, result); },
+				[&merger, index](NomBuilder& b, RTPWValuePtr<PWFloat>) -> void {
+					auto imtarr = NomFloatClass::GetInstance()->GetInterfaceTableLookup(*b.GetModule(), static_cast<llvm::GlobalValue*>(NomFloatClass::GetInstance()->GetLLVMElement(*b.GetModule()))->getLinkage());
 					PWIMTFunction result = imtarr->getAggregateElement(index);
-					merger.AddResult(builder, result); },
-				[&merger, index](NomBuilder& builder, RTPWValuePtr<PWBool> val) -> void {
-					auto imtarr = NomBoolClass::GetInstance()->GetInterfaceTableLookup(*builder.GetModule(), static_cast<llvm::GlobalValue*>(NomBoolClass::GetInstance()->GetLLVMElement(*builder.GetModule()))->getLinkage());
+					merger.AddResult(b, result); },
+				[&merger, index](NomBuilder& b, RTPWValuePtr<PWBool>) -> void {
+					auto imtarr = NomBoolClass::GetInstance()->GetInterfaceTableLookup(*b.GetModule(), static_cast<llvm::GlobalValue*>(NomBoolClass::GetInstance()->GetLLVMElement(*b.GetModule()))->getLinkage());
 					PWIMTFunction result = imtarr->getAggregateElement(index);
-					merger.AddResult(builder, result); });
+					merger.AddResult(b, result); });
 			return merger.Merge(builder, "IMT");
 		}
 

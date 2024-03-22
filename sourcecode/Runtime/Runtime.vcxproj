@@ -303,12 +303,14 @@
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="pugixml\pugixml.cpp" />
     <ClCompile Include="PWArr.cpp" />
+    <ClCompile Include="PWBotType.cpp" />
     <ClCompile Include="PWCastData.cpp" />
     <ClCompile Include="PWCastFunction.cpp" />
     <ClCompile Include="PWCheckReturnValueFunction.cpp" />
     <ClCompile Include="PWClass.cpp" />
     <ClCompile Include="PWClassType.cpp" />
     <ClCompile Include="PWDispatchPair.cpp" />
+    <ClCompile Include="PWDynType.cpp" />
     <ClCompile Include="PWFloat.cpp" />
     <ClCompile Include="PWIMTFunction.cpp" />
     <ClCompile Include="PWInstanceType.cpp" />
@@ -329,6 +331,7 @@
     <ClCompile Include="PWStructVal.cpp" />
     <ClCompile Include="PWSubstStack.cpp" />
     <ClCompile Include="PWSuperInstance.cpp" />
+    <ClCompile Include="PWTopType.cpp" />
     <ClCompile Include="PWType.cpp" />
     <ClCompile Include="PWTypeArr.cpp" />
     <ClCompile Include="PWTypeVar.cpp" />
@@ -338,6 +341,7 @@
     <ClCompile Include="RTCast.cpp" />
     <ClCompile Include="RTClass.cpp" />
     <ClCompile Include="RTClassType.cpp" />
+    <ClCompile Include="RTTypeCheckGen.cpp" />
     <ClCompile Include="XRTClassType.cpp" />
     <ClCompile Include="RTDictionary.cpp" />
     <ClCompile Include="RTDisjointness.cpp" />
@@ -484,12 +488,14 @@
     <ClInclude Include="pugixml\pugixml.hpp" />
     <ClInclude Include="PWAll.h" />
     <ClInclude Include="PWArr.h" />
+    <ClInclude Include="PWBotType.h" />
     <ClInclude Include="PWCastData.h" />
     <ClInclude Include="PWCastFunction.h" />
     <ClInclude Include="PWCheckReturnValueFunction.h" />
     <ClInclude Include="PWClass.h" />
     <ClInclude Include="PWClassType.h" />
     <ClInclude Include="PWDispatchPair.h" />
+    <ClInclude Include="PWDynType.h" />
     <ClInclude Include="PWFloat.h" />
     <ClInclude Include="PWIMTFunction.h" />
     <ClInclude Include="PWInstanceType.h" />
@@ -511,6 +517,7 @@
     <ClInclude Include="PWStructVal.h" />
     <ClInclude Include="PWSubstStack.h" />
     <ClInclude Include="PWSuperInstance.h" />
+    <ClInclude Include="PWTopType.h" />
     <ClInclude Include="PWType.h" />
     <ClInclude Include="PWTypeArr.h" />
     <ClInclude Include="PWTypeVar.h" />
@@ -521,6 +528,7 @@
     <ClInclude Include="RTCast.h" />
     <ClInclude Include="RTClass.h" />
     <ClInclude Include="RTClassType.h" />
+    <ClInclude Include="RTTypeCheckGen.h" />
     <ClInclude Include="XRTClassType.h" />
     <ClInclude Include="RTCompileConfig.h" />
     <ClInclude Include="RTConfig_LambdaOpt.h" />
