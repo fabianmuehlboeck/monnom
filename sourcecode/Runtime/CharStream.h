@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <string>
+#include <cstdio>
 
 #ifdef _WIN32
 #include <istream>

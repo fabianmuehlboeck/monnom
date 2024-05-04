@@ -1,0 +1,2 @@
+#!/bin/bash
+dotnet "$MONNOMBASE/monnombuild/NomC/bin/Release/netcoreapp8.0/nomc.dll" $@
