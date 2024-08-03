@@ -1,10 +1,10 @@
 #include "CallCheckedStaticMethod.h"
-#include "../NomAlloc.h"
-#include "../NomStaticMethod.h"
-#include "../CompileHelpers.h"
+#include "../Runtime/Memory/NomAlloc.h"
+#include "../Intermediate_Representation/Callables/NomStaticMethod.h"
+#include "../Common/CompileHelpers.h"
 #include "CastInstruction.h"
 #include <iostream>
-#include "../CastStats.h"
+#include "../Runtime/Statistics/CastStats.h"
 
 using namespace std;
 namespace Nom

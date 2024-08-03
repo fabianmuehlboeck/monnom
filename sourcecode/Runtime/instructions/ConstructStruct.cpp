@@ -1,12 +1,12 @@
 #include "ConstructStruct.h"
 #include <iostream>
-#include "../NomConstants.h"
-#include "../NomRecord.h"
-#include "../NomDynamicType.h"
-#include "../TypeOperations.h"
-#include "../CallingConvConf.h"
-#include "../NomField.h"
-#include "../NomType.h"
+#include "../Intermediate_Representation/NomConstants.h"
+#include "../Intermediate_Representation/Data/NomRecord.h"
+#include "../Intermediate_Representation/Types/NomDynamicType.h"
+#include "../Common/TypeOperations.h"
+#include "../Common/CallingConvConf.h"
+#include "../Intermediate_Representation/NomField.h"
+#include "../Intermediate_Representation/Types/NomType.h"
 
 using namespace llvm;
 using namespace std;

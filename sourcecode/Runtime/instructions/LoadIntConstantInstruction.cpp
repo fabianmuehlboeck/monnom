@@ -1,6 +1,6 @@
 #include "LoadIntConstantInstruction.h"
-#include "../IntClass.h"
-#include "../NomClassType.h"
+#include "../Library/IntClass.h"
+#include "../Intermediate_Representation/Types/NomClassType.h"
 #include <iostream>
 
 using namespace std;

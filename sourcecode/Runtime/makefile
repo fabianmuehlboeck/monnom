@@ -2,10 +2,10 @@ CPPFLAGS = $(shell llvm-config-12 --cxxflags) -fexceptions -std=c++17
 LLFLAGS = -ltbb -lgc -lpugixml $(shell llvm-config-12 --cxxflags --ldflags --libs all)
 INCLUDES = -I/opt/intel/oneapi/vtune/latest/include -I/opt/intel/oneapi/tbb/latest/include
 
-VPATH = .:./instructions
+src_files := $(shell find ./ -type f -name '*.cpp')
+objects := $(patsubst %.cpp,%.o,$(src_files))
+debugobjects := $(patsubst %.cpp,%.debug.o,$(src_files))
 
-objects := $(patsubst %.cpp,%.o,$(wildcard *.cpp)) $(patsubst instructions/%.cpp,%.o,$(wildcard instructions/*.cpp))
-debugobjects := $(patsubst %.cpp,%.debug.o,$(wildcard *.cpp)) $(patsubst instructions/%.cpp,%.debug.o,$(wildcard instructions/*.cpp))
 
 
 .DEFAULT: nombuild
@@ -37,7 +37,7 @@ clean:
 
 sources = $(*.cpp)
 
-deps = $(patsubst %.cpp,%.d,$(wildcard *.cpp)) $(patsubst instructions/%.cpp,%.d,$(wildcard instructions/*.cpp))
+deps = $(patsubst %.cpp,%.d,$(src_files))
 
 headers: $(deps)
 

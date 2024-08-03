@@ -1,6 +1,6 @@
 #pragma once
-#include "../NomInstruction.h"
-#include "../CompileEnv.h"
+#include "../instructions/NomInstruction.h"
+#include "../Common/CompileEnv.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace Nom

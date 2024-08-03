@@ -1,11 +1,11 @@
 #include "RTCmdInstruction.h"
 #include <iostream>
-#include "../NomConstants.h"
-#include "../Runtime.h"
-#include "../CompileHelpers.h"
+#include "../Intermediate_Representation/NomConstants.h"
+#include "../Runtime/Runtime.h"
+#include "../Common/CompileHelpers.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "../DLLExport.h"
-#include "../RTConfig.h"
+#include "../Common/DLLExport.h"
+#include "../Runtime/Config/RTConfig.h"
 
 using namespace llvm;
 using namespace std;

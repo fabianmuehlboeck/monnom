@@ -1,15 +1,15 @@
 #include "CreateClosure.h"
-#include "../NomAlloc.h"
+#include "../Runtime/Memory/NomAlloc.h"
 #include "llvm/IR/Function.h"
-#include "../NomVMInterface.h"
-#include "../NomLambda.h"
-#include "../NomConstants.h"
-#include "../RTLambda.h"
-#include "../LambdaHeader.h"
-#include "../NomDynamicType.h"
+#include "../Runtime/NomVMInterface.h"
+#include "../Intermediate_Representation/Data/NomLambda.h"
+#include "../Intermediate_Representation/NomConstants.h"
+#include "../Runtime_Data/VTables/RTLambda.h"
+#include "../Runtime_Data/Headers/LambdaHeader.h"
+#include "../Intermediate_Representation/Types/NomDynamicType.h"
 #include <iostream>
-#include "../CallingConvConf.h"
-#include "../CompileHelpers.h"
+#include "../Common/CallingConvConf.h"
+#include "../Common/CompileHelpers.h"
 
 using namespace llvm;
 using namespace std;

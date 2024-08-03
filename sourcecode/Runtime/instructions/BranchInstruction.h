@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "../NomInstruction.h"
+#include "../instructions/NomInstruction.h"
 
 namespace Nom
 {

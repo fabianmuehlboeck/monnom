@@ -1,6 +1,6 @@
 #include "ReturnInstruction.h"
 #include "llvm/IR/IRBuilder.h"
-#include "../TypeOperations.h"
+#include "../Common/TypeOperations.h"
 #include <iostream>
 
 using namespace Nom::Runtime;

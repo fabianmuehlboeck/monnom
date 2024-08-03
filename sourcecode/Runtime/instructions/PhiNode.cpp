@@ -1,9 +1,9 @@
 #include "PhiNode.h"
-#include "../Defs.h"
-#include "../NomString.h"
-#include "../IntClass.h"
-#include "../FloatClass.h"
-#include "../NomClassType.h"
+#include "../Common/Defs.h"
+#include "../Intermediate_Representation/NomString.h"
+#include "../Library/IntClass.h"
+#include "../Library/FloatClass.h"
+#include "../Intermediate_Representation/Types/NomClassType.h"
 #include <iostream>
 
 using namespace llvm;

@@ -1,9 +1,9 @@
 #include "CondBranchInstruction.h"
 #include "PhiNode.h"
-#include "../TypeOperations.h"
+#include "../Common/TypeOperations.h"
 #include <iostream>
 #include <tuple>
-#include "../NomValue.h"
+#include "../Intermediate_Representation/NomValue.h"
 
 using namespace llvm;
 using namespace std;

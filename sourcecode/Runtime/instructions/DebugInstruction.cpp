@@ -1,7 +1,7 @@
 #include "DebugInstruction.h"
-#include "../NomConstants.h"
+#include "../Intermediate_Representation/NomConstants.h"
 #include <iostream>
-#include "../NomVMInterface.h"
+#include "../Runtime/NomVMInterface.h"
 
 using namespace std;
 namespace Nom

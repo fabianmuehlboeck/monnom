@@ -1,6 +1,6 @@
 #include "LoadStringConstantInstruction.h"
-#include "../StringClass.h"
-#include "../NomClassType.h"
+#include "../Library/StringClass.h"
+#include "../Intermediate_Representation/Types/NomClassType.h"
 
 using namespace std;
 namespace Nom
