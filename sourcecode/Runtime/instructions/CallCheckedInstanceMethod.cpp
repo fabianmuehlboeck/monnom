@@ -38,6 +38,12 @@ namespace Nom
 
 			NomInstantiationRef<const NomMethod> method = NomConstants::GetMethod(Method)->GetMethod(&nscmc);
 
+			/*
+			Final -> Cannot be overriden in sub-class
+			GetName Empty -> No method name (Interfaces, lambdas with only one method. Class behaves just like lambda)
+			(Special pointer in the object itself to avoid hops in method table)
+			*/
+			
 			bool rawInvoke = false;
 			if ((!method.Elem->IsFinal()) && method.Elem->GetName().empty() && NomLambdaOptimizationLevel > 0)
 			{
@@ -45,6 +51,28 @@ namespace Nom
 			}
 
 			NomSubstitutionContextList nscl(method.TypeArgs);
+
+			/*
+			Interface method table (interface method calls)
+			Class methods -> each object has pointer going to method table (starting from parent methods to its own methods)
+			Index in parent class same as subclass
+
+			Can implement multiple interfaces -> have list of all interfaces, each of those have identifiers, pointer to a sepearate table. 
+			If matches interface, has table of corresponding method in own class.
+
+			Hashtable (fixed size) of interface method dispatcher methods, constant is 13 (total dispatcher methods)
+			Each method has additional argument telling which interface and method pair calling
+
+			Dispatcher method -> Either one method that dispatcher handles (ignore identifier)
+								-> Multiple method, has switch table and maps pair to class (call corresponding method). 
+			Identifier can be a pointer to another method, that handles the case that you call an interface method on structural object. 
+
+			new Record (field x (lambda)) 
+			has not type (dynamic object). Can call x, retrieve x. 
+			Interact with typed code. Didn't declare that it was an instance of an interface. Cast it to an interface (method X) 
+
+			Takes identifier (method pointer) and calls that. 
+			*/
 
 			int additionalArgs = 0;
 			auto recContainer = method.Elem->GetContainer();
@@ -156,6 +184,7 @@ namespace Nom
 				auto recNV = (*env)[Receiver];
 				llvm::Value* methodptr = builder->CreatePointerCast(RefValueHeader::GenerateReadRawInvoke(builder, recNV), GetIMTFunctionType()->getPointerTo());
 				auto argsArrSize = method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() - RTConfig_NumberOfVarargsArguments;
+
 				if (method.Elem->GetArgumentCount() + method.Elem->GetDirectTypeParametersCount() > RTConfig_NumberOfVarargsArguments)
 				{
 					llvm::Value* argsasarr = builder->CreateAlloca(POINTERTYPE, MakeInt32(argsArrSize), "argarray");

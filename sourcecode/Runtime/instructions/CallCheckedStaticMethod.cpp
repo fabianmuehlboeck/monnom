@@ -23,18 +23,31 @@ namespace Nom
 		void CallCheckedStaticMethod::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
 		{
 			if (NomCastStats)
-			{
+			{	
 				builder->CreateCall(GetIncStaticMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
+
 			env->basicBlockTerminated = false;
+
+			/*
+			Substitutes generic types for the actual types based on the context of the function call
+			and the context of the generic types.
+			*/
+
 			NomSubstitutionContextMemberContext nscmc(env->Context);
 			auto typeArgs = NomConstants::GetTypeList(this->TypeArgs)->GetTypeList(&nscmc);
 
 			NomSubstitutionContextList substC = NomSubstitutionContextList(typeArgs);
 			NomInstantiationRef<const NomStaticMethod> method = NomConstants::GetStaticMethod(Method)->GetStaticMethod(&substC);
 			
+			/*
+			The signature of the method, i.e. name and types
+			*/
 			auto signature = method.Elem->Signature(&substC);
 
+			/*
+			Argument counts, type counts and total
+			*/
 			auto argcount = method.Elem->GetArgumentCount();
 			auto targcount = typeArgs.size();
 
@@ -45,11 +58,22 @@ namespace Nom
 				throw new std::exception();
 			}
 
+			/*
+			Array for arguments and their types.
+			*/
 			auto argarr = makealloca(Value*, method.Elem->GetArgumentCount() + typeArgs.size());
+
+			/*
+			Pointer to the function and the parameter array.
+			*/
 			llvm::Function* func = method.Elem->GetLLVMFunction(env->Module);
 			llvm::ArrayRef<llvm::Type*> funcparams = func->getFunctionType()->params();
+
 			for (int i = argcount - 1; i >= 0; i--)
 			{
+				/*
+				Gets the value of the argument and converts the type from NomTypes to matching LLVM Types.
+				*/
 				NomValue arg = env->GetArgument(i);
 				argarr[i + targcount] = CastInstruction::MakeCast(builder, env, arg, signature.ArgumentTypes[i]);
 			}
@@ -72,10 +96,17 @@ namespace Nom
 					argarr[i] = targ->GetLLVMElement(*(env->Module));
 				}
 			}
+
+			/*
+			Clear arguments, set the new arguments to be the modified arguments, and generate the function call 
+			*/
 			env->ClearArguments();
 			auto args = llvm::ArrayRef<llvm::Value*>(argarr, method.Elem->GetArgumentCount() + typeArgs.size());
 			auto call = GenerateFunctionCall(builder, *(env->Module), func, args, true);
 
+			/*
+			Return register
+			*/
 			RegisterValue(env, NomValue(call, method.Elem->GetReturnType(&substC), true));
 		}
 		void CallCheckedStaticMethod::Print(bool resolve)

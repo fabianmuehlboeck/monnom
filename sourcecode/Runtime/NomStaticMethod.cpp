@@ -30,6 +30,14 @@ namespace Nom
 			{
 				linkage = llvm::GlobalValue::LinkageTypes::ExternalLinkage;
 			}
+			/*
+			Creates an LLVM function and links it to an exisiting definition.
+			Symbol name is the name of the function (create foo function) (based on c++ code, can link against and call this foo)
+			Mod is the LLVM, module -> Drop everything into. (Code is meant so that you can make multiple modules)
+			Environment is the book-keeping data to compile things. 
+
+			Calling convention -> the C calling convention. 
+			*/
 			auto fun = llvm::Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(NOMCC);
 			if (declOnly)

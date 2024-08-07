@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29025.244
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Parser", "Parser\Parser.csproj", "{A46A5789-BCD2-4479-920C-D50842C877C7}"
 EndProject
@@ -31,10 +31,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MonNomCore", "MonNomCore\MonNomCore.vcxproj", "{4786A8F7-8935-4059-A323-8BEFEC2F1454}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		MonNomCoreShared\MonNomCoreShared.vcxitems*{4786a8f7-8935-4059-a323-8befec2f1454}*SharedItemsImports = 4
-		MonNomCoreShared\MonNomCoreShared.vcxitems*{56cea22f-10dc-45ea-a529-e1a67e1733c6}*SharedItemsImports = 9
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
@@ -243,5 +239,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B3F9B205-25F8-474E-8E4E-60D124F32C33}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		MonNomCoreShared\MonNomCoreShared.vcxitems*{4786a8f7-8935-4059-a323-8befec2f1454}*SharedItemsImports = 4
+		MonNomCoreShared\MonNomCoreShared.vcxitems*{56cea22f-10dc-45ea-a529-e1a67e1733c6}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal

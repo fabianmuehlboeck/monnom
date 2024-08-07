@@ -148,6 +148,22 @@ extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Get_1(void* arraylist, void* index)
 	return lst->at(indexval);
 }
 
+/*
+These C++ functions get compiled to LLVM IR, packaged with the rest of the module, linked against rest of LLVM code. 
+Runtime: metadata says there are specification foo, calls receiver (instance of class bar), calls its own method bas (call receiver.bass)
+with arg1. Return result of that. 
+
+Specification language that can interpret this. 
+
+Constr calls and field access, casts, 
+
+Make foo do callcheckedinstance method, runtime generates foo to do that. 
+
+
+*/
+extern "C" DLLEXPORT void* foo(void* receiver, void* arg1);
+
+
 extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Set_2(void* arraylist, void* index, void* value) noexcept(false)
 {
 	static auto readField = GetReadFieldFunction();
