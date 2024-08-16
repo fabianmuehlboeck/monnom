@@ -161,7 +161,6 @@ Make foo do callcheckedinstance method, runtime generates foo to do that.
 
 
 */
-extern "C" DLLEXPORT void* foo(void* receiver, void* arg1);
 
 
 extern "C" DLLEXPORT void* LIB_NOM_ArrayList_Set_2(void* arraylist, void* index, void* value) noexcept(false)

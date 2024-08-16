@@ -42,6 +42,7 @@ namespace Nom
 //extern const Nom::Runtime::RTClass * const _RTStringClassRTC;
 
 extern "C" DLLEXPORT void * LIB_NOM_String_Print_1(void* str);
+extern "C" DLLEXPORT void* foo(void* str);
 llvm::Function* GetDebugPrint(llvm::Module* mod);
 
 llvm::Function* GetDebugPrintHex(llvm::Module* mod);

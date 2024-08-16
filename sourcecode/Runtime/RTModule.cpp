@@ -21,6 +21,8 @@
 #include <iostream>
 #include "llvm/IR/Verifier.h"
 
+#include "LibraryTest.h"
+
 namespace Nom
 {
 	namespace Runtime
@@ -63,6 +65,10 @@ namespace Nom
 			NomClassType::GetInitializerFunction(*(theModule.get()));
 			NomMaybeType::GetInitializerFunction(*(theModule.get()));
 			RTClassType::Instance().GetLLVMElement(*(theModule.get()));
+
+			//Library Testing
+			LibraryTest::Instance()->GetLLVMElement(*theModule.get());
+
 			auto& ifaces = mod->GetInterfaces();
 			auto& clses = mod->GetClasses();
 			for (auto& iface : ifaces)

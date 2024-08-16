@@ -79,6 +79,10 @@ class Main
 		return Main.Sieve(Main.CountFrom(2));
 	}
 
+	public static fun Print_Test() : Void
+	{
+	
+	}
 	
 	public static fun Main() : Void
 	{
@@ -88,5 +92,6 @@ class Main
 		"\n".Print();
 		p.ToString().Print();
 		"\n".Print();
+		Main.Print_Test();
 	}
 }

@@ -239,6 +239,7 @@
     <ClCompile Include="Library.cpp" />
     <ClCompile Include="LibraryDependency.cpp" />
     <ClCompile Include="LibrarySource.cpp" />
+    <ClCompile Include="LibraryTest.cpp" />
     <ClCompile Include="LibraryVersion.cpp" />
     <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadFloatConstantInstruction.cpp" />
@@ -369,6 +370,7 @@
     <ClInclude Include="gcinclude_config.h" />
     <ClInclude Include="GloballyNamed.h" />
     <ClInclude Include="GlobalNameAddressLookupList.h" />
+    <ClInclude Include="LibraryTest.h" />
     <ClInclude Include="Metadata.h" />
     <ClInclude Include="NomBuilder.h" />
     <ClInclude Include="NomInterfaceCallTag.h" />

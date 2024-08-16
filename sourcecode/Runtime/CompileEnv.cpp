@@ -232,7 +232,7 @@ namespace Nom
 
 		NomTypeVarValue StaticMethodCompileEnv::GetTypeArgument(NomBuilder& builder, int i)
 		{
-			return TypeArguments[i];
+			return TypeArguments[i]; 
 		}
 		size_t StaticMethodCompileEnv::GetEnvTypeArgumentCount()
 		{

@@ -17,6 +17,7 @@
 #include "CastStats.h"
 #include "NomClassType.h"
 #include "Runtime.h"
+#include "LibraryTest.h"
 
 using namespace Nom::Runtime;
 
@@ -103,6 +104,14 @@ namespace Nom
 			print->SetReturnType(NomVoidClass::GetInstance()->GetType());
 
 			this->AddMethod(print);
+			
+			NomMethodInternal* print_test = new NomMethodInternal(this, "GetPrimes", "foo", true);
+			print_test->SetDirectTypeParameters();
+			print_test->SetArgumentTypes();
+			print_test->SetReturnType(NomVoidClass::GetInstance()->GetType());
+
+			this->AddMethod(print_test);
+			
 
 			//this->compiled = true;
 			////this->preprocessed = true;
@@ -145,9 +154,22 @@ extern "C" DLLEXPORT void* LIB_NOM_String_Print_1(void* str)
 		std::cout << ((NomStringRef)GetReadFieldFunction()(str, 0))->ToStdString();
 		std::cout.flush();
 	}
+	LibraryTest::print_test();
 	//std::cout << ((NomStringRef)(ObjectHeader(str).Fields()-sizeof(intptr_t)))->ToStdString();
 	return (void*)((intptr_t)(NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
 }
+
+extern "C" DLLEXPORT void* foo(void* str)
+{
+	if (!isInWarmup())
+	{
+		std::cout << ((NomStringRef)GetReadFieldFunction()(str, 0))->ToStdString();
+		std::cout.flush();
+	}
+	//std::cout << ((NomStringRef)(ObjectHeader(str).Fields()-sizeof(intptr_t)))->ToStdString();
+	return (void*)((intptr_t)(NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
+}
+
 
 llvm::Function* GetDebugPrint(llvm::Module* mod)
 {

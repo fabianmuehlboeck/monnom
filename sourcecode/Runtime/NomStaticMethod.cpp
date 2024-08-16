@@ -138,7 +138,7 @@ namespace Nom
 			auto funtype = GetLLVMFunctionType();
 			auto wfun = Function::Create(funtype, linkage, *GetSymbolName(), &mod);
 			wfun->setCallingConv(NOMCC);
-			BasicBlock* forwardblock = BasicBlock::Create(LLVMCONTEXT, "start", wfun);
+			BasicBlock* forwardblock = BasicBlock::Create(LLVMCONTEXT, "start", wfun);  
 			builder->SetInsertPoint(forwardblock);
 			auto ufun = Function::Create(funtype, linkage, GetQName(), &mod);
 			ufun->setCallingConv(llvm::CallingConv::C);

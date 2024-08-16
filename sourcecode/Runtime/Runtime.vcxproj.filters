@@ -70,6 +70,9 @@
     <Filter Include="Runtime\Config">
       <UniqueIdentifier>{c71a7b2b-d8b7-4603-8da7-6043dd1e6f96}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Library\NomLib">
+      <UniqueIdentifier>{2eda5c46-2e49-49bc-8e9d-37de1d91a14d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="instructions\CallCheckedStaticMethod.cpp">
@@ -533,6 +536,9 @@
     </ClCompile>
     <ClCompile Include="RTConfig.cpp">
       <Filter>Runtime\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="LibraryTest.cpp">
+      <Filter>Library\NomLib</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1054,6 +1060,9 @@
     </ClInclude>
     <ClInclude Include="RTConfig_LambdaOpt.h">
       <Filter>Runtime\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="LibraryTest.h">
+      <Filter>Library\NomLib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
