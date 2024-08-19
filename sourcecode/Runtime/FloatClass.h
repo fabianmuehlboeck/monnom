@@ -12,6 +12,8 @@ namespace Nom
 		public:
 			static NomFloatClass *GetInstance();
 			virtual ~NomFloatClass() override;
+			virtual void GetClassDependencies(llvm::SmallVector<const NomClassInternal*, 4>& results) const override;
+			virtual void GetInterfaceDependencies(llvm::SmallVector<const NomInterfaceInternal*, 4>& results) const override;
 		};
 
 		class NomFloatObjects : public AvailableExternally < llvm::Constant >

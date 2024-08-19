@@ -13,6 +13,7 @@ namespace Nom
 			virtual ~IComparableInterface() override;
 		public:
 			static IComparableInterface* GetInstance();
+			virtual void GetClassDependencies(llvm::SmallVector<const NomClassInternal*, 4>& results) const override;
 		};
 
 
