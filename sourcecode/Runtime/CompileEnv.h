@@ -163,6 +163,7 @@ namespace Nom
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
 			virtual bool GetInConstructor() override { return false; }
 		};
+		//Create a new subclass of AFullArityCompileEnv, 
 
 		class ConstructorCompileEnv : public AFullArityCompileEnv
 		{

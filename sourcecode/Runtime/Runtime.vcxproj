@@ -140,6 +140,7 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Wno-unused-variable -Wno-c++98-compat -Wno-c++98-compat-pedantic -ferror-limit=0</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">-ferror-limit=0</AdditionalOptions>
       <ExternalWarningLevel Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">Level3</ExternalWarningLevel>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
     <Lib>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(LLVMDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

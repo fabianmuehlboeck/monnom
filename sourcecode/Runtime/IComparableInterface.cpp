@@ -15,7 +15,6 @@ namespace Nom
 			SetDirectTypeParameters(llvm::ArrayRef<NomTypeParameterRef>(ntparr, 1));
 			SetSuperInterfaces();
 			
-			
 		}
 
 		IComparableInterface::~IComparableInterface()

@@ -20,6 +20,7 @@ namespace Nom
 
 			// Inherited via NomValueInstruction
 			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			void CompileDirectly(NomTypeRef type, NomBuilder& builder, CompileEnv* env, int lineno);
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

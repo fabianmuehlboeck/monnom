@@ -14,6 +14,7 @@ namespace Nom
 			CallCheckedStaticMethod(const ConstantID method, const ConstantID typeArgs, RegIndex reg);
 			virtual ~CallCheckedStaticMethod();
 			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
+			void CompileDirectly(NomString* className, NomString* methodName, llvm::ArrayRef<NomTypeRef> typeArgs, llvm::ArrayRef<NomTypeRef> argTypes, NomBuilder& builder, CompileEnv* env, int lineno);
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

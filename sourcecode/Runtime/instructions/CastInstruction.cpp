@@ -83,6 +83,13 @@ namespace Nom
 			RegisterValue(env, MakeCast(builder, env, (*env)[ValueRegister], NomConstants::GetType(&nscmc, TypeConstant)));
 		}
 
+		void CastInstruction::CompileDirectly(NomTypeRef type, NomBuilder& builder, CompileEnv* env, int lineno)
+		{
+			NomSubstitutionContextMemberContext nscmc(env->Context);
+			RegisterValue(env, MakeCast(builder, env, (*env)[ValueRegister], type));
+
+		}
+
 		void CastInstruction::Print(bool resolve)
 		{
 			cout << "Cast #" << std::dec << ValueRegister;

@@ -18,6 +18,10 @@ namespace Nom
 			{
 
 			}
+			void setMethod() {
+
+			}
+
 			virtual ~CallCheckedInstanceMethod();
 			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
 

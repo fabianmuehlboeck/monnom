@@ -3,7 +3,6 @@
 #include "CompileEnv.h"
 #include "Defs.h"
 #include "NomBuilder.h"
-
 namespace Nom
 {
 	namespace Runtime
@@ -53,6 +52,10 @@ namespace Nom
 			}
 
 			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) = 0;
+
+            
+
+
 			virtual void Print(bool resolve = false) = 0;
 
 			NomInstruction(OpCode opcode):opcode(opcode)

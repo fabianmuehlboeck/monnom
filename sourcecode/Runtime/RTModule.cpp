@@ -66,8 +66,7 @@ namespace Nom
 			NomMaybeType::GetInitializerFunction(*(theModule.get()));
 			RTClassType::Instance().GetLLVMElement(*(theModule.get()));
 
-			//Library Testing
-			LibraryTest::Instance()->GetLLVMElement(*theModule.get());
+			
 
 			auto& ifaces = mod->GetInterfaces();
 			auto& clses = mod->GetClasses();
@@ -92,6 +91,11 @@ namespace Nom
 				cls->CompileLLVM(theModule.get());
 			}
 			ObjectHeader::EnsureExternalReadWriteFieldFunctions(theModule.get());
+
+			//Library Testing
+			LibraryTest* test = new LibraryTest();
+			test->GetLLVMElement(*theModule.get());
+
 			std::vector<std::string> compiledFunctionNames;
 			std::basic_ofstream<char> pobof;
 			if (NomVerbose)

@@ -19,10 +19,10 @@ namespace Nom
 			//NomClass(NomConstants::AddString(NomString("Void")), 0, 0, 0, nullptr)
 		{
 			this->SetDirectTypeParameters();
-			this->SetSuperClass();
+			//this->SetSuperClass();
 			this->SetSuperInterfaces();
 			//compiled = true;
-			//preprocessed = true;
+			preprocessed = true;
 		}
 
 
