@@ -332,6 +332,7 @@ namespace Nom.TypeChecker
                     {
                         source.RegisterIncoming(reg, dict[source]);
                     }
+                    CurrentRegister = reg;
                     return (reg, Type).InjectOptional();
                 }
                 return Optional<(IRegister, Language.IType)>.Empty;
