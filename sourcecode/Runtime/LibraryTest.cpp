@@ -35,17 +35,16 @@ namespace Nom {
 			auto fun = llvm::Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(llvm::CallingConv::C);
 
-			StaticMethodCompileEnv smenv = StaticMethodCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), typeArgs, argTypes, NULL);
-			CompileEnv* env = &smenv;
-
-
 			NomBuilder builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, *GetSymbolName() + "$start", fun);
+			builder->SetInsertPoint(startBlock);
+
+			CLibCompileEnv smenv = CLibCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), typeArgs, argTypes, NULL, builder);
+			CompileEnv* env = &smenv;
 
 			InitializePhis(builder, fun, env);
 
-			builder->SetInsertPoint(startBlock);
-
+			
 #ifdef INSTRUCTIONMESSAGES
 			auto dbgfun = GetDebugPrint(&mod);
 #endif
@@ -69,7 +68,8 @@ namespace Nom {
 			}
 
 			std::vector<NomTypeRef> tA1 = {};
-			const TypeList tA = ArrayRef<NomTypeRef>((const NomTypeRef*)NomIntClass::GetInstance()->GetType(), (size_t)1);
+			//const TypeList tA = ArrayRef<NomTypeRef>((const NomTypeRef*)NomIntClass::GetInstance()->GetType(), (size_t)1);
+			const TypeList tA = ArrayRef<NomTypeRef>(tA1);
 			CallCheckedStaticMethod callInst = CallCheckedStaticMethod(NULL, NULL, 0);
 			callInst.CompileDirectly(className, methodName, tA, functionTypes, builder, env, 0);
 #ifdef INSTRUCTIONMESSAGES

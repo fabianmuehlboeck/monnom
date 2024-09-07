@@ -149,6 +149,40 @@ namespace Nom
 				throw new std::exception();
 			}
 		}
+		AFullArityCompileEnv::AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType, NomBuilder& builder) : ACompileEnv(regcount, contextName, function, argument_offset, phiNodes, directTypeArgs, context, argtypes, thisType)
+		{
+			size_t argcount = 0;
+			RegIndex argindex = 0;
+			size_t typeArgCount = directTypeArgs.size();
+			for (auto& Arg : function->args())
+			{
+				if (argument_offset > 0)
+				{
+					argument_offset--;
+					continue;
+				}
+				if (argcount == 0 && thisType != nullptr)
+				{
+					registers[argindex] = NomValue(&Arg, thisType);
+					argindex++;
+				}
+				else if (argcount + (thisType != nullptr ? 0 : 1) <= typeArgCount)
+				{
+					llvm::Value* val = builder->CreateBitCast(&Arg, TYPETYPE, "cTA");
+					TypeArguments.push_back(NomTypeVarValue(val, directTypeArgs[argcount - (thisType != nullptr ? 1 : 0)]->GetVariable()));
+				}
+				else
+				{
+					registers[argindex] = NomValue(&Arg, argtypes[argindex - (thisType == nullptr ? 0 : 1)]);
+					argindex++;
+				}
+				argcount++;
+			}
+			if (argcount != typeArgCount + argtypes.size() + (thisType == nullptr ? 0 : 1))
+			{
+				throw new std::exception();
+			}
+		}
 		AFullArityCompileEnv::AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType) : AFullArityCompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, context, argtypes, thisType)
 		{
 		}
@@ -243,6 +277,26 @@ namespace Nom
 			return ConstantPointerNull::get(TYPETYPE->getPointerTo());
 		}
 #pragma endregion
+
+#pragma region CLibCompileEnv
+		CLibCompileEnv::CLibCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomStaticMethod* method, NomBuilder& builder) : AFullArityCompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, method, argtypes, nullptr, builder), Method(method)
+		{
+		}
+
+		NomTypeVarValue CLibCompileEnv::GetTypeArgument(NomBuilder& builder, int i)
+		{
+			return TypeArguments[i];
+		}
+		size_t CLibCompileEnv::GetEnvTypeArgumentCount()
+		{
+			return 0;
+		}
+		llvm::Value* CLibCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
+		{
+			return ConstantPointerNull::get(TYPETYPE->getPointerTo());
+		}
+#pragma endregion
+
 
 #pragma region ConstructorCompileEnv
 		ConstructorCompileEnv::ConstructorCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomClassTypeRef thisType, const NomConstructor* method) : AFullArityCompileEnv(regcount, contextName, function, phiNodes, directTypeArgs, method, argtypes, thisType), Method(method)

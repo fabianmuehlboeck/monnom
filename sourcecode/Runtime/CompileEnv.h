@@ -120,6 +120,8 @@ namespace Nom
 
 			AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
 
+			AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType, NomBuilder& builder);
+
 			AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
 
 			virtual ~AFullArityCompileEnv() override;
@@ -164,6 +166,18 @@ namespace Nom
 			virtual bool GetInConstructor() override { return false; }
 		};
 		//Create a new subclass of AFullArityCompileEnv, 
+
+		class CLibCompileEnv : public AFullArityCompileEnv
+		{
+		public:
+			const NomStaticMethod* const Method;
+			CLibCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomStaticMethod* method, NomBuilder& builder);
+			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
+			virtual size_t GetEnvTypeArgumentCount() override;
+			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;
+			virtual bool GetInConstructor() override { return false; }
+		};
+
 
 		class ConstructorCompileEnv : public AFullArityCompileEnv
 		{

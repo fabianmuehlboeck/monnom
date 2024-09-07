@@ -140,15 +140,14 @@ namespace Nom
 			*/
 
 
-			NomClass* c = NomClass::getClass(className);
-			NomInstantiationRef<const NomStaticMethod> method1 = c->GetStaticMethod(methodName, typeArgs, argTypes);
+			
 
 
 			NomSubstitutionContextMemberContext nscmc(env->Context);
 
 			//TypeList list;
 			NomSubstitutionContextList substC = NomSubstitutionContextList(argTypes);
-
+			NomClass* c = NomClass::getClass(className);
 			NomInstantiationRef<const NomStaticMethod> method = c->GetStaticMethod(methodName, typeArgs, argTypes);
 
 			/*

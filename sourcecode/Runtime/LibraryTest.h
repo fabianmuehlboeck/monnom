@@ -11,6 +11,7 @@
 #include "NomClassType.h"
 #include "ObjectClass.h"
 #include "IComparableInterface.h"
+#include "NomTypeParameter.h"
 #include <algorithm>
 
 namespace Nom {
@@ -36,21 +37,16 @@ namespace Nom {
 			~LibraryTest() {
 			}
 
-			NomString* methodName = new NomString("test2");
+			NomString* methodName = new NomString("test3");
 			NomString* className = new NomString("Main_0");
 			NomValueInstruction* call_inst;
-
-			//NomTypeRef returnType = (NomType*)NomVoidClass::GetInstance()->GetType();
-			/*
-			std::vector<NomTypeRef> types = {(NomType*)NomFloatClass::GetInstance()->GetType(), (NomType*)NomIntClass::GetInstance()->GetType(), 
-				(NomType*)NomObjectClass::GetInstance()->GetType(), (NomType*)NomFloatClass::GetInstance()->GetType(),
-				(NomType*)NomObjectClass::GetInstance()->GetType() };
-			*/
 			
 			NomTypeRef returnType = (NomType*)NomBoolClass::GetInstance()->GetType();
 			std::vector<NomTypeRef> argTypesArray = {(NomType*)NomIntClass::GetInstance()->GetType(), (NomType*)NomIntClass::GetInstance()->GetType() };
 
-			std::vector<NomTypeParameterRef> typeArgsArray = {IComparableInterface::GetInstance()->GetAllTypeParameters()[0]};
+		
+			NomTypeParameterRef ref = new NomTypeParameterInternal(NULL, 0, NomType::AnythingRef, NomType::NothingRef);
+			std::vector<NomTypeParameterRef> typeArgsArray = {ref};
 			//std::vector<NomTypeRef> typeArgsArray = {};
 
 			const llvm::ArrayRef<NomTypeRef> argTypes = llvm::ArrayRef<NomTypeRef>(argTypesArray);

@@ -13,6 +13,10 @@ class Main
 		return 1 == 0;
 	}
 	
+	public static fun test4<T>(Int arg1, Int arg2): Bool{
+		return 1 == 0;
+	}
+	
 
 	public static fun Main() : Void
 	{
