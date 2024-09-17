@@ -36,13 +36,11 @@ namespace Nom
 		class BinOpInstruction : public NomValueInstruction
 		{
 		private:
-			NomValue CompileLeftInt(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left);
-			NomValue CompileLeftFloat(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left);
-			NomValue CompileLeftBool(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left);
-			NomValue CompileLeftPointer(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left);
-			NomValue CompileIntInt(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right);
-			NomValue CompileFloatFloat(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right);
+			llvm::Value* CompileIntIntLLVM(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right, llvm::Value** resultTag);
+			llvm::Value* CompileFloatFloatLLVM(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right, llvm::Value** resultTag);
+			llvm::Value* CompileBoolBoolLLVM(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right, llvm::Value** resultTag);
 			NomValue CompileBoolBool(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right);
+			NomTypeRef NomReturnType(NomTypeRef leftTy, NomTypeRef rightTy);
 		public:
 			const BinaryOperation Operation;
 			const RegIndex Left;

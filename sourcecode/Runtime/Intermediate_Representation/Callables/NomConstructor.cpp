@@ -79,6 +79,7 @@ namespace Nom
 				selfType = Class->GetType();
 			}
 			ConstructorCompileEnv cenv = ConstructorCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), this->GetAllTypeParameters(), this->GetArgumentTypes(nullptr), selfType, this);
+			cenv.builder = &builder;
 			CompileEnv* env = &cenv;
 
 

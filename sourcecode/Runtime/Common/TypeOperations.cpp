@@ -236,7 +236,7 @@ namespace Nom
 				}
 				else if (valType == REFTYPE && type == BOOLTYPE)
 				{
-					return UnpackFloat(builder, NomValue(val, NomBoolClass::GetInstance()->GetType()));
+					return UnpackBool(builder, NomValue(val, NomBoolClass::GetInstance()->GetType()));
 				}
 				else if (valType == INTTYPE && type == REFTYPE)
 				{
@@ -255,6 +255,114 @@ namespace Nom
 					throw new std::exception();
 				}
 			}
+		}
+
+		llvm::Value* PackFromTag(NomBuilder& builder, llvm::Value *value, NomTypeRef nomType, llvm::Value *tag, llvm::BasicBlock* packBlock)
+		{
+			auto currentInsertPoint = builder->GetInsertBlock();
+			// Delete the default BR instruction in the pack block
+			// packBlock->print(outs());
+			auto inst = packBlock->getTerminator();
+			BranchInst* brInst = llvm::cast<BranchInst>(inst);
+			assert(brInst->isUnconditional());
+			BasicBlock* successor = brInst->getSuccessor(0);
+			brInst->dropAllReferences();
+			brInst->removeFromParent();
+
+
+			bool isFloat = nomType->IsSubtype(GetFloatClassType(), false);
+			bool isInt = nomType->IsSubtype(GetIntClassType(), false);
+			bool isBool = nomType->IsSubtype(GetBoolClassType(), false);
+			bool isTypeKnown = isFloat || isInt || isBool;
+
+			Function* fun = packBlock->getParent();
+			assert (packBlock->begin() == packBlock->end());
+			BasicBlock* floatBlock   = BasicBlock::Create(LLVMCONTEXT, "floatTag", fun, packBlock);
+			BasicBlock* intBlock   = BasicBlock::Create(LLVMCONTEXT, "intTag", fun, packBlock);
+			BasicBlock* boolBlock   = BasicBlock::Create(LLVMCONTEXT, "boolTag", fun, packBlock);
+			BasicBlock* refBlock   = BasicBlock::Create(LLVMCONTEXT, "refTag", fun, packBlock);
+			builder->SetInsertPoint(packBlock);
+			SwitchInst* switchInst = builder->CreateSwitch(tag, floatBlock, 3);
+			switchInst->addCase(MakeUInt(2, 0), refBlock);
+			switchInst->addCase(MakeUInt(2, 2), boolBlock);
+			switchInst->addCase(MakeUInt(2, 3), intBlock);
+
+			BasicBlock* merge = BasicBlock::Create(LLVMCONTEXT, "mergeTag", fun, successor);
+			
+			PHINode* mergeResult;
+			llvm::Value* outValue;
+			builder->SetInsertPoint(merge);
+			if (!isTypeKnown) {
+				mergeResult = builder->CreatePHI(REFTYPE, 3, "tagPackResult");
+				outValue = mergeResult;
+			}
+			builder->CreateBr(successor);
+
+			BasicBlock* invalidBlock;
+
+			if (isTypeKnown)
+				invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Type Mismatch");
+
+			builder->SetInsertPoint(floatBlock);
+			if (isFloat) {
+				llvm::Value* floatValue = builder->CreateBitCast(value, FLOATTYPE);
+				outValue = floatValue;
+				builder->CreateBr(merge);
+			} else if (isTypeKnown) {
+				// REPORT ERROR
+				builder->CreateBr(invalidBlock);
+			} else {
+				llvm::Value* floatValue = builder->CreateBitCast(value, FLOATTYPE);
+				llvm::Value* packedFloat = PackFloat(builder, floatValue);
+				mergeResult->addIncoming(packedFloat, builder->GetInsertBlock());
+				builder->CreateBr(merge);
+			}
+
+			builder->SetInsertPoint(intBlock);
+			if (isInt) {
+				llvm::Value* intValue = builder->CreateBitCast(value, INTTYPE);
+				outValue = intValue;
+				builder->CreateBr(merge);
+			} else if (isTypeKnown) {
+				// REPORT ERROR
+				builder->CreateBr(invalidBlock);
+			} else {
+				llvm::Value* intValue = builder->CreateBitCast(value, INTTYPE);
+				llvm::Value* packedInt = PackInt(builder, intValue);
+				auto intOutBlock = builder->GetInsertBlock();
+				mergeResult->addIncoming(packedInt, builder->GetInsertBlock());
+				builder->CreateBr(merge);
+			}
+
+			builder->SetInsertPoint(boolBlock);
+			if (isBool) {
+				llvm::Value* boolValue = builder->CreateTrunc(value, BOOLTYPE);
+				outValue = boolValue;
+				builder->CreateBr(merge);
+			} else if (isTypeKnown) {
+				builder->CreateBr(invalidBlock);
+			} else {
+				llvm::Value* boolValue = builder->CreateTrunc(value, BOOLTYPE);
+				llvm::Value* packedBool = PackBool(builder, boolValue);
+				auto boolOutBlock = builder->GetInsertBlock();
+				mergeResult->addIncoming(packedBool, boolOutBlock);
+				builder->CreateBr(merge);
+			}
+
+			// It seems like this case should never be needed, but in case it is, it is here for completeness
+			// In most cases, LLVM should be able to very easily optimise it away
+			builder->SetInsertPoint(refBlock);
+			if (isTypeKnown) {
+				builder->CreateBr(invalidBlock);
+			} else {
+				llvm::Value* refValue = builder->CreateIntToPtr(value, REFTYPE);
+				auto intOutBlock = builder->GetInsertBlock();
+				mergeResult->addIncoming(refValue, builder->GetInsertBlock());
+				builder->CreateBr(merge);
+			}
+
+			builder->SetInsertPoint(currentInsertPoint);
+			return outValue;
 		}
 
 		/// <summary>

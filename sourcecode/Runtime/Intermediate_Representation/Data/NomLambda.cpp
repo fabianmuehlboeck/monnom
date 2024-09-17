@@ -277,7 +277,7 @@ namespace Nom
 			builder->CreateCondBr(callTagMatch, matchBlock, mismatchBlock, GetLikelyFirstBranchMetadata());
 
 			LambdaCompileEnv lenv = LambdaCompileEnv(regcount, fun->getName(), fun, &phiNodes, GetDirectTypeParameters(), GetArgumentTypes(nullptr), this);
-
+			lenv.builder = &builder;
 			CompileEnv* env = &lenv;
 
 			InitializePhis(builder, fun, env);

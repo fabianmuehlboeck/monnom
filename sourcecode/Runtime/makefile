@@ -24,9 +24,9 @@ nomdebug: $(debugobjects)
 
 .PHONY: clean
 clean:
-	-rm *.o
+	-find . -name '*.o' -delete
 	-rm nom
-	-rm *.d
+	-find . -name '*.d' -delete
 
 %.o : %.cpp
 	clang++-12 $(CPPFLAGS) $(INCLUDES) -O3 -c $< -o $@

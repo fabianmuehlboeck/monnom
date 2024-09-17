@@ -40,6 +40,7 @@ namespace Nom
 			CompileEnv* env = &smenv;
 
 			NomBuilder builder;
+			smenv.builder = &builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, *GetSymbolName() + "$start", fun);
 
 			InitializePhis(builder, fun, env);

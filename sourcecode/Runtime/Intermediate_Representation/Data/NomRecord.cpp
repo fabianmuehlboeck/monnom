@@ -86,6 +86,7 @@ namespace Nom
 			gv->setInitializer(ConstantStruct::get(gvartype, { ConstantArray::get(arrtype(inttype(64), hasRawInvoke ? 1 : 0), ArrayRef<Constant*>(pushArr, hasRawInvoke ? 1 : 0)), constant, ddtable }));
 
 			StructInstantiationCompileEnv sice = StructInstantiationCompileEnv(regcount, fun, GetAllTypeParameters(), GetArgumentTypes(nullptr), this, EndArgRegisterCount);
+			sice.builder = &builder;
 
 			RecordHeader::GenerateConstructorCode(builder, ArrayRef<Value*>(typeArgBuf, targc), &sice, ConstantExpr::getGetElementPtr(gvartype, gv, ArrayRef<Constant*>({ MakeInt32(0), MakeInt32(1) })), GetInstructions());
 

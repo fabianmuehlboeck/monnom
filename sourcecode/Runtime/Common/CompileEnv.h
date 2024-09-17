@@ -41,6 +41,7 @@ namespace Nom
 			llvm::Function* Function;
 			const NomMemberContext* Context;
 			virtual NomValue& operator[] (const RegIndex index) = 0;
+			virtual llvm::Value* LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type) = 0;
 
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) = 0;
 
@@ -76,14 +77,10 @@ namespace Nom
 			llvm::Value* localTypeArgArray = nullptr;
 			llvm::Value* envTypeArgArray = nullptr;
 		public:
-			virtual NomValue& operator[] (const RegIndex index) override
-			{
-				if (index < 0 || index >= regcount)
-				{
-					throw "Invalid Register index!";
-				}
-				return registers[index];
-			}
+			NomBuilder* builder = nullptr;
+
+			virtual NomValue& operator[] (const RegIndex index) override;
+			virtual llvm::Value* LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type) override ;
 
 			ACompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<llvm::Value*> typeArgValues);
 
@@ -131,6 +128,7 @@ namespace Nom
 		{
 		public:
 			virtual NomValue& operator[] (const RegIndex index) override;
+			virtual llvm::Value* LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type) override;
 			AVariableArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<llvm::Value*> typeArgValues);
 
 			AVariableArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType);
@@ -242,6 +240,7 @@ namespace Nom
 
 			// Inherited via CompileEnv
 			virtual NomValue& operator[](const RegIndex index) override;
+			virtual llvm::Value* LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type) override;
 
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 

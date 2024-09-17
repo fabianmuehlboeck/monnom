@@ -6,6 +6,7 @@
 #include "../Intermediate_Representation/Types/NomClassType.h"
 #include "../Intermediate_Representation/NomMemberContext.h"
 #include "../Runtime_Data/Headers/ObjectHeader.h"
+#include "../Runtime_Data/Headers/RefValueHeader.h"
 #include "../Common/CompileHelpers.h"
 #include "../Common/TypeOperations.h"
 #include "../Intermediate_Representation/Types/NomDynamicType.h"
@@ -53,6 +54,127 @@ namespace Nom
 		}
 
 
+		NomValue& ACompileEnv::operator[] (const RegIndex index)
+		{
+			if (index < 0 || index >= regcount)
+			{
+				throw "Invalid Register index!";
+			}
+
+			auto value = registers[index];
+			auto tag = value.GetTag();
+			if (*value == nullptr || tag == nullptr) return registers[index];
+			if (builder == nullptr) throw "Builder needed to lookup NomValue";
+			auto newValue = Runtime::PackFromTag(*builder, value, value.GetNomType(), tag, value.GetPackBlock());
+			registers[index].MakePacked(newValue);
+			return registers[index];
+		}
+		llvm::Value* ACompileEnv::LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type)
+		{
+			if (index < 0 || index >= regcount)
+			{
+				throw "Invalid Register index!";
+			}
+			auto value = registers[index];
+			auto valueTag = value.GetTag();
+			*type = value.GetNomType();
+			if (valueTag != nullptr) {
+				*tag = valueTag;
+				return *value;
+			}
+
+			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * 
+				primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
+			Value* intValue = nullptr, * floatValue = nullptr, * boolValue = nullptr;
+			#define BUILDER ((*builder))
+			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(BUILDER, value, 
+				&refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &intValue, 
+				&primitiveFloatBlock, &floatValue, &primitiveBoolBlock, &boolValue);
+
+
+			llvm::Function* fun = BUILDER->GetInsertBlock()->getParent();
+			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "unpackOut", fun);
+			PHINode* outValuePHI = nullptr;
+			llvm::Value* outValue = nullptr;
+			PHINode* outTagPHI = nullptr;
+			llvm::Type* unpackedTy = llvm::Type::getInt64Ty(LLVMCONTEXT);
+
+			if (cases > 1)
+			{
+				BUILDER->SetInsertPoint(outBlock);
+				// TODO: what is the type of an unpacked value?
+
+				outValuePHI = BUILDER->CreatePHI(unpackedTy, cases, "unpackedValue");
+				outTagPHI = BUILDER->CreatePHI(llvm::Type::getIntNTy(LLVMCONTEXT, 2), cases, "unpackedTag");
+				outValue = outValuePHI;
+			}
+
+			if (primitiveIntBlock != nullptr)
+			{
+				BUILDER->SetInsertPoint(primitiveIntBlock);
+				if (outValuePHI == nullptr) {
+					outValue = BUILDER->CreateBitCast(intValue, unpackedTy, "unpackedInt");
+					*tag = MakeUInt(2, 3);
+				} else {
+					auto casted = BUILDER->CreateBitCast(intValue, unpackedTy, "unpackedInt");
+					outValuePHI->addIncoming(casted, primitiveIntBlock);
+					outTagPHI->addIncoming(MakeUInt(2,3), primitiveIntBlock);
+				}
+				BUILDER->CreateBr(outBlock);
+			}
+
+			if (primitiveFloatBlock != nullptr)
+			{
+				BUILDER->SetInsertPoint(primitiveFloatBlock);
+				if (outValuePHI == nullptr) {
+					outValue = BUILDER->CreateBitCast(floatValue, unpackedTy, "unpackedFloat");
+					*tag = MakeUInt(2, 1);
+				} else {
+					auto casted = BUILDER->CreateBitCast(floatValue, unpackedTy, "unpackedFloat");
+					outValuePHI->addIncoming(casted, primitiveFloatBlock);
+					outTagPHI->addIncoming(MakeUInt(2,1), primitiveFloatBlock);
+				}
+				BUILDER->CreateBr(outBlock);
+			}
+
+			if (refValueBlock != nullptr)
+			{
+				BUILDER->SetInsertPoint(refValueBlock);
+				if (outValuePHI == nullptr) {
+					outValue = BUILDER->CreatePtrToInt(value, unpackedTy, "unpackedRef");
+					*tag = MakeUInt(2, 0);
+				} else {
+					auto casted = BUILDER->CreatePtrToInt(value, unpackedTy, "unpackedRef");
+					outValuePHI->addIncoming(casted, refValueBlock);
+					outTagPHI->addIncoming(MakeUInt(2,1), refValueBlock);
+				}
+				BUILDER->CreateBr(outBlock);
+			}
+
+			if (primitiveBoolBlock != nullptr)
+			{
+				BUILDER->SetInsertPoint(primitiveBoolBlock);
+				if (outValuePHI == nullptr) {
+					outValue = BUILDER->CreateZExt(boolValue, unpackedTy, "unpackedBool");
+					*tag = MakeUInt(2, 0);
+				} else {
+					auto casted = BUILDER->CreateZExt(boolValue, unpackedTy, "unpackedBool");
+					outValuePHI->addIncoming(casted, primitiveBoolBlock);
+					outTagPHI->addIncoming(MakeUInt(2,1), primitiveBoolBlock);
+				}
+				BUILDER->CreateBr(outBlock);
+			}
+
+			BUILDER->SetInsertPoint(outBlock);
+			if (outValuePHI != nullptr) {
+				*tag = outTagPHI;
+			}
+
+			return outValue;
+			#undef BUILDER
+
+			// TODO fix to unwrap if wrapped
+		}
 
 		NomValue ACompileEnv::GetArgument(int i)
 		{
@@ -161,6 +283,10 @@ namespace Nom
 		NomValue& AVariableArityCompileEnv::operator[](const RegIndex index)
 		{
 			return ACompileEnv::operator[](index);
+		}
+		llvm::Value* AVariableArityCompileEnv::LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type)
+		{
+			return ACompileEnv::LookupUnwrapped(index, tag, type);
 		}
 
 		AVariableArityCompileEnv::AVariableArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const NomMemberContext* context, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const llvm::ArrayRef<llvm::Value*> typeArgValues) : ACompileEnv(regcount, contextName, function, context, phiNodes, directTypeArgs, typeArgValues)
@@ -394,6 +520,10 @@ namespace Nom
 		{
 		}
 		NomValue& CastedValueCompileEnv::operator[](const RegIndex index)
+		{
+			throw new std::exception();
+		}
+		llvm::Value* CastedValueCompileEnv::LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type)
 		{
 			throw new std::exception();
 		}

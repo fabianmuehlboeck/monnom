@@ -35,5 +35,7 @@ namespace Nom
 		llvm::Value* PackBool(NomBuilder& builder, llvm::Value* b);
 		llvm::Value* UnpackBool(NomBuilder& builder, llvm::Value* b, bool verify=false);
 
+		llvm::Value* PackFromTag(NomBuilder& builder, llvm::Value *value, NomTypeRef typeRef, llvm::Value *tag, llvm::BasicBlock* packBlock);
+
 	}
 }

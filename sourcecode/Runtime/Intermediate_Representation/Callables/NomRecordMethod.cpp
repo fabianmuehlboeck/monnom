@@ -23,6 +23,7 @@ namespace Nom
 			fun->setCallingConv(NOMCC);
 
 			StructMethodCompileEnv menv = StructMethodCompileEnv(regcount, name, fun, &phiNodes, this->GetDirectTypeParameters(), this->GetArgumentTypes(nullptr), this);
+			menv.builder = &builder;
 			CompileEnv* env = &menv;
 
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, name + "start", fun);

@@ -10,7 +10,7 @@
 #include <iostream>
 #include "../Common/TypeOperations.h"
 #include "CastInstruction.h"
-#include "../Intermediate_Representation/NomValuePrimitiveCases.h"
+#include "../Intermediate_Representation/NomValue.h"
 #include "../Runtime_Data/Headers/RefValueHeader.h"
 #include "../Runtime/RTOutput.h"
 #include "../Common/Metadata.h"
@@ -750,127 +750,119 @@ namespace Nom
 			}
 			else
 			{
-				auto leftVal = (*env)[Left];
+				llvm::Value* leftTag;
+				NomTypeRef leftType;
+				llvm::Value* leftValue = env->LookupUnwrapped(Left, &leftTag, &leftType);
 
-				BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-				Value* leftIntValue = nullptr, * leftFloatValue = nullptr, * leftBoolValue = nullptr;
+				llvm::Value* rightTag;
+				NomTypeRef rightType;
+				llvm::Value* rightValue = env->LookupUnwrapped(Right, &rightTag, &rightType);
+
+				llvm::Value* tagsPaired = builder->CreateOr(builder->CreateShl(
+					builder->CreateZExt(leftTag, llvm::Type::getIntNTy(LLVMCONTEXT, 4)), 2), 
+					builder->CreateZExt(rightTag, llvm::Type::getIntNTy(LLVMCONTEXT, 4)));
 				Function* fun = builder->GetInsertBlock()->getParent();
+				BasicBlock* failBlock = 
+				RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!");
+				SwitchInst* switchInst = builder->CreateSwitch(tagsPaired, failBlock, 2);
 
-				auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, leftVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &leftIntValue, &primitiveFloatBlock, &leftFloatValue, &primitiveBoolBlock, &leftBoolValue);
-
-				if (refValueBlock != nullptr)
-				{
-					RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-					cases--;
-				}
-
-				if (cases == 0)
-				{
-					throw new std::exception();
-				}
-
-				BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut", fun);
-				PHINode* outPHI = nullptr;;
-				NomValue outValue;
-				if (cases > 1)
-				{
-					builder->SetInsertPoint(outBlock);
-					outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult");
-					outValue = NomValue(outPHI);
-				}
-				if (primitiveIntBlock != nullptr)
-				{
-					builder->SetInsertPoint(primitiveIntBlock);
-					auto retVal = CompileLeftInt(builder, env, lineno, leftIntValue);
-					if (retVal->getValueID() == Value::PoisonValueVal)
-					{
-						if (builder->GetInsertBlock()->getTerminator() == nullptr)
-						{
-							BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-							builder->CreateBr(invalidBlock);
-						}
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-					}
-					else
-					{
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-						else
-						{
-							retVal = EnsurePacked(builder, retVal);
-							outPHI->addIncoming(retVal, builder->GetInsertBlock());
-						}
-						builder->CreateBr(outBlock);
-					}
-				}
-				if (primitiveFloatBlock != nullptr)
-				{
-					builder->SetInsertPoint(primitiveFloatBlock);
-					auto retVal = CompileLeftFloat(builder, env, lineno, leftFloatValue);
-					if (retVal->getValueID() == Value::PoisonValueVal)
-					{
-						if (builder->GetInsertBlock()->getTerminator() == nullptr)
-						{
-							BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-							builder->CreateBr(invalidBlock);
-						}
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-					}
-					else
-					{
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-						else
-						{
-							retVal = EnsurePacked(builder, retVal);
-							outPHI->addIncoming(retVal, builder->GetInsertBlock());
-						}
-						builder->CreateBr(outBlock);
-					}
-				}
-				if (primitiveBoolBlock != nullptr)
-				{
-					builder->SetInsertPoint(primitiveBoolBlock);
-					auto retVal = CompileLeftBool(builder, env, lineno, leftBoolValue);
-					if (retVal->getValueID() == Value::PoisonValueVal)
-					{
-						if (builder->GetInsertBlock()->getTerminator() == nullptr)
-						{
-							BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-							builder->CreateBr(invalidBlock);
-						}
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-					}
-					else
-					{
-						if (outPHI == nullptr)
-						{
-							outValue = retVal;
-						}
-						else
-						{
-							retVal = EnsurePacked(builder, retVal);
-							outPHI->addIncoming(retVal, builder->GetInsertBlock());
-						}
-						builder->CreateBr(outBlock);
-					}
-				}
-
+				BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "outputBinOp", fun);
 				builder->SetInsertPoint(outBlock);
-				RegisterValue(env, outValue);
+				llvm::Type* unpackedTy = llvm::Type::getInt64Ty(LLVMCONTEXT);
+				llvm::Type* tagTy = llvm::Type::getIntNTy(LLVMCONTEXT, 2);
+				PHINode* outValue = builder->CreatePHI(unpackedTy, 2);
+				PHINode* outTag = builder->CreatePHI(tagTy, 2);
+
+				BasicBlock* finalFloatFloatBlock = BasicBlock::Create(LLVMCONTEXT, "finalFloatFloatBinOp", fun);
+
+				BasicBlock* floatFloatBlock = BasicBlock::Create(LLVMCONTEXT, "floatFloatBinOp", fun);
+				builder->SetInsertPoint(floatFloatBlock);
+				llvm::Value* leftFloatFloat = builder->CreateBitCast(leftValue, FLOATTYPE, "leftFloat");
+				llvm::Value* rightFloatFloat = builder->CreateBitCast(rightValue, FLOATTYPE, "rightFloat");
+				builder->CreateBr(finalFloatFloatBlock);
+
+				BasicBlock* intFloatBlock = BasicBlock::Create(LLVMCONTEXT, "intFloatBinOp", fun);
+				builder->SetInsertPoint(intFloatBlock);
+				llvm::Value* leftIntFloat = builder->CreateSIToFP(builder->CreateBitCast(leftValue, INTTYPE), FLOATTYPE, "leftFloat");
+				llvm::Value* rightIntFloat = builder->CreateBitCast(rightValue, FLOATTYPE, "rightFloat");
+				builder->CreateBr(finalFloatFloatBlock);
+
+				BasicBlock* floatIntBlock = BasicBlock::Create(LLVMCONTEXT, "floatIntBinOp", fun);
+				builder->SetInsertPoint(floatIntBlock);
+				llvm::Value* leftFloatInt = builder->CreateBitCast(leftValue, FLOATTYPE, "leftFloat");
+				llvm::Value* rightFloatInt = builder->CreateSIToFP(builder->CreateBitCast(rightValue, INTTYPE), FLOATTYPE, "rightFloat");
+				builder->CreateBr(finalFloatFloatBlock);
+
+				builder->SetInsertPoint(finalFloatFloatBlock);
+				PHINode* leftFloatPhi = builder->CreatePHI(FLOATTYPE, 3, "leftFloatPhi");
+				leftFloatPhi->addIncoming(leftFloatFloat, floatFloatBlock);
+				leftFloatPhi->addIncoming(leftIntFloat, intFloatBlock);
+				leftFloatPhi->addIncoming(leftFloatInt, floatIntBlock);
+				PHINode* rightFloatPhi = builder->CreatePHI(FLOATTYPE, 3, "rightFloatPhi");
+				rightFloatPhi->addIncoming(rightFloatFloat, floatFloatBlock);
+				rightFloatPhi->addIncoming(rightIntFloat, intFloatBlock);
+				rightFloatPhi->addIncoming(rightFloatInt, floatIntBlock);
+
+
+				llvm::Value* floatTagResult;
+				llvm::Value* floatResult = CompileFloatFloatLLVM(builder, env, lineno, leftFloatPhi, rightFloatPhi, &floatTagResult);
+				if (floatResult == nullptr) {
+					BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
+					builder->CreateBr(invalidBlock);
+				} else {
+					outValue->addIncoming(builder->CreateZExtOrBitCast(floatResult, unpackedTy), finalFloatFloatBlock);
+					outTag->addIncoming(floatTagResult, finalFloatFloatBlock);
+					builder->CreateBr(outBlock);
+				}
+
+				BasicBlock* intIntBlock = BasicBlock::Create(LLVMCONTEXT, "intIntBinOp", fun);
+				builder->SetInsertPoint(intIntBlock);
+				llvm::Value* leftInt = builder->CreateBitCast(leftValue, INTTYPE, "leftInt");
+				llvm::Value* rightInt = builder->CreateBitCast(rightValue, INTTYPE, "rightInt");
+				llvm::Value* intTagResult;
+				llvm::Value* intResult = CompileIntIntLLVM(builder, env, lineno, leftInt, rightInt, &intTagResult);
+				if (intResult == nullptr) {
+					BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
+					builder->CreateBr(invalidBlock);
+				} else {
+					outValue->addIncoming(builder->CreateZExtOrBitCast(intResult, unpackedTy), intIntBlock);
+					outTag->addIncoming(intTagResult, intIntBlock);
+					builder->CreateBr(outBlock);
+				}
+
+				BasicBlock* boolBoolBlock = BasicBlock::Create(LLVMCONTEXT, "boolBoolBinOp", fun);
+				builder->SetInsertPoint(boolBoolBlock);
+				llvm::Value* leftBool = builder->CreateTrunc(leftValue, BOOLTYPE, "leftBool");
+				llvm::Value* rightBool = builder->CreateTrunc(rightValue, BOOLTYPE, "rightBool");
+				llvm::Value* boolTagResult;
+				llvm::Value* boolResult = CompileBoolBoolLLVM(builder, env, lineno, leftBool, rightBool, &boolTagResult);
+				if (boolResult == nullptr) {
+					BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
+					builder->CreateBr(invalidBlock);
+				} else {
+					outValue->addIncoming(builder->CreateZExt(boolResult, unpackedTy), boolBoolBlock);
+					outTag->addIncoming(boolTagResult, boolBoolBlock);
+					builder->CreateBr(outBlock);
+				}
+
+				switchInst->addCase(MakeUInt(4, 1 << 2 | 1), floatFloatBlock);
+				switchInst->addCase(MakeUInt(4, 3 << 2 | 1), intFloatBlock);
+				switchInst->addCase(MakeUInt(4, 1 << 2 | 3), floatIntBlock);
+				switchInst->addCase(MakeUInt(4, 3 << 2 | 3), intIntBlock);
+				switchInst->addCase(MakeUInt(4, 2 << 2 | 2), boolBoolBlock);
+
+				BasicBlock* packBlock = BasicBlock::Create(LLVMCONTEXT, "packBlock", fun);
+				builder->SetInsertPoint(outBlock);
+				builder->CreateBr(packBlock);
+
+				BasicBlock* continueBlock = BasicBlock::Create(LLVMCONTEXT, "afterBinOp", fun);
+				builder->SetInsertPoint(packBlock);
+				builder->CreateBr(continueBlock);
+
+				auto outVal = NomValue(outValue, outTag, packBlock, NomReturnType(leftType, rightType));
+
+				builder->SetInsertPoint(continueBlock);
+				RegisterValue(env, outVal);
 			}
 		}
 
@@ -888,370 +880,146 @@ namespace Nom
 		{
 		}
 
-		NomValue BinOpInstruction::CompileLeftInt(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
+		llvm::Value* BinOpInstruction::CompileIntIntLLVM(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right, llvm::Value** resultTag)
 		{
-			auto rightVal = (*env)[Right];
-
-			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-			Value* rightIntValue = nullptr, * rightFloatValue = nullptr, * rightBoolValue = nullptr;
-			Function* fun = builder->GetInsertBlock()->getParent();
-
-			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, rightVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &rightIntValue, &primitiveFloatBlock, &rightFloatValue, &primitiveBoolBlock, &rightBoolValue);
-
-			if (refValueBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-				cases--;
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Integers and Booleans!", primitiveBoolBlock);
-				cases--;
-			}
-			if (cases == 0)
-			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
-			}
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftInt", fun);
-			PHINode* outPHI = nullptr;
-			NomValue outValue;
-			if (cases > 1)
-			{
-				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftInt");
-				outValue = NomValue(outPHI);
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveIntBlock);
-				auto retVal = CompileIntInt(builder, env, lineno, left, rightIntValue);
-				if (retVal->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveFloatBlock);
-				auto retVal = CompileFloatFloat(builder, env, lineno, builder->CreateSIToFP(left, FLOATTYPE, "leftAsFloat"), rightFloatValue);
-				if (retVal->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			builder->SetInsertPoint(outBlock);
-			return outValue;
-		}
-		NomValue BinOpInstruction::CompileLeftFloat(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
-		{
-			auto rightVal = (*env)[Right];
-
-			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-			Value* rightIntValue = nullptr, * rightFloatValue = nullptr, * rightBoolValue = nullptr;
-			Function* fun = builder->GetInsertBlock()->getParent();
-
-			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, rightVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &rightIntValue, &primitiveFloatBlock, &rightFloatValue, &primitiveBoolBlock, &rightBoolValue);
-
-			if (refValueBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-				cases--;
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Floats and Booleans!", primitiveBoolBlock);
-				cases--;
-			}
-			if (cases == 0)
-			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
-			}
-
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftFloat", fun);
-			PHINode* outPHI = nullptr;
-			NomValue outValue;
-			if (cases > 1)
-			{
-				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftFloat");
-				outValue = NomValue(outPHI);
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveIntBlock);
-				auto retVal = CompileFloatFloat(builder, env, lineno, left, builder->CreateSIToFP(rightIntValue, FLOATTYPE, "rightAsFloat"));
-				if (retVal->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveFloatBlock);
-				auto retVal = CompileFloatFloat(builder, env, lineno, left, rightFloatValue); if (retVal->getValueID() == Value::PoisonValueVal)
-				{
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			builder->SetInsertPoint(outBlock);
-			return outValue;
-		}
-		NomValue BinOpInstruction::CompileLeftBool(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
-		{
-			auto rightVal = (*env)[Right];
-
-			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
-			Value* rightIntValue = nullptr, * rightFloatValue = nullptr, * rightBoolValue = nullptr;
-			Function* fun = builder->GetInsertBlock()->getParent();
-
-			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(builder, rightVal, &refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &rightIntValue, &primitiveFloatBlock, &rightFloatValue, &primitiveBoolBlock, &rightBoolValue);
-
-			if (refValueBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "Invalid binary operation on non-primitive operand!", refValueBlock);
-				cases--;
-			}
-			if (primitiveIntBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Booleans and Integers!", primitiveIntBlock);
-				cases--;
-			}
-			if (primitiveFloatBlock != nullptr)
-			{
-				RTOutput_Fail::MakeBlockFailOutputBlock(builder, "No binary operations on Booleans and Floats!", primitiveFloatBlock);
-				cases--;
-			}
-
-			if (cases == 0)
-			{
-				//auto nullVal = GetLLVMRef(nullptr);
-				//nullVal->setName("INVALID_VALUE");
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
-			}
-
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "binOpOut$leftBool", fun);
-			PHINode* outPHI = nullptr;
-			NomValue outValue;
-			if (cases > 1)
-			{
-				builder->SetInsertPoint(outBlock);
-				outPHI = builder->CreatePHI(REFTYPE, cases, "binOpResult$leftBool");
-				outValue = NomValue(outPHI);
-			}
-			if (primitiveBoolBlock != nullptr)
-			{
-				builder->SetInsertPoint(primitiveBoolBlock);
-				auto retVal = CompileBoolBool(builder, env, lineno, left, rightBoolValue);
-				if (retVal->getValueID() == Value::PoisonValueVal)
-				{
-
-					if (builder->GetInsertBlock()->getTerminator() == nullptr)
-					{
-						BasicBlock* invalidBlock = RTOutput_Fail::GenerateFailOutputBlock(builder, "Invalid operation on given operands!");
-						builder->CreateBr(invalidBlock);
-					}
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-				}
-				else
-				{
-					if (outPHI == nullptr)
-					{
-						outValue = retVal;
-					}
-					else
-					{
-						retVal = EnsurePacked(builder, retVal);
-						outPHI->addIncoming(retVal, builder->GetInsertBlock());
-					}
-					builder->CreateBr(outBlock);
-				}
-			}
-			builder->SetInsertPoint(outBlock);
-			return outValue;
-		}
-		NomValue BinOpInstruction::CompileLeftPointer(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left)
-		{
-			return NomValue(GetLLVMRef(nullptr), NomType::Anything);
-		}
-		NomValue BinOpInstruction::CompileIntInt(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right)
-		{
+			llvm::Value* intTypeTag = MakeUInt(2, 3);
+			llvm::Value* boolTypeTag = MakeUInt(2, 2);
 			switch (Operation)
 			{
 			case BinaryOperation::Add:
-				return NomValue(builder->CreateAdd(left, right), NomIntClass::GetInstance()->GetType());
+				*resultTag = intTypeTag;
+				return builder->CreateAdd(left, right);
 			case BinaryOperation::Subtract:
-				return NomValue(builder->CreateSub(left, right), NomIntClass::GetInstance()->GetType());
+				*resultTag = intTypeTag;
+				return builder->CreateSub(left, right);
 			case BinaryOperation::Multiply:
-				return NomValue(builder->CreateMul(left, right), NomIntClass::GetInstance()->GetType());
+				*resultTag = intTypeTag;
+				return builder->CreateMul(left, right);
 			case BinaryOperation::Divide:
-				return NomValue(builder->CreateSDiv(left, right), NomIntClass::GetInstance()->GetType());
+				*resultTag = intTypeTag;
+				return builder->CreateSDiv(left, right);
 			case BinaryOperation::Mod:
-				return NomValue(builder->CreateSRem(left, right), NomIntClass::GetInstance()->GetType());
+				*resultTag = intTypeTag;
+				return builder->CreateSRem(left, right);
 			case BinaryOperation::GreaterThan:
-				return NomValue(builder->CreateICmpSGT(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateICmpSGT(left, right);
 			case BinaryOperation::LessThan:
-				return NomValue(builder->CreateICmpSLT(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateICmpSLT(left, right);
 			case BinaryOperation::GreaterOrEqualTo:
-				return NomValue(builder->CreateICmpSGE(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateICmpSGE(left, right);
 			case BinaryOperation::LessOrEqualTo:
-				return NomValue(builder->CreateICmpSLE(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateICmpSLE(left, right);
 			case BinaryOperation::Equals:
-				return NomValue(builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateICmpEQ(left, right);
 			case BinaryOperation::RefEquals:
-				return NomValue(builder->CreateICmpEQ(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateICmpEQ(left, right);
 			default:
 			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				*resultTag = nullptr;
+				return nullptr;
 			}
 			}
 		}
-		NomValue BinOpInstruction::CompileFloatFloat(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right)
+		llvm::Value* BinOpInstruction::CompileFloatFloatLLVM(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right, llvm::Value** resultTag)
 		{
+			llvm::Value* floatTypeTag = MakeUInt(2, 1);
+			llvm::Value* boolTypeTag = MakeUInt(2, 2);
 			switch (Operation)
 			{
 			case BinaryOperation::Add:
-				return NomValue(builder->CreateFAdd(left, right), NomFloatClass::GetInstance()->GetType());
+				*resultTag = floatTypeTag;
+				return builder->CreateFAdd(left, right);
 			case BinaryOperation::Subtract:
-				return NomValue(builder->CreateFSub(left, right), NomFloatClass::GetInstance()->GetType());
+				*resultTag = floatTypeTag;
+				return builder->CreateFSub(left, right);
 			case BinaryOperation::Multiply:
-				return NomValue(builder->CreateFMul(left, right), NomFloatClass::GetInstance()->GetType());
+				*resultTag = floatTypeTag;
+				return builder->CreateFMul(left, right);
 			case BinaryOperation::Divide:
-				return NomValue(builder->CreateFDiv(left, right), NomFloatClass::GetInstance()->GetType());
-			case BinaryOperation::Equals:
-				return NomValue(builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType());
-			case BinaryOperation::RefEquals:
-				return NomValue(builder->CreateFCmpOEQ(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = floatTypeTag;
+				return builder->CreateFDiv(left, right);
 			case BinaryOperation::Mod:
-				return NomValue(builder->CreateFRem(left, right), NomFloatClass::GetInstance()->GetType());
+				*resultTag = floatTypeTag;
+				return builder->CreateFRem(left, right);
+			case BinaryOperation::Equals:
+				*resultTag = boolTypeTag;
+				return builder->CreateFCmpOEQ(left, right);
+			case BinaryOperation::RefEquals:
+				*resultTag = boolTypeTag;
+				return builder->CreateFCmpOEQ(left, right);
 			case BinaryOperation::GreaterThan:
-				return NomValue(builder->CreateFCmpOGT(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateFCmpOGT(left, right);
 			case BinaryOperation::LessThan:
-				return NomValue(builder->CreateFCmpOLT(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateFCmpOLT(left, right);
 			case BinaryOperation::GreaterOrEqualTo:
-				return NomValue(builder->CreateFCmpOGE(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateFCmpOGE(left, right);
 			case BinaryOperation::LessOrEqualTo:
-				return NomValue(builder->CreateFCmpOLE(left, right), NomBoolClass::GetInstance()->GetType());
+				*resultTag = boolTypeTag;
+				return builder->CreateFCmpOLE(left, right);
 			default:
 			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				*resultTag = nullptr;
+				return nullptr;
 			}
 			}
 		}
-		NomValue BinOpInstruction::CompileBoolBool(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right)
+		llvm::Value* BinOpInstruction::CompileBoolBoolLLVM(NomBuilder& builder, CompileEnv* env, int lineno, llvm::Value* left, llvm::Value* right, llvm::Value** resultTag)
 		{
+			*resultTag = MakeUInt(2, 2);
 			switch (Operation)
 			{
 			case BinaryOperation::And:
-				return NomValue(EnsurePacked(builder, builder->CreateAnd(left, right)), NomBoolClass::GetInstance()->GetType());
+				return EnsurePacked(builder, builder->CreateAnd(left, right));
 			case BinaryOperation::Or:
-				return NomValue(EnsurePacked(builder, builder->CreateOr(left, right)), NomBoolClass::GetInstance()->GetType());
+				return EnsurePacked(builder, builder->CreateOr(left, right));
 			case BinaryOperation::BitXOR:
-				return NomValue(EnsurePacked(builder, builder->CreateXor(left, right)), NomBoolClass::GetInstance()->GetType());
+				return EnsurePacked(builder, builder->CreateXor(left, right));
 			case BinaryOperation::Equals:
-				return NomValue(EnsurePacked(builder, builder->CreateICmpEQ(left, right)), NomBoolClass::GetInstance()->GetType());
+				return EnsurePacked(builder, builder->CreateICmpEQ(left, right));
 			case BinaryOperation::RefEquals:
-				return NomValue(EnsurePacked(builder, builder->CreateICmpEQ(left, right)), NomBoolClass::GetInstance()->GetType());
+				return EnsurePacked(builder, builder->CreateICmpEQ(left, right));
 			default:
 			{
-				auto nullVal = PoisonValue::get(REFTYPE);
-				return NomValue(nullVal, NomType::Anything);
+				*resultTag = nullptr;
+				return nullptr;
 			}
 			}
+		}
+
+		NomTypeRef BinOpInstruction::NomReturnType(NomTypeRef leftTy, NomTypeRef rightTy) {
+			switch (Operation)
+			{
+			case BinaryOperation::And:
+			case BinaryOperation::Or:
+			case BinaryOperation::BitXOR:
+			case BinaryOperation::GreaterThan:
+			case BinaryOperation::LessThan:
+			case BinaryOperation::GreaterOrEqualTo:
+			case BinaryOperation::Equals:
+			case BinaryOperation::RefEquals:
+				return GetBoolClassType();
+			case BinaryOperation::Add:
+			case BinaryOperation::Subtract:
+			case BinaryOperation::Multiply:
+			case BinaryOperation::Divide:
+			case BinaryOperation::Mod:
+				if (leftTy->IsSubtype(GetFloatClassType(), false) || rightTy->IsSubtype(GetFloatClassType(), false))
+					return GetFloatClassType();
+				else if (leftTy->IsSubtype(GetIntClassType(), false) && rightTy->IsSubtype(GetIntClassType(), false))
+					return GetIntClassType();
+			default:
+				break;
+			}
+			return GetDynamicType();
 		}
 
 		const char* GetBinOpName(BinaryOperation op)
