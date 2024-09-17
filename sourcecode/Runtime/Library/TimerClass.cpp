@@ -1,5 +1,6 @@
 #include "../Library/TimerClass.h"
 #include "../Library/ObjectClass.h"
+#include "../Library/FloatClass.h"
 #include "../Intermediate_Representation/Callables/NomConstructor.h"
 #include "../Runtime/NomJIT.h"
 #include "../Common/DLLExport.h"
@@ -36,6 +37,48 @@ namespace Nom
 		}
 #endif
 	}
+}
+
+extern "C" DLLEXPORT double LIB_NOM_Timer_GetDifference_1(void* timer) noexcept(false)
+{
+#ifdef _WIN32
+	char* valueptr = ((char*)timer) + sizeof(LARGE_INTEGER);
+	LARGE_INTEGER value = *((LARGE_INTEGER*)valueptr);
+	LARGE_INTEGER current;
+	LARGE_INTEGER difference;
+	if (QueryPerformanceCounter(&current))
+	{
+		difference.QuadPart = current.QuadPart - value.QuadPart;
+		double floatdiff = ((double)(difference.QuadPart)) / Nom::Runtime::find_timer_frequency();
+		return floatdiff;
+	}
+	else
+	{
+		throw new std::exception();
+		//ThrowException(&stackframe, "Could not retrieve thread timings!");
+	}
+#else
+#ifdef CLOCK_THREAD_CPUTIME_ID
+	struct timespec current;
+	struct timespec* myvalptr = (struct timespec*)(((char*)timer) + sizeof(intptr_t));
+	if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &current) == 0)
+	{
+		long differenceMS = ((current.tv_sec - myvalptr->tv_sec) * 10000) + ((current.tv_nsec - myvalptr->tv_nsec) / 100000);
+		double floatdiff = ((double)differenceMS) / 10000.0;
+		return floatdiff;
+	}
+	else
+	{
+		throw new std::exception();
+	}
+#else
+	clock_t* myclock = (clock_t*)(((char*)timer) + sizeof(intptr_t));
+	clock_t now = clock();
+	long t = (long)(clock() - (*myclock);
+	auto tdiff = ((double)t) / CLOCKS_PER_SEC;
+	return tdiff
+#endif
+#endif
 }
 
 extern "C" DLLEXPORT void* LIB_NOM_Timer_PrintDifference_1(void* timer) noexcept(false)
@@ -134,6 +177,13 @@ namespace Nom
 
 			this->AddMethod(printDifference);
 
+			NomMethodInternal* getDifference = new NomMethodInternal(this, "GetDifference", "LIB_NOM_Timer_GetDifference_1", true);
+			getDifference->SetDirectTypeParameters();
+			getDifference->SetArgumentTypes();
+			getDifference->SetReturnType(NomFloatClass::GetInstance()->GetType());
+
+			this->AddMethod(getDifference);
+
 			NomConstructorInternal* constructor = new NomConstructorInternal("LIB_NOM_Timer_Constructor_0", this);
 			constructor->SetDirectTypeParameters();
 			constructor->SetArgumentTypes();
@@ -159,6 +209,7 @@ namespace Nom
 
 			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Timer_Constructor_0", (void*)&LIB_NOM_Timer_Constructor_0);
 			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Timer_PrintDifference_1", (void*)&LIB_NOM_Timer_PrintDifference_1);
+			llvm::sys::DynamicLibrary::AddSymbol("LIB_NOM_Timer_GetDifference_1", (void*)&LIB_NOM_Timer_GetDifference_1);
 
 		}
 		NomTimerClass* NomTimerClass::GetInstance()
