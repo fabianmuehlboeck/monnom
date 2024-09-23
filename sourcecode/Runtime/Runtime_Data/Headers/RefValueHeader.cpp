@@ -20,6 +20,8 @@
 #include "../../Runtime_Data/Headers/StructuralValueHeader.h"
 #include "../../Common/Metadata.h"
 #include "../../Intermediate_Representation/Types/NomMaybeType.h"
+#include "../../Runtime/Config/RTConfig.h"
+#include "../../Runtime/Statistics/CastStats.h"
 
 using namespace llvm;
 using namespace std;
@@ -492,6 +494,10 @@ namespace Nom
 					builder->CreateCondBr(isInt, unboxIntBlock, _refValueBlock, (intWeight > boolRefWeight && intWeight > floatWeight)?GetLikelyFirstBranchMetadata():GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(unboxIntBlock);
+					if (NomCastStats)
+                    {
+                        builder->CreateCall(GetIncIntBoxesFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
+                    }
 					auto unboxedInt = builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE, "unboxedInt");
 					_primitiveIntPHI->addIncoming(unboxedInt, unboxIntBlock);
 					builder->CreateBr(_primitiveIntBlock);
@@ -507,6 +513,10 @@ namespace Nom
 					builder->CreateCondBr(isFloat, unboxFloatBlock, _refValueBlock, (floatWeight > boolRefWeight) ? GetLikelyFirstBranchMetadata() : GetLikelySecondBranchMetadata());
 
 					builder->SetInsertPoint(unboxFloatBlock);
+					if (NomCastStats)
+                    {
+                        builder->CreateCall(GetIncFloatUnboxesFunction(*builder->GetInsertBlock()->getParent()->getParent()), {});
+                    }
 					auto unboxedFloat = builder->CreateBitCast(builder->CreatePtrToInt(ObjectHeader::ReadField(builder, value, MakeInt32(0), false), INTTYPE), FLOATTYPE, "unboxedFloat");
 					_primitiveFloatPHI->addIncoming(unboxedFloat, unboxFloatBlock);
 					builder->CreateBr(_primitiveFloatBlock);

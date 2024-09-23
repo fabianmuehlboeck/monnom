@@ -22,6 +22,8 @@
 #include "../Runtime_Data/Headers/RecordHeader.h"
 #include "../Intermediate_Representation/NomTypeParameter.h"
 #include "../Runtime/RTCompileConfig.h"
+#include "../Runtime/Config/RTConfig.h"
+#include "../Runtime/Statistics/CastStats.h"
 
 namespace Nom
 {
@@ -102,7 +104,6 @@ namespace Nom
 			if (cases > 1)
 			{
 				BUILDER->SetInsertPoint(outBlock);
-				// TODO: what is the type of an unpacked value?
 
 				outValuePHI = BUILDER->CreatePHI(unpackedTy, cases, "unpackedValue");
 				outTagPHI = BUILDER->CreatePHI(llvm::Type::getIntNTy(LLVMCONTEXT, 2), cases, "unpackedTag");
@@ -116,6 +117,11 @@ namespace Nom
 					outValue = BUILDER->CreateBitCast(intValue, unpackedTy, "unpackedInt");
 					*tag = MakeUInt(2, 3);
 				} else {
+					// TODO: Check if this is actually sufficient! I think it is though since in RefValueHeader if the type is known statically
+					// Then the correct call is generated
+					if (NomCastStats) {
+                        BUILDER->CreateCall(GetIncIntUnpacksFunction(*BUILDER->GetInsertBlock()->getParent()->getParent()), {});
+					}
 					auto casted = BUILDER->CreateBitCast(intValue, unpackedTy, "unpackedInt");
 					outValuePHI->addIncoming(casted, primitiveIntBlock);
 					outTagPHI->addIncoming(MakeUInt(2,3), primitiveIntBlock);
@@ -130,6 +136,9 @@ namespace Nom
 					outValue = BUILDER->CreateBitCast(floatValue, unpackedTy, "unpackedFloat");
 					*tag = MakeUInt(2, 1);
 				} else {
+					if (NomCastStats) {
+                        BUILDER->CreateCall(GetIncFloatUnpacksFunction(*BUILDER->GetInsertBlock()->getParent()->getParent()), {});
+					}
 					auto casted = BUILDER->CreateBitCast(floatValue, unpackedTy, "unpackedFloat");
 					outValuePHI->addIncoming(casted, primitiveFloatBlock);
 					outTagPHI->addIncoming(MakeUInt(2,1), primitiveFloatBlock);
