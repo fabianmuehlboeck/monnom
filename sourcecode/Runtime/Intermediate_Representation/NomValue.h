@@ -32,6 +32,7 @@ namespace Nom
 			// Alternatively, always have a tag, and if the type if obvious then the tag will be obvious
 			// So llvm can optimise any switches
 			T * tag;
+			T * tagVal;
 			llvm::BasicBlock * packValBlock;
 		public:
 			NomValueContainer() : val(nullptr), type(nullptr)
@@ -51,7 +52,7 @@ namespace Nom
 				__NomValueContainerDebugCheck(type, val->getType());
 				#endif
 			}
-			NomValueContainer(T* val, T* tag, llvm::BasicBlock* packValBlock, NomTypeRef type, bool isFunctionCall = false) : val(val), type(type), isFunctionCall(isFunctionCall)
+			NomValueContainer(T* val, T* tag, llvm::BasicBlock* packValBlock, NomTypeRef type, bool isFunctionCall = false) : val(nullptr), tagVal(val), type(type), isFunctionCall(isFunctionCall)
 			, tag(tag), packValBlock(packValBlock) 
 			{
 				#ifdef _DEBUG
@@ -82,13 +83,22 @@ namespace Nom
 			{
 				return tag;
 			}
+			void TagAndVal(T*& outTag, T*& outVal) const
+			{
+				outTag = tag;
+				outVal = tagVal;
+			}
 			llvm::BasicBlock * GetPackBlock() {
 				return packValBlock;
 			}
 
 			void MakePacked(T* newVal) {
 				val = newVal;
-				tag = nullptr;
+				// tag = nullptr;
+			}
+			void MakeUnpacked(T* unpackedVal, T* newTag) {
+				tagVal = unpackedVal;
+				tag = newTag;
 			}
 
 			operator T*() const { return val; }

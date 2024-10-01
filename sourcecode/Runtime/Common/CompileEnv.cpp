@@ -64,25 +64,28 @@ namespace Nom
 			}
 
 			auto value = registers[index];
-			auto tag = value.GetTag();
-			if (*value == nullptr || tag == nullptr) return registers[index];
+			llvm::Value *tag, *tagVal;
+			value.TagAndVal(tag, tagVal);
+			// Need to handle both a value being defined, and also the register being undefined.
+			if (*value != nullptr || (tag == nullptr && *value == nullptr)) return registers[index];
 			if (builder == nullptr) throw "Builder needed to lookup NomValue";
-			auto newValue = Runtime::PackFromTag(*builder, value, value.GetNomType(), tag, value.GetPackBlock());
+			auto newValue = Runtime::PackFromTag(*builder, tagVal, value.GetNomType(), tag, value.GetPackBlock());
 			registers[index].MakePacked(newValue);
 			return registers[index];
 		}
-		llvm::Value* ACompileEnv::LookupUnwrapped(const RegIndex index, llvm::Value** tag, NomTypeRef* type)
+		llvm::Value* ACompileEnv::LookupUnwrapped(const RegIndex index, llvm::Value** outTag, NomTypeRef* type)
 		{
 			if (index < 0 || index >= regcount)
 			{
 				throw "Invalid Register index!";
 			}
 			auto value = registers[index];
-			auto valueTag = value.GetTag();
+			llvm::Value *tag, *tagVal;
+			value.TagAndVal(tag, tagVal);
 			*type = value.GetNomType();
-			if (valueTag != nullptr) {
-				*tag = valueTag;
-				return *value;
+			if (tag != nullptr) {
+				*outTag = tag;
+				return tagVal;
 			}
 
 			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * 
@@ -115,7 +118,7 @@ namespace Nom
 				BUILDER->SetInsertPoint(primitiveIntBlock);
 				if (outValuePHI == nullptr) {
 					outValue = BUILDER->CreateBitCast(intValue, unpackedTy, "unpackedInt");
-					*tag = MakeUInt(2, 3);
+					*outTag = MakeUInt(2, 3);
 				} else {
 					// TODO: Check if this is actually sufficient! I think it is though since in RefValueHeader if the type is known statically
 					// Then the correct call is generated
@@ -134,7 +137,7 @@ namespace Nom
 				BUILDER->SetInsertPoint(primitiveFloatBlock);
 				if (outValuePHI == nullptr) {
 					outValue = BUILDER->CreateBitCast(floatValue, unpackedTy, "unpackedFloat");
-					*tag = MakeUInt(2, 1);
+					*outTag = MakeUInt(2, 1);
 				} else {
 					if (NomCastStats) {
                         BUILDER->CreateCall(GetIncFloatUnpacksFunction(*BUILDER->GetInsertBlock()->getParent()->getParent()), {});
@@ -151,7 +154,7 @@ namespace Nom
 				BUILDER->SetInsertPoint(refValueBlock);
 				if (outValuePHI == nullptr) {
 					outValue = BUILDER->CreatePtrToInt(value, unpackedTy, "unpackedRef");
-					*tag = MakeUInt(2, 0);
+					*outTag = MakeUInt(2, 0);
 				} else {
 					auto casted = BUILDER->CreatePtrToInt(value, unpackedTy, "unpackedRef");
 					outValuePHI->addIncoming(casted, refValueBlock);
@@ -165,7 +168,7 @@ namespace Nom
 				BUILDER->SetInsertPoint(primitiveBoolBlock);
 				if (outValuePHI == nullptr) {
 					outValue = BUILDER->CreateZExt(boolValue, unpackedTy, "unpackedBool");
-					*tag = MakeUInt(2, 0);
+					*outTag = MakeUInt(2, 0);
 				} else {
 					auto casted = BUILDER->CreateZExt(boolValue, unpackedTy, "unpackedBool");
 					outValuePHI->addIncoming(casted, primitiveBoolBlock);
@@ -176,9 +179,10 @@ namespace Nom
 
 			BUILDER->SetInsertPoint(outBlock);
 			if (outValuePHI != nullptr) {
-				*tag = outTagPHI;
+				*outTag = outTagPHI;
 			}
 
+			registers[index].MakeUnpacked(outValue, *outTag);
 			return outValue;
 			#undef BUILDER
 
