@@ -149,7 +149,11 @@ namespace Nom
 				throw new std::exception();
 			}
 		}
-		AFullArityCompileEnv::AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, int argument_offset, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType, NomBuilder& builder) : ACompileEnv(regcount, contextName, function, argument_offset, phiNodes, directTypeArgs, context, argtypes, thisType)
+		AFullArityCompileEnv::AFullArityCompileEnv(const RegIndex regcount, const llvm::Twine contextName, 
+			llvm::Function* function, int argument_offset, 
+			const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, 
+			const NomMemberContext* context, const TypeList argtypes, NomTypeRef thisType, NomBuilder& builder) 
+			: ACompileEnv(regcount, contextName, function, argument_offset, phiNodes, directTypeArgs, context, argtypes, thisType)
 		{
 			size_t argcount = 0;
 			RegIndex argindex = 0;
@@ -163,7 +167,8 @@ namespace Nom
 				}
 				if (argcount == 0 && thisType != nullptr)
 				{
-					registers[argindex] = NomValue(&Arg, thisType);
+					llvm::Value* val = builder->CreateBitCast(&Arg, REFTYPE, "rA");
+					registers[argindex] = NomValue(val, thisType);
 					argindex++;
 				}
 				else if (argcount + (thisType != nullptr ? 0 : 1) <= typeArgCount)
@@ -173,8 +178,16 @@ namespace Nom
 				}
 				else
 				{
-					registers[argindex] = NomValue(&Arg, argtypes[argindex - (thisType == nullptr ? 0 : 1)]);
-					argindex++;
+					if (Arg.getType()->isPointerTy()) {
+						llvm::Value* val = builder->CreateBitCast(&Arg, REFTYPE, "cA");
+						int k = argindex - (thisType == nullptr ? 0 : 1);
+						registers[argindex] = NomValue(val, argtypes[argindex - (thisType == nullptr ? 0 : 1)]);
+						argindex++;
+					}
+					else {
+						registers[argindex] = NomValue(&Arg, argtypes[argindex - (thisType == nullptr ? 0 : 1)]);
+						argindex++;
+					}
 				}
 				argcount++;
 			}
@@ -278,20 +291,46 @@ namespace Nom
 		}
 #pragma endregion
 
-#pragma region CLibCompileEnv
-		CLibCompileEnv::CLibCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, const NomStaticMethod* method, NomBuilder& builder) : AFullArityCompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, method, argtypes, nullptr, builder), Method(method)
+#pragma region CLibStaticCompileEnv
+		CLibStaticCompileEnv::CLibStaticCompileEnv(RegIndex regcount, const llvm::Twine contextName, 
+			llvm::Function* function, const std::vector<PhiNode*>* phiNodes, 
+			const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, 
+			NomClassTypeRef thisType, NomBuilder& builder) 
+			: AFullArityCompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, NULL, argtypes, thisType, builder), Method(NULL)
 		{
 		}
 
-		NomTypeVarValue CLibCompileEnv::GetTypeArgument(NomBuilder& builder, int i)
+		NomTypeVarValue CLibStaticCompileEnv::GetTypeArgument(NomBuilder& builder, int i)
 		{
 			return TypeArguments[i];
 		}
-		size_t CLibCompileEnv::GetEnvTypeArgumentCount()
+		size_t CLibStaticCompileEnv::GetEnvTypeArgumentCount()
 		{
 			return 0;
 		}
-		llvm::Value* CLibCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
+		llvm::Value* CLibStaticCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
+		{
+			return ConstantPointerNull::get(TYPETYPE->getPointerTo());
+		}
+#pragma endregion
+
+#pragma region CLibInstanceCompileEnv
+		CLibInstanceCompileEnv::CLibInstanceCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, 
+			const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, 
+			const TypeList argtypes, NomClassTypeRef thisType, NomBuilder& builder) 
+			: AFullArityCompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, NULL, argtypes, thisType, builder), Method(NULL)
+		{
+		}
+
+		NomTypeVarValue CLibInstanceCompileEnv::GetTypeArgument(NomBuilder& builder, int i)
+		{
+			return TypeArguments[i];
+		}
+		size_t CLibInstanceCompileEnv::GetEnvTypeArgumentCount()
+		{
+			return 0;
+		}
+		llvm::Value* CLibInstanceCompileEnv::GetEnvTypeArgumentArray(NomBuilder& builder)
 		{
 			return ConstantPointerNull::get(TYPETYPE->getPointerTo());
 		}

@@ -17,7 +17,7 @@
 #include "CastStats.h"
 #include "NomClassType.h"
 #include "Runtime.h"
-#include "LibraryTest.h"
+#include "NomCLib.h"
 
 using namespace Nom::Runtime;
 
@@ -156,7 +156,6 @@ extern "C" DLLEXPORT void* LIB_NOM_String_Print_1(void* str)
 		std::cout << ((NomStringRef)GetReadFieldFunction()(str, 0))->ToStdString();
 		std::cout.flush();
 	}
-	LibraryTest::print_test();
 	//std::cout << ((NomStringRef)(ObjectHeader(str).Fields()-sizeof(intptr_t)))->ToStdString();
 	return (void*)((intptr_t)(NomJIT::Instance().getSymbolAddress("RT_NOM_VOIDOBJ")));
 }

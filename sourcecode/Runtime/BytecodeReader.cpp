@@ -513,6 +513,7 @@ namespace Nom
 			bool isFinal = (bool)stream.read<char>();
 			RegIndex regcount = stream.read<RegIndex>();
 			NomMethodLoaded* meth = iface->AddMethod(namestr, iface->GetName()->ToStdString() + "." + namestr, typeParameters, returnType, argTypes, regcount, isFinal);
+			
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
 				auto instr = ReadInstruction();
@@ -537,7 +538,14 @@ namespace Nom
 			std::string namestr = NomConstants::GetString(name)->GetText()->ToStdString();
 			RegIndex regcount = stream.read<RegIndex>();
 			std::string qnamestr = cls->GetName()->ToStdString() + "." + namestr;
+
+			//NomSubstitutionContextMemberContext nscmc("What Context Here?");
+			//auto argTypes = NomConstants::GetTypeList(argTypes)->GetTypeList(&nscmc);
+
+
 			NomStaticMethodLoaded* meth = cls->AddStaticMethod(namestr, qnamestr, typeargs, returnType, argTypes, regcount);
+			ArrayRef<NomTypeParameterRef> ref = meth->GetAllTypeParameters();
+			//TypeList t = meth->get;
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
 				auto instr = ReadInstruction();

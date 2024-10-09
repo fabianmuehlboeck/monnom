@@ -1,5 +1,6 @@
 #pragma once
 #include "../NomValueInstruction.h"
+#include "../NomInstantiationRef.h"
 #include "../Defs.h"
 
 namespace Nom
@@ -15,7 +16,7 @@ namespace Nom
 			virtual ~CallCheckedStaticMethod();
 			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
 			void CompileDirectly(NomString* className, NomString* methodName, llvm::ArrayRef<NomTypeRef> typeArgs, llvm::ArrayRef<NomTypeRef> argTypes, NomBuilder& builder, CompileEnv* env, int lineno);
-
+			void CompileActual(NomInstantiationRef<const NomStaticMethod> method, llvm::ArrayRef<NomTypeRef> typeArgs, NomBuilder& builder, CompileEnv* env, int lineno);
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;
 

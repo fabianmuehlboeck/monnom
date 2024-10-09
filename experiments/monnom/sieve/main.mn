@@ -78,12 +78,6 @@ class Main
 	{
 		return Main.Sieve(Main.CountFrom(2));
 	}
-
-	public static fun PrintTest(Int n1, Int n2, Object s) : Int
-	{
-		Int n3 = n1 + n2;
-		return n3;
-	}
 	
 	public static fun Main() : Void
 	{

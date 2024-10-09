@@ -17,6 +17,7 @@ namespace Nom
 			~CallConstructor();
 
 			virtual void Compile(NomBuilder& builder, CompileEnv* env, int lineno) override;
+			void CompileDirectly(NomInstantiationRef<NomClass> cls, TypeList argTypes, NomBuilder& builder, CompileEnv* env, int lineno);
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

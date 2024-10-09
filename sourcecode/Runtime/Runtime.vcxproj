@@ -191,8 +191,10 @@
     <ClCompile Include="BoolClass.cpp" />
     <ClCompile Include="BytecodeReader.cpp" />
     <ClCompile Include="BytecodeTopReadHandler.cpp" />
+    <ClCompile Include="CallParser.cpp" />
     <ClCompile Include="CastStats.cpp" />
     <ClCompile Include="CharStream.cpp" />
+    <ClCompile Include="ClassMethodParser.cpp" />
     <ClCompile Include="ClassTypeList.cpp" />
     <ClCompile Include="CompileEnv.cpp" />
     <ClCompile Include="CompileHelpers.cpp" />
@@ -207,6 +209,7 @@
     <ClCompile Include="FloatClass.cpp" />
     <ClCompile Include="FunctionTimings.cpp" />
     <ClCompile Include="FunInterface.cpp" />
+    <ClCompile Include="GeneratedFunction.cpp" />
     <ClCompile Include="GloballyNamed.cpp" />
     <ClCompile Include="IComparableInterface.cpp" />
     <ClCompile Include="IEnumeratorInterface.cpp" />
@@ -240,7 +243,7 @@
     <ClCompile Include="Library.cpp" />
     <ClCompile Include="LibraryDependency.cpp" />
     <ClCompile Include="LibrarySource.cpp" />
-    <ClCompile Include="LibraryTest.cpp" />
+    <ClCompile Include="NomCLib.cpp" />
     <ClCompile Include="LibraryVersion.cpp" />
     <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadFloatConstantInstruction.cpp" />
@@ -294,6 +297,10 @@
     <ClCompile Include="NomVMInterface.cpp" />
     <ClCompile Include="ObjectClass.cpp" />
     <ClCompile Include="ObjectHeader.cpp" />
+    <ClCompile Include="ParsedClassType.cpp" />
+    <ClCompile Include="ParsedMethodType.cpp" />
+    <ClCompile Include="ParsedArgument.cpp" />
+    <ClCompile Include="ParsedTP.cpp" />
     <ClCompile Include="PartialAppHeader.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="pugixml\pugixml.cpp" />
@@ -325,6 +332,7 @@
     <ClCompile Include="RTTypeVar.cpp" />
     <ClCompile Include="Runtime.cpp" />
     <ClCompile Include="SourcePos.cpp" />
+    <ClCompile Include="SpecParser.cpp" />
     <ClCompile Include="StringClass.cpp" />
     <ClCompile Include="RecordHeader.cpp" />
     <ClCompile Include="StructuralValueHeader.cpp" />
@@ -351,8 +359,10 @@
     <ClInclude Include="BytecodeReader.h" />
     <ClInclude Include="BytecodeTopReadHandler.h" />
     <ClInclude Include="CallingConvConf.h" />
+    <ClInclude Include="CallParser.h" />
     <ClInclude Include="CastStats.h" />
     <ClInclude Include="CharStream.h" />
+    <ClInclude Include="ClassMethodParser.h" />
     <ClInclude Include="ClassTypeList.h" />
     <ClInclude Include="CompileHelpers.h" />
     <ClInclude Include="ComponentSource.h" />
@@ -369,9 +379,10 @@
     <ClInclude Include="FunctionTimings.h" />
     <ClInclude Include="FunInterface.h" />
     <ClInclude Include="gcinclude_config.h" />
+    <ClInclude Include="GeneratedFunction.h" />
     <ClInclude Include="GloballyNamed.h" />
     <ClInclude Include="GlobalNameAddressLookupList.h" />
-    <ClInclude Include="LibraryTest.h" />
+    <ClInclude Include="NomCLib.h" />
     <ClInclude Include="Metadata.h" />
     <ClInclude Include="NomBuilder.h" />
     <ClInclude Include="NomInterfaceCallTag.h" />
@@ -427,6 +438,10 @@
     <ClInclude Include="NomValue.h" />
     <ClInclude Include="NomValuePrimitiveCases.h" />
     <ClInclude Include="ObjectHeader.h" />
+    <ClInclude Include="ParsedClassType.h" />
+    <ClInclude Include="ParsedMethodType.h" />
+    <ClInclude Include="ParsedArgument.h" />
+    <ClInclude Include="ParsedTP.h" />
     <ClInclude Include="PartialAppHeader.h" />
     <ClInclude Include="Path.h" />
     <ClInclude Include="pugixml\pugiconfig.hpp" />
@@ -461,6 +476,7 @@
     <ClInclude Include="Singleton.h" />
     <ClInclude Include="RTTypeVar.h" />
     <ClInclude Include="SourcePos.h" />
+    <ClInclude Include="SpecParser.h" />
     <ClInclude Include="StringDict.h" />
     <ClInclude Include="instructions\ArgumentInstruction.h" />
     <ClInclude Include="instructions\CallCheckedInstanceMethod.h" />

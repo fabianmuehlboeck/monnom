@@ -1,0 +1,51 @@
+foo1: construct NoTP()
+
+foo2: construct NoTP(Int, String)
+
+foo3: construct<T> OneTP<T>()
+
+foo4: construct<T> OneTP<T>(T, String)
+
+foo5: construct OneTP<String>(String, String)
+
+foo6: construct<X,Y> TwoTP<X,Y>() 
+
+foo7: construct<X> TwoTP<X,String>(X,String,String) 
+
+foo8: call_static NoTP.StaticTest1(Int, String) : Void
+
+foo9: call_static<T> NoTP.StaticTest2<T>(T, Int) : Void
+
+foo91: call_static NoTP.StaticTest2<String>(String, Int) : Void
+
+foo10: call_static<T,X> NoTP.StaticTest3<T,X>(X, T) : Void
+
+foo11: call_static<T> OneTP<T>.StaticTest1(T, String) : Void
+
+foo12: call_static<T,X> OneTP<T>.StaticTest2<X>(T, X) : Void
+
+foo13: call_static<X> OneTP<Int>.StaticTest2<X>(Int, X) : Void
+
+foo14: call_static<X> OneTP<String>.StaticTest2<X>(String, X) : Void
+
+foo15: call_static OneTP<Int>.StaticTest1(Int, String) : Void
+
+foo16: call_static OneTP<String>.StaticTest2<NoTP>(String, NoTP) : Void
+
+foo17: call_static OneTP<OneTP<NoTP>>.StaticTest2<NoTP>(OneTP<NoTP>, NoTP) : Void
+
+foo18: call_static<T> OneTP<T>.StaticTest1(T, String) : Void
+
+foo19: call_instance NoTP.InstanceTest1() : Void
+
+foo20: call_instance OneTP<Int>.InstanceTest1() : Void
+
+foo21: call_instance<T> OneTP<T>.InstanceTest1() : Void
+
+foo22: call_instance<T> OneTP<T>.InstanceTest2(T) : T
+
+foo23: call_instance OneTP<Int>.InstanceTest2(Int) : Int
+
+foo24: call_instance OneTP<Float>.InstanceTest2(Float) : Float
+
+foo25: call_instance<T,S> TwoTP<S,T>.InstanceTest1(T,S) : Int

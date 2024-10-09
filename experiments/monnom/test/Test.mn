@@ -1,25 +1,78 @@
+class NoTP
+{
+	public constructor()
+	{
+	
+	}
+	public constructor(Int arg1, String arg2)
+	{
+	
+	}
+	public static fun StaticTest1(Int arg1, String arg2) : Void{
+	
+	}
+	public static fun StaticTest2<T>(T arg1, Int arg2) : Void{
+	
+	}
+	public static fun StaticTest3<T,X>(X arg1, T arg2) : Void{
+	
+	}
+	public fun InstanceTest1() : Void{
+	
+	}
+}
+class OneTP<T>
+{
+	public constructor()
+	{
+	
+	}
+	public constructor(T arg1, String arg2)
+	{
+	
+	}
+	public static fun StaticTest1(T arg1, String arg2) : Void{
+	
+	}
+	public static fun StaticTest2<X>(T arg1, X arg2) : Void{
+	
+	}
+	public static fun StaticTest3<X>(X arg1, Int arg2) : Void{
+	
+	}
+	public fun InstanceTest1() : Void{
+	
+	}
+	public fun InstanceTest2(T arg1) : T{
+		return arg1;
+	}
+}
+class TwoTP<T,S>
+{
+	public constructor()
+	{
+	
+	}
+	public constructor(T arg1, String arg2, S arg3)
+	{
+	
+	}
+	public fun InstanceTest1(S arg1, T arg2) : Int{
+		return 4;
+	}
+}
+
+
+
 class Main
 {
-	public static fun test1(Float arg1, Int arg2, Object arg3, Float arg4, Object arg5) : Void{
-		Float n1 = arg1 + arg4;
-		Int n2 = arg2 * 2;
+	public static fun test1<T>(){
+		OneTP<T> t = new OneTP<T>();
 	}
-
-	public static fun test2<T extends IComparable<T>>(T arg1, T arg2) : Bool{
-		return arg1.Compare(arg2) == 0;
-	}
-
-	public static fun test3(Int arg1, Int arg2) : Bool{
-		return 1 == 0;
-	}
-	
-	public static fun test4<T>(Int arg1, Int arg2): Bool{
-		return 1 == 0;
-	}
-	
-
 	public static fun Main() : Void
 	{
-		"\n".Print();
+		new NoTP();
+		new OneTP<Int>();
+		new TwoTP<Int,Int>();
 	}
 }

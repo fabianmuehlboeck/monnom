@@ -121,6 +121,64 @@ namespace Nom
 			env->ClearArguments();
 		
 		}
+
+		/*
+		void CallConstructor::CompileDirectly(NomString* className, TypeList typeArgs, TypeList argTypes, NomBuilder& builder, CompileEnv* env, int lineno)
+		{
+			//NomSubstitutionContextMemberContext nscmc(env->Context);
+			//NomInstantiationRef<NomClass> cls = NomConstants::GetSuperClass(ClassSuperClass)->GetClassType(&nscmc);
+
+			NomClass* c = NomClass::getClass(className);
+			NomInstantiationRef<NomClass> cls = NomInstantiationRef(c, typeArgs);
+
+			auto fieldCount = cls.Elem->GetFieldCount();
+
+			Function* allocfun = GetNewAlloc(env->Module);
+			llvm::Value* newmem = builder->CreateCall(allocfun, { MakeInt<size_t>(fieldCount + ((cls.Elem->GetHasRawInvoke() && NomLambdaOptimizationLevel > 0) ? 1 : 0)), MakeInt<size_t>(cls.Elem->GetTypeArgOffset() + cls.Elem->GetTypeParametersCount()) });
+
+			newmem = ObjectHeader::GenerateSetClassDescriptor(builder, newmem, fieldCount, cls.Elem->GetLLVMElement(*(env->Module)));
+			if (cls.Elem->GetHasRawInvoke() && NomLambdaOptimizationLevel > 0)
+			{
+				RefValueHeader::GenerateWriteRawInvoke(builder, newmem, cls.Elem->GetRawInvokeFunction(*(env->Module)));
+			}
+
+			NomValue* argbuf = (NomValue*)(nmalloc(sizeof(NomValue) * env->GetArgCount()));
+			for (int i = 0; i < env->GetArgCount(); i++)
+			{
+				argbuf[i] = env->GetArgument(i);
+			}
+			RegisterValue(env, cls.Elem->GenerateConstructorCall(builder, env, cls.TypeArgs, newmem, llvm::ArrayRef<NomValue>(argbuf, env->GetArgCount())));
+			env->ClearArguments();
+
+		}
+		*/
+		void CallConstructor::CompileDirectly(NomInstantiationRef<NomClass> cls, TypeList argTypes, NomBuilder& builder, CompileEnv* env, int lineno)
+		{
+			//NomSubstitutionContextMemberContext nscmc(env->Context);
+			//NomInstantiationRef<NomClass> cls = NomConstants::GetSuperClass(ClassSuperClass)->GetClassType(&nscmc);
+
+			auto fieldCount = cls.Elem->GetFieldCount();
+
+			Function* allocfun = GetNewAlloc(env->Module);
+			llvm::Value* newmem = builder->CreateCall(allocfun, { MakeInt<size_t>(fieldCount + ((cls.Elem->GetHasRawInvoke() && NomLambdaOptimizationLevel > 0) ? 1 : 0)), MakeInt<size_t>(cls.Elem->GetTypeArgOffset() + cls.Elem->GetTypeParametersCount()) });
+
+			newmem = ObjectHeader::GenerateSetClassDescriptor(builder, newmem, fieldCount, cls.Elem->GetLLVMElement(*(env->Module)));
+			if (cls.Elem->GetHasRawInvoke() && NomLambdaOptimizationLevel > 0)
+			{
+				RefValueHeader::GenerateWriteRawInvoke(builder, newmem, cls.Elem->GetRawInvokeFunction(*(env->Module)));
+			}
+
+			NomValue* argbuf = (NomValue*)(nmalloc(sizeof(NomValue) * env->GetArgCount()));
+			for (int i = 0; i < env->GetArgCount(); i++)
+			{
+				argbuf[i] = env->GetArgument(i);
+			}
+			RegisterValue(env, cls.Elem->GenerateConstructorCall(builder, env, cls.TypeArgs, newmem, llvm::ArrayRef<NomValue>(argbuf, env->GetArgCount())));
+			env->ClearArguments();
+
+		}
+
+
 		void CallConstructor::Print(bool resolve)
 		{
 			cout << "CCall #";
@@ -133,5 +191,6 @@ namespace Nom
 			result.push_back(ClassSuperClass);
 			result.push_back(TypeArgs);
 		}
+
 	}
 }
