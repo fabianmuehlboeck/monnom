@@ -22,11 +22,25 @@ namespace Nom.Bytecode
             public String Name;
             public Version Version;
         }
+        public class BinaryInfo
+        {
+            public String Type;
+            public String Path;
+            public String Platform;
+            public String OS;
+            public String Version;
+        }
+        public class NativeLink
+        {
+            public String Name;
+            public List<BinaryInfo> Binaries = new List<BinaryInfo>();
+        }
         IOptional<String> MainClass { get; }
         String ProgramName { get; }
         IEnumerable<LibraryDependency> Dependencies { get; }
         IEnumerable<ClassInfo> Classes { get; }
         IEnumerable<InterfaceInfo> Interfaces { get; }
+        IEnumerable<NativeLink> NativeLinks { get; }
         Version Version { get; }
         void Emit(Func<string, Stream> opener);
     }

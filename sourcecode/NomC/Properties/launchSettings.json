@@ -1,8 +1,12 @@
 {
   "profiles": {
-    "NomC": {
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    },
+    "DEBUG": {
       "commandName": "Project",
-      "commandLineArgs": "-p \"C:\\MonNomBenchmarks\\SieveShort\\.BM_CCCCD\" --project Sieve"
+      "commandLineArgs": "-p \"C:\\tmp\\monnom\\experiments\\monnom\\cfunction\" --project cfun"
     }
   }
 }

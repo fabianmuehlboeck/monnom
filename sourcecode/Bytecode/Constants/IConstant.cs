@@ -29,7 +29,8 @@ namespace Nom.Bytecode
         CTTypeList = 191,
         CTSuperInterfaceList = 192,
         //CTClassTypeList = 193,
-        CTTypeParameters = 194
+        CTTypeParameters = 194,
+        CFunctionConstant = 250
     }
 
     public interface IConstant

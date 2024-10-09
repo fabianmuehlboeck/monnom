@@ -44,6 +44,7 @@ IN: 'in';
 OUT: 'out';
 INOUT: 'inout';
 CALLTARGET: 'calltarget';
+CFUN: 'CFUNCTION';
 
 PUBLIC: 'public';
 PRIVATE: 'private';

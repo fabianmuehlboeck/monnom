@@ -70,7 +70,7 @@ namespace Nom
 		class NomStringConstant : public NomConstant
 		{
 		private:
-			llvm::Constant * obj = nullptr;
+			llvm::Constant* obj = nullptr;
 		public:
 			const NomString Text;
 
@@ -89,12 +89,12 @@ namespace Nom
 			NomStringConstant(NomStringConstant&&) = delete;
 			virtual ~NomStringConstant() override = default;
 
-			const NomString * GetText()
+			const NomString* GetText()
 			{
 				return &Text;
 			}
 
-			llvm::Constant * getObject(llvm::Module &mod);
+			llvm::Constant* getObject(llvm::Module& mod);
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
@@ -104,7 +104,7 @@ namespace Nom
 		class NomClassConstant : public NomConstant
 		{
 		private:
-			const NomClass * cls = nullptr;
+			const NomClass* cls = nullptr;
 			const ConstantID Library;
 			const ConstantID Name;
 		public:
@@ -116,7 +116,7 @@ namespace Nom
 
 			}
 			virtual ~NomClassConstant() override = default;
-			const NomClass * GetClass();
+			const NomClass* GetClass();
 			void EnsureClassLoaded(NomModule* mod);
 
 			// Inherited via NomConstant
@@ -133,7 +133,7 @@ namespace Nom
 		private:
 			const ConstantID Library;
 			const ConstantID Name;
-			mutable const NomInterface * iface  = nullptr;
+			mutable const NomInterface* iface = nullptr;
 		public:
 
 			NomInterfaceConstant(NomInterfaceConstant&) = delete;
@@ -143,8 +143,8 @@ namespace Nom
 			{
 			}
 			virtual ~NomInterfaceConstant() override = default;
-			const NomInterface * GetInterface() const;
-			void EnsureInterfaceLoaded(NomModule *mod);
+			const NomInterface* GetInterface() const;
+			void EnsureInterfaceLoaded(NomModule* mod);
 
 			// Inherited via NomConstant
 			virtual void Print(bool resolve = false) override;
@@ -174,7 +174,7 @@ namespace Nom
 				result.push_back(LowerBound);
 				result.push_back(UpperBound);
 			}
-		//	virtual ~NomTypeParameterConstant() override = default;
+			//	virtual ~NomTypeParameterConstant() override = default;
 		};
 
 		class NomLambdaConstant : public NomConstant
@@ -259,7 +259,7 @@ namespace Nom
 			NomSuperInterfacesConstant(NomSuperInterfacesConstant&) = delete;
 			NomSuperInterfacesConstant(const NomSuperInterfacesConstant&) = delete;
 			NomSuperInterfacesConstant(NomSuperInterfacesConstant&&) = delete;
-			NomSuperInterfacesConstant(const llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4> &entries) : NomConstant(NomConstantType::CTSuperInterfaces), entries(entries)
+			NomSuperInterfacesConstant(const llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4>& entries) : NomConstant(NomConstantType::CTSuperInterfaces), entries(entries)
 			{
 			}
 			virtual ~NomSuperInterfacesConstant() override = default;
@@ -282,7 +282,7 @@ namespace Nom
 		{
 		private:
 			llvm::SmallVector<ConstantID, 8> types;
-			mutable NomTypeRef *typeRefs = nullptr;
+			mutable NomTypeRef* typeRefs = nullptr;
 		public:
 
 			NomTypeListConstant(NomTypeListConstant&) = delete;
@@ -562,6 +562,43 @@ namespace Nom
 			}
 		};
 
+		class NomCFunctionConstant : public NomConstant
+		{
+		private:
+			mutable NomInstantiationRef<const NomConstructor> constructor = NomInstantiationRef<const NomConstructor>();
+		public:
+			const ConstantID SourceNameConstant;
+			const ConstantID FunctionNameConstant;
+			const ConstantID TypeArgs;
+			const ConstantID ArgTypes;
+			const ConstantID ReturnType;
+			NomCFunctionConstant(NomConstructorConstant&) = delete;
+			NomCFunctionConstant(const NomConstructorConstant&) = delete;
+			NomCFunctionConstant(NomConstructorConstant&&) = delete;
+			NomCFunctionConstant(const ConstantID source, const ConstantID name, ConstantID typeArgs, const ConstantID argTypes, const ConstantID returnType) : NomConstant(NomConstantType::CFunctionConstant), SourceNameConstant(source), FunctionNameConstant(name), TypeArgs(typeArgs), ArgTypes(argTypes), ReturnType(returnType)
+			{
+
+			}
+			virtual ~NomCFunctionConstant() override = default;
+			llvm::Function* GetCFunction(llvm::Module &mod) const;
+
+			size_t GetNumTypeParameters() const;
+			llvm::ArrayRef<NomTypeParameterConstant*> GetTypeParameters() const;
+			TypeList GetArgumentTypes(NomSubstitutionContextRef context) const;
+			NomTypeRef GetReturnType(NomSubstitutionContextRef context) const;
+
+			// Inherited via NomConstant
+			virtual void Print(bool resolve = false) override;
+			virtual void FillConstantDependencies(NOM_CONSTANT_DEPENCENCY_CONTAINER& result) override
+			{
+				result.push_back(SourceNameConstant);
+				result.push_back(FunctionNameConstant);
+				result.push_back(ArgTypes);
+				result.push_back(ArgTypes);
+				result.push_back(ReturnType);
+			}
+		};
+
 		class NomConstantContext
 		{
 		private:
@@ -586,6 +623,7 @@ namespace Nom
 			ConstantID AddSuperInterfaces(LocalConstantID lid, const llvm::SmallVector<std::tuple<LocalConstantID, LocalConstantID>, 4>& entries);
 			ConstantID AddMethod(LocalConstantID lid, const LocalConstantID cls, const LocalConstantID name, const LocalConstantID typeArgs, const LocalConstantID argTypes);
 			ConstantID AddStaticMethod(LocalConstantID lid, const LocalConstantID cls, const LocalConstantID name, const LocalConstantID typeArgs, const LocalConstantID argTypes);
+			ConstantID AddCFunction(LocalConstantID lid, const LocalConstantID source, const LocalConstantID name, const LocalConstantID typeArgs, const LocalConstantID argTypes, const LocalConstantID returnType);
 			ConstantID AddTypeList(LocalConstantID lid, const llvm::SmallVector<LocalConstantID, 8> types);
 			ConstantID AddClassType(LocalConstantID lid, const LocalConstantID cls, const LocalConstantID typeArgs);
 			ConstantID AddBottomType(LocalConstantID lid);
@@ -624,20 +662,7 @@ namespace Nom
 			static NomStaticMethodConstant* GetStaticMethod(const ConstantID constant);
 			static NomConstructorConstant* GetConstructor(const ConstantID constant);
 			static NomTypeListConstant* GetTypeList(const ConstantID constant);
-			//static NomClassTypeListConstant * GetClassTypeList(const ConstantID constant)
-			//{
-			//	if (constant == 0)
-			//	{
-			//		static NomClassTypeListConstant defaultConst{ llvm::SmallVector<ConstantID, 8>() };
-			//		return &defaultConst;
-			//	}
-			//	NomConstant *cnstnt = constants()[constant];
-			//	if (cnstnt->Type != NomConstantType::CTClassTypeList)
-			//	{
-			//		throw new std::exception();
-			//	}
-			//	return (NomClassTypeListConstant *)cnstnt;
-			//}
+			static NomCFunctionConstant* GetCFunction(const ConstantID constant);
 			static NomClassTypeConstant* GetClassType(const ConstantID constant);
 			static NomSuperClassConstant* GetSuperClass(const ConstantID constant);
 			static NomSuperInterfacesConstant* GetSuperInterfaces(const ConstantID constant);
@@ -655,21 +680,13 @@ namespace Nom
 			static ConstantID AddMethod(const ConstantID cls, const ConstantID name, const ConstantID typeArgs, const ConstantID argTypes, ConstantID cid = 0);
 			static ConstantID AddStaticMethod(const ConstantID cls, const ConstantID name, const ConstantID typeArgs, const ConstantID argTypes, ConstantID cid = 0);
 			static ConstantID AddConstructor(const ConstantID cls, const ConstantID typeArgs, const ConstantID argTypes, ConstantID cid = 0);
+			static ConstantID AddCFunction(const ConstantID source, const ConstantID name, const ConstantID typeArgs, const ConstantID argTypes, const ConstantID returnType, ConstantID cid = 0);
 			static ConstantID AddTypeList(const llvm::ArrayRef<ConstantID> types, ConstantID cid = 0);
 			static ConstantID AddClassType(const ConstantID cls, const ConstantID typeArgs, ConstantID cid = 0);
 			static ConstantID AddBottomType(ConstantID cid = 0);
 			static ConstantID AddDynamicType(ConstantID cid = 0);
 			static ConstantID AddMaybeType(const ConstantID ptype, ConstantID cid = 0);
 			static ConstantID AddTypeVariable(int index, ConstantID cid = 0);
-			//static ConstantID AddTypeParameter(ParameterVariance variance, const ConstantID lowerBound, const ConstantID upperBound, ConstantID cid = 0)
-			//{
-			//	if (cid == 0)
-			//	{
-			//		cid = GetConstantID();
-			//	}
-			//	constants()[cid] = (new NomTypeParameterConstant(variance, lowerBound, upperBound));
-			//	return cid;
-			//}
 			static ConstantID AddTypeParameters(llvm::ArrayRef<NomTypeParameterConstant*> typeParameters, ConstantID cid = 0);
 			static ConstantID AddSuperClass(const ConstantID cls, const ConstantID args, ConstantID cid = 0);
 			static ConstantID AddSuperInterfaces(const llvm::SmallVector<std::tuple<ConstantID, ConstantID>, 4> & entries, ConstantID cid = 0);

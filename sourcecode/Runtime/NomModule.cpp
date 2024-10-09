@@ -8,6 +8,7 @@
 #include "FloatClass.h"
 #include "BoolClass.h"
 #include "StringClass.h"
+#include "NomJIT.h"
 
 namespace Nom
 {
@@ -33,23 +34,31 @@ namespace Nom
 
 		std::list<const NomInterface *> &NomModule::GetInterfaces()
 		{
-			//std::vector<NomInterface *> ret;
-			//for (auto ifc = Interfaces.begin(); ifc != Interfaces.end(); ifc++)
-			//{
-			//	ret.push_back(&(*ifc));
-			//}
-			//return ret;
 			return Interfaces;
 		}
 		std::list<const NomClass *> &NomModule::GetClasses()
 		{
-			//std::vector<NomClass *> ret;
-			//for (auto cls = Classes.begin(); cls != Classes.end(); cls++)
-			//{
-			//	ret.push_back(&(*cls));
-			//}
-			//return ret;
 			return Classes;
+		}
+
+		void NomModule::AddBinaries(const NativeLib* lib, const std::string basepath)
+		{
+			for (auto entry : lib->Binaries) {
+				if (entry.OS == NATIVEOS && entry.Platform == NATIVEPLATFORM)
+				{
+					bool found = false;
+					for (auto ne : NativeEntries) {
+						if (ne.Type == entry.Type && ne.Path == basepath+"/"+entry.Path && ne.Version == entry.Version)
+						{
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						NativeEntries.emplace_back(entry.Type, basepath+"/"+entry.Path, entry.Platform, entry.OS, entry.Version);
+					}
+				}
+			}
 		}
 
 		NomClassLoaded* NomModule::AddClass(ConstantID name, ConstantID typeParameters, ConstantID superClass, ConstantID superInterfaces) {
@@ -65,19 +74,6 @@ namespace Nom
 		}
 		void NomModule::AddInternalClass(const NomClassInternal* cls)
 		{
-			//llvm::SmallVector<const NomInterfaceInternal*, 4> ifacebuffer;
-			//cls->GetInterfaceDependencies(ifacebuffer);
-			//for (auto dep : ifacebuffer)
-			//{
-			//	AddInternalInterface(dep);
-			//}
-			//llvm::SmallVector<const NomClassInternal*, 4> clsbuffer;
-			//cls->GetClassDependencies(clsbuffer);
-			//for (auto dep : clsbuffer)
-			//{
-			//	AddInternalClass(dep);
-			//}
-			//Classes.push_back(cls);
 			if (!cls->AddOnce())
 			{
 				Classes.push_back(cls);
@@ -85,12 +81,6 @@ namespace Nom
 		}
 		void NomModule::AddInternalInterface(const NomInterfaceInternal* iface)
 		{
-			//llvm::SmallVector<const NomInterfaceInternal*, 4> ifacebuffer;
-			//iface->GetInterfaceDependencies(ifacebuffer);
-			//for (auto dep : ifacebuffer)
-			//{
-			//	AddInternalInterface(dep);
-			//}
 			if (!iface->AddOnce())
 			{
 				Interfaces.push_back(iface);

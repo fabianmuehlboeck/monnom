@@ -135,6 +135,7 @@ namespace Nom
 				}
 				else if (argcount + (thisType != nullptr ? 0 : 1) <= typeArgCount)
 				{
+
 					TypeArguments.push_back(NomTypeVarValue(&Arg, directTypeArgs[argcount - (thisType != nullptr ? 1 : 0)]->GetVariable()));
 				}
 				else

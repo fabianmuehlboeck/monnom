@@ -35,7 +35,8 @@ namespace Nom.Bytecode
         BinOp = 42,
         Debug = 121,
         RTCmd = 122,
-        Error = 123
+        Error = 123,
+        CallC = 150
     }
     public interface IInstruction
     {

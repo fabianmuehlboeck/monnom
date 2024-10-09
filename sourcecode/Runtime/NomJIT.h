@@ -21,9 +21,23 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+#include "Context.h"
 #include <memory>
+#include <set>
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
+#ifdef _WIN64
+#define NATIVEOS "Windows"
+#else
+#ifdef __unix__
+#define NATIVEOS "Unix"
+#else
+#define NATIVEOS "Unknown"
+#endif
+#endif
 
 //
 //#include "llvm/ExecutionEngine/ExecutionEngine.h"
@@ -65,14 +79,35 @@ namespace Nom
 
 			//llvm::orc::JITDylib& MainJD;
 			std::unique_ptr<llvm::orc::LLJIT> lljit;
+			std::set<std::string> loadedFiles;
 
 		public:
-			NomJIT(std::unique_ptr<llvm::orc::LLJIT> &&llj /*llvm::orc::JITTargetMachineBuilder JTMB, llvm::DataLayout DL*/);
+			NomJIT(std::unique_ptr<llvm::orc::LLJIT>&& llj /*llvm::orc::JITTargetMachineBuilder JTMB, llvm::DataLayout DL*/);
 			static llvm::Expected<std::unique_ptr<NomJIT>> Create();
 
 			const llvm::DataLayout& getDataLayout() const { return lljit->getDataLayout(); }
 
 			llvm::LLVMContext& getContext() { return *Ctx.getContext(); }
+
+			llvm::Error addObjectFile(const std::string& fileName) {
+				if (loadedFiles.find(fileName) != loadedFiles.end()) {
+					return llvm::Error::success();
+				}
+				loadedFiles.insert(fileName);
+				auto ofile = llvm::MemoryBuffer::getFile(fileName);
+				auto r = lljit->addObjectFile(lljit->getMainJITDylib(), std::move(ofile.get()));
+				return r;
+			}
+
+			llvm::Error addIRFile(const std::string& fileName) {
+				if (loadedFiles.find(fileName) != loadedFiles.end()) {
+					return llvm::Error::success();
+				}
+				loadedFiles.insert(fileName);
+				auto smd = llvm::SMDiagnostic();
+				auto module = parseIRFile(fileName, smd, LLVMCONTEXT);
+				return lljit->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), Ctx));
+			}
 
 			llvm::Error addModule(std::unique_ptr<llvm::Module> M) {
 				return lljit->addIRModule(llvm::orc::ThreadSafeModule(std::move(M), Ctx));

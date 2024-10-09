@@ -109,6 +109,7 @@ expr returns [IExpr exp]
 	 |<assoc=right> e1=expr AND e2=expr {$exp = new BinOpExpr($e1.exp,new BinaryOperatorNode(BinaryOperator.And, $AND.ToSourceSpan()),$e2.exp);}
 	 |<assoc=right> e1=expr OR e2=expr {$exp = new BinOpExpr($e1.exp,new BinaryOperatorNode(BinaryOperator.Or, $OR.ToSourceSpan()),$e2.exp);}
 	 |<assoc=right> e1=expr EQEQEQ e2=expr {$exp = new BinOpExpr($e1.exp,new BinaryOperatorNode(BinaryOperator.Equals, $EQEQEQ.ToSourceSpan()),$e2.exp);}
+	 | CFUN LBRACKET (STRING COLONCOLON)? declident args=typelist COLON dtype RBRACKET (LANGLE (targs+=type (COMMA targs+=type)*)? RANGLE)? LPAREN (args+=expr (COMMA args+=expr)*)? RPAREN { $exp = new CFunctionCallExpr($STRING, $declident.i, $typelist.ts, $dtype.t, $targs?.Select(t=>t.t), $args.Select(e=>e.exp), $CFUN.ToSourceSpan($RPAREN)); }
 	 ;
 
 lambdabody returns [Block b]

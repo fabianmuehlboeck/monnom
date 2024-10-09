@@ -45,6 +45,7 @@ extern "C" DLLEXPORT void RT_NOM_STATS_IncStaticMethodCalls();
 extern "C" DLLEXPORT void RT_NOM_STATS_IncDynamicInvokes();
 extern "C" DLLEXPORT void RT_NOM_STATS_IncDynamicMethodCalls();
 extern "C" DLLEXPORT void RT_NOM_STATS_IncDynamicFieldLookups();
+extern "C" DLLEXPORT void RT_NOM_STATS_IncCFunctionCalls();
 
 
 enum class NomDebugPrintValueType : unsigned char { Nothing = 0, Pointer = 1, Int = 2, Float = 3, Bool = 4 };
@@ -86,6 +87,7 @@ namespace Nom
 		llvm::Function* GetIncDynamicInvokes(llvm::Module& mod);
 		llvm::Function* GetIncDynamicMethodCalls(llvm::Module& mod);
 		llvm::Function* GetIncDynamicFieldLookups(llvm::Module& mod);
+		llvm::Function* GetIncCFunctionCalls(llvm::Module& mod);
 
 		void InitializeProfileCounter();
 		void PrintCastStats();

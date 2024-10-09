@@ -96,76 +96,13 @@ namespace Nom
 				VersionNumber compToVersion = manifest->CompatibleTo;
 				bool isDeprecated = manifest->IsDeprecated;
 				bool isSecurityRisk = manifest->IsSecurityRisk;
-				//	xml_document doc;
-				//	xml_parse_result result = doc.load_file(fpath);
-				//	if (!result)
-				//	{
-				//		throw result.description();
-				//	}
-				//	xml_node rootnode = doc.first_child();
-				//	VersionNumber libVersion = VersionNumber(1, 0, 0, 1);
-				//	xml_node versionnode = rootnode.child("version");
-				//	if (versionnode)
-				//	{
-				//		libVersion = VersionNumber(versionnode.attribute("major").as_uint(), versionnode.attribute("minor").as_uint(), versionnode.attribute("revision").as_uint(), versionnode.attribute("build").as_uint());
-				//	}
-				//	VersionNumber compFromVersion = libVersion;
-				//	versionnode = rootnode.child("compatiblefrom");
-				//	if (versionnode)
-				//	{
-				//		compFromVersion = VersionNumber(versionnode.attribute("major").as_uint(), versionnode.attribute("minor").as_uint(), versionnode.attribute("revision").as_uint(), versionnode.attribute("build").as_uint());
-				//	}
-				//	VersionNumber compToVersion = libVersion;
-				//	versionnode = rootnode.child("compatibleto");
-				//	if (versionnode)
-				//	{
-				//		compToVersion = VersionNumber(versionnode.attribute("major").as_uint(), versionnode.attribute("minor").as_uint(), versionnode.attribute("revision").as_uint(), versionnode.attribute("build").as_uint());
-				//	}
-				//	bool isDeprecated = false;
-				//	if (rootnode.attribute("deprecated"))
-				//	{
-				//		isDeprecated = true;
-				//	}
-				//	bool isSecurityRisk = false;
-				//	if (rootnode.attribute("securityrisk"))
-				//	{
-				//		isSecurityRisk = true;
-				//	}
-				//	std::vector<LibraryDependency> dependencies;
-				//	for (xml_node depnode : rootnode.children("dependency"))
-				//	{
-				//		VersionNumber depversion = VersionNumber(1, 0, 0, 1);
-				//		versionnode = depnode.child("version");
-				//		if (versionnode)
-				//		{
-				//			depversion = VersionNumber(versionnode.attribute("major").as_uint(), versionnode.attribute("minor").as_uint(), versionnode.attribute("revision").as_uint(), versionnode.attribute("build").as_uint());
-				//		}
-				//		dependencies.emplace_back(depnode.attribute("name").as_string(), depversion);
-				//	}
-				//	std::string mainclassname = "Main";
-				//	for (xml_node mainclassentry : rootnode.children("mainclass"))
-				//	{
-				//		mainclassname = std::string(mainclassentry.attribute("name").as_string());
-				//	}
 				versions.emplace_back(name, mainclassname, libVersion, compFromVersion, compToVersion, isDeprecated, isSecurityRisk, std::move(dependencies), new ManifestComponentSource(Path, manifest, lcs.Program));
 			}
-			////return std::move(versions);
 
 		}
 
 		InternalComponentSource::InternalComponentSource(NomProgram* program) : ComponentSource(program)
 		{
-			//for (auto iface : LibrarySourceNS::GetStdLibInterfaces())
-			//{
-			//	interfaces[iface->GetName()] = iface;
-			//}
-			//for (auto cls : LibrarySourceNS::GetStdLibClasses())
-			//{
-			//	classes[cls->GetName()] = cls;
-			//}
-			//classes[&LibrarySourceNS::ObjectName] = NomObjectClass::GetInstance();
-			//classes[&LibrarySourceNS::StringName] = NomStringClass::GetInstance();
-			//classes[&LibrarySourceNS::NullName] = NomNullClass::GetInstance();;
 		}
 
 		const NomClass* InternalComponentSource::LoadClass(NomStringRef name, NomModule* mod)
@@ -242,6 +179,10 @@ namespace Nom
 		{
 			interfaces[iface->GetName()] = iface;
 		}
+		std::tuple<const NativeLib*, const std::string> LocalComponentSource::RequireBinary(std::string name)
+		{
+			throw new std::exception(("Native code source \"" + name + "\" not found!").c_str());
+		}
 		const NomClass* ManifestComponentSource::LoadClass(NomStringRef name, NomModule* mod)
 		{
 			std::string stdname = name->ToStdString();
@@ -250,10 +191,6 @@ namespace Nom
 				if (stdname == cls.Name)
 				{
 					std::string filepath = (*Path) + "/" + cls.FileName;
-					//std::cout << "FILE: " + filepath + "\n";
-					//std::cout.flush();
-					//std::basic_ifstream<unsigned char> fstream(filepath, std::ios::in | std::ios::binary);
-					//std::basic_istream<char> stream = std::basic_istream<char>(fstream.rdbuf());
 					CharStream cs = CharStream(filepath);
 					BytecodeReader br(cs);
 					br.readToEnd(mod, this);
@@ -275,10 +212,6 @@ namespace Nom
 				if (stdname == iface.Name)
 				{
 					std::string filepath = (*Path) + "/" + iface.FileName;
-					//std::cout << "FILE: " + filepath + "\n";
-					//std::cout.flush();
-					//std::basic_ifstream<unsigned char> fstream(filepath, std::ios::in | std::ios::binary);
-					//std::basic_istream<char> stream = std::basic_istream<char>(fstream.rdbuf());
 					CharStream cs = CharStream(filepath);
 					BytecodeReader br(cs);
 					br.readToEnd(mod, this);
@@ -299,6 +232,15 @@ namespace Nom
 		void ManifestComponentSource::ReadInterface(NomInterface* iface)
 		{
 			interfaces[iface->GetName()] = iface;
+		}
+		std::tuple<const NativeLib *, const std::string> ManifestComponentSource::RequireBinary(std::string name)
+		{
+			for (auto &nl : this->Manifest->NativeLibs) {
+				if (nl.Name == name) {
+					return std::make_tuple(&nl, *Path);
+				}
+			}
+			throw new std::exception(("Native code source \"" + name + "\" not found!").c_str());
 		}
 }
 }

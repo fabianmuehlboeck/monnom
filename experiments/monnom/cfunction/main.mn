@@ -1,0 +1,15 @@
+class Foo
+{
+	public static fun Test(Int a, Int b) : Int
+	{
+		return CFUNCTION["foo"::ctestfun(Int,Int):Int](a,b);
+	}
+}
+class Main
+{	
+	public static fun Main() : Void
+	{
+		Foo.Test(5,3).ToString().Print();
+		"\n".Print();
+	}
+}

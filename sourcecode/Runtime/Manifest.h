@@ -27,6 +27,27 @@ namespace Nom
 
 			}
 		};
+		struct NativeEntry
+		{
+			const std::string Type;
+			const std::string Path;
+			const std::string Platform;
+			const std::string OS;
+			const std::string Version;
+			NativeEntry(const std::string &type, const std::string& path, const std::string& platform, const std::string& os, const std::string& version) : Type(type), Path(path), Platform(platform), OS(os), Version(version)
+			{
+
+			}
+		};
+		struct NativeLib
+		{
+			const std::string Name;
+			std::vector<NativeEntry> Binaries;
+			NativeLib(std::string&& name) : Name(name)
+			{
+
+			}
+		};
 
 		class Manifest
 		{
@@ -42,6 +63,7 @@ namespace Nom
 			std::vector<LibraryDependency> Dependencies;
 			std::vector<ClassEntry> Classes;
 			std::vector<InterfaceEntry> Interfaces;
+			std::vector<NativeLib> NativeLibs;
 			
 			Manifest(std::string name, VersionNumber version, VersionNumber compatibleFrom, VersionNumber compatibleTo, bool isSecurityRisk, bool isDeprecated);
 			~Manifest();

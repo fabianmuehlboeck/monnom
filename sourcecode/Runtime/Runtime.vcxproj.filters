@@ -534,6 +534,9 @@
     <ClCompile Include="RTConfig.cpp">
       <Filter>Runtime\Config</Filter>
     </ClCompile>
+    <ClCompile Include="Instructions\CallCFunction.cpp">
+      <Filter>Instructions</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -1054,6 +1057,9 @@
     </ClInclude>
     <ClInclude Include="RTConfig_LambdaOpt.h">
       <Filter>Runtime\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="instructions\CallCFunction.h">
+      <Filter>Instructions</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

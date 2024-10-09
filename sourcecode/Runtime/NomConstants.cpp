@@ -15,6 +15,7 @@
 #include "Loader.h"
 #include <iostream>
 #include "NomMaybeType.h"
+#include "NomTypeParameter.h"
 
 using namespace std;
 namespace Nom
@@ -98,6 +99,11 @@ namespace Nom
 		ConstantID NomConstantContext::AddStaticMethod(LocalConstantID lid, const LocalConstantID cls, const LocalConstantID name, const LocalConstantID typeArgs, const LocalConstantID argTypes)
 		{
 			idmap[lid]= NomConstants::AddStaticMethod(GetGlobalID(cls), GetGlobalID(name), GetGlobalID(typeArgs), GetGlobalID(argTypes), TryGetGlobalID(lid));
+			return idmap[lid];
+		}
+		ConstantID NomConstantContext::AddCFunction(LocalConstantID lid, const LocalConstantID source, const LocalConstantID name, const LocalConstantID typeArgs, const LocalConstantID argTypes, const LocalConstantID returnType)
+		{
+			idmap[lid] = NomConstants::AddCFunction(GetGlobalID(source), GetGlobalID(name), GetGlobalID(typeArgs), GetGlobalID(argTypes), GetGlobalID(returnType), TryGetGlobalID(lid));
 			return idmap[lid];
 		}
 		ConstantID NomConstantContext::AddTypeList(LocalConstantID lid, const llvm::SmallVector<LocalConstantID, 8> types)
@@ -495,6 +501,16 @@ namespace Nom
 			return (NomTypeListConstant*)cnstnt;
 		}
 
+		NomCFunctionConstant* NomConstants::GetCFunction(const ConstantID constant)
+		{
+			NomConstant* cnstnt = constants()[constant];
+			if (cnstnt->Type != NomConstantType::CFunctionConstant)
+			{
+				throw new std::exception();
+			}
+			return (NomCFunctionConstant*)cnstnt;
+		}
+
 		NomClassTypeConstant* NomConstants::GetClassType(const ConstantID constant)
 		{
 			NomConstant* cnstnt = constants()[constant];
@@ -594,7 +610,8 @@ namespace Nom
 		ConstantID NomConstants::GetConstantID()
 		{
 			constants().push_back(nullptr);
-			return constants().size() - 1;
+			ConstantID ret = constants().size() - 1;
+			return ret;
 		}
 		ConstantID NomConstants::AddString(const NomString& text, ConstantID cid)
 		{
@@ -682,6 +699,16 @@ namespace Nom
 				cid = GetConstantID();
 			}
 			constants()[cid] = (new NomConstructorConstant(cls, typeArgs, argTypes));
+			return cid;
+		}
+
+		ConstantID NomConstants::AddCFunction(const ConstantID source, const ConstantID name, const ConstantID typeArgs, const ConstantID argTypes, const ConstantID returnType, ConstantID cid)
+		{
+			if (cid == 0)
+			{
+				cid = GetConstantID();
+			}
+			constants()[cid] = (new NomCFunctionConstant(source, name, typeArgs, argTypes, returnType));
 			return cid;
 		}
 
@@ -934,5 +961,65 @@ namespace Nom
 		{
 			result.push_back(ptype);
 		}
-}
+		llvm::Function* NomCFunctionConstant::GetCFunction(llvm::Module &mod) const
+		{
+			auto name = NomConstants::GetString(FunctionNameConstant)->GetText()->ToStdString();
+			auto fun = mod.getFunction(name);
+			if (fun == 0) {
+				int paramc = GetNumTypeParameters();
+				NomTypeRef types[paramc];
+				for (int i = 0; i < paramc; i++)
+				{
+					NomTypeParameterInternal ntp(nullptr, 0, NomType::AnythingRef, NomType::NothingRef);
+					types[i] = ntp.GetVariable();
+				}
+				NomSubstitutionContextList nscl(TypeList(types, paramc));
+				auto argtypes = GetArgumentTypes(&nscl);
+				int argnum = argtypes.size() + paramc;
+				llvm::Type* funargtypes[argnum];
+				for (int i = 0; i < argnum; i++) {
+					if (i < paramc) {
+						funargtypes[i] = TYPETYPE;
+					}
+					else {
+						funargtypes[i] = argtypes[i - paramc]->GetLLVMType();
+					}
+				}
+
+				auto returnType = GetReturnType(&nscl);
+				llvm::FunctionType* funtype = llvm::FunctionType::get(returnType->GetLLVMType(), llvm::ArrayRef<llvm::Type*>(funargtypes, argnum), false);
+				fun = llvm::Function::Create(funtype, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, mod);
+			}
+			return fun;
+		}
+		size_t NomCFunctionConstant::GetNumTypeParameters() const
+		{
+			return NomConstants::GetTypeParameters(TypeArgs)->GetSize();
+		}
+		llvm::ArrayRef<NomTypeParameterConstant*> NomCFunctionConstant::GetTypeParameters() const
+		{
+			return NomConstants::GetTypeParameters(TypeArgs)->GetParameters();
+		}
+		TypeList NomCFunctionConstant::GetArgumentTypes(NomSubstitutionContextRef context) const
+		{
+			return NomConstants::GetTypeList(ArgTypes)->GetTypeList(context);
+		}
+		NomTypeRef NomCFunctionConstant::GetReturnType(NomSubstitutionContextRef context) const
+		{
+			return NomConstants::GetType(context, ReturnType);
+		}
+		void NomCFunctionConstant::Print(bool resolve)
+		{
+			cout << "CFunction ";
+			NomConstants::PrintConstant(this->SourceNameConstant, resolve);
+			cout << "::";
+			NomConstants::PrintConstant(this->FunctionNameConstant, resolve);
+			cout << "<";
+			NomConstants::PrintConstant(TypeArgs, resolve);
+			cout << ">(";
+			NomConstants::PrintConstant(ArgTypes, resolve);
+			cout << ") : ";
+			NomConstants::PrintConstant(ReturnType, resolve);
+		}
+	}
 }

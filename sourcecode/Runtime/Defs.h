@@ -69,7 +69,8 @@ namespace Nom
 			CTTypeList = 191,
 			CTSuperInterfaceList = 192,
 			CTClassTypeList = 193,
-			CTTypeParameters = 194
+			CTTypeParameters = 194,
+			CFunctionConstant = 250
 		};
 
 		enum class Visibility : unsigned char

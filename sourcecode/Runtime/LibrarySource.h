@@ -67,6 +67,7 @@ namespace Nom
 			const NomInterface * LoadInterface(NomStringRef name, NomModule * mod) override;
 			void ReadClass(NomClass * cls) override;
 			void ReadInterface(NomInterface * iface) override;
+			std::tuple<const NativeLib*, const std::string> RequireBinary(std::string name) override;
 		};
 
 		class ManifestComponentSource : public ComponentSource, public BytecodeTopReadHandler
@@ -88,6 +89,7 @@ namespace Nom
 			const NomInterface* LoadInterface(NomStringRef name, NomModule* mod) override;
 			void ReadClass(NomClass* cls) override;
 			void ReadInterface(NomInterface* iface) override;
+			std::tuple<const NativeLib*, const std::string> RequireBinary(std::string name) override;
 		};
 
 

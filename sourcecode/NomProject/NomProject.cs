@@ -33,13 +33,14 @@ namespace Nom.Project
             return ret;
         }
     }
-    public class NomProject 
+    public class NomProject
     {
         public string Name { get; set; }
         public string MainClassName { get; set; }
         public List<String> Files { get; } = new List<string>();
         public List<String> LibraryFiles { get; } = new List<string>();
         public List<NomDependency> Dependencies { get; } = new List<NomDependency>();
+        public List<NativeLink> NativeLinks { get; } = new List<NativeLink>();
         public Version Version { get; set; }
 
         public NomProject(NomProject other)
@@ -50,6 +51,7 @@ namespace Nom.Project
             Files.AddRange(other.Files);
             LibraryFiles.AddRange(other.Files);
             Dependencies.AddRange(other.Dependencies);
+            NativeLinks.AddRange(other.NativeLinks);
         }
 
         public NomProject(string name)
@@ -104,6 +106,21 @@ namespace Nom.Project
                 var filename = fileelem.GetAttribute("name");
                 LibraryFiles.Add(filename);
             }
+
+            var nativelinks = nomproj.SelectNodes("./native/library");
+            foreach (var natlink in nativelinks)
+            {
+                var natlinkelem = (XmlElement)natlink;
+                var natlinkname = natlinkelem.GetAttribute("name");
+                var binnodes = natlinkelem.SelectNodes("./binary");
+                List<NativeLink.Binary> binaries=new List<NativeLink.Binary>();
+                foreach (var binnode in binnodes)
+                {
+                    var binelem=(XmlElement)binnode;
+                    binaries.Add(new NativeLink.Binary(binelem.GetAttribute("type"), binelem.GetAttribute("path"), binelem.GetAttribute("platform"), binelem.GetAttribute("os"), binelem.GetAttribute("version")));
+                }
+                NativeLinks.Add(new NativeLink(natlinkname, binaries));
+            }
         }
 
         public void Write(FileInfo fi)
@@ -157,6 +174,27 @@ namespace Nom.Project
                     files.AppendChild(fileelem);
                 }
                 nomproj.AppendChild(files);
+            }
+
+            if (NativeLinks.Count > 0) {
+                XmlElement nativeelem = doc.CreateElement("native");
+                foreach (NativeLink nl in NativeLinks)
+                {
+                    XmlElement libelem = doc.CreateElement("library");
+                    libelem.SetAttribute("name", nl.Name);
+                    foreach(var binary in nl.Binaries)
+                    {
+                        XmlElement binelem = doc.CreateElement("binary");
+                        binelem.SetAttribute("type", binary.Type);
+                        binelem.SetAttribute("path", binary.Path);
+                        binelem.SetAttribute("platform", binary.Platform);
+                        binelem.SetAttribute("os", binary.OS);
+                        binelem.SetAttribute("version", binary.Version);
+                        libelem.AppendChild(binelem);
+                    }
+                    nativeelem.AppendChild(libelem);
+                }
+                nomproj.AppendChild(nativeelem);
             }
 
             if (fi.Exists)

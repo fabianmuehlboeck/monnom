@@ -2,6 +2,8 @@
 #include "NomInterface.h"
 #include "NomClass.h"
 #include <list>
+#include <vector>
+#include "Manifest.h"
 
 namespace Nom
 {
@@ -16,8 +18,12 @@ namespace Nom
 			std::list<const NomInterface *> Interfaces;
 			std::list<const NomClass *> Classes;
 
+			std::list<NativeEntry> NativeEntries;
+
 			std::list<const NomInterface *> &GetInterfaces();
 			std::list<const NomClass *> &GetClasses();
+
+			void AddBinaries(const NativeLib* lib, const std::string basepath);
 
 			NomClassLoaded* AddClass(ConstantID name, const ConstantID typeParameters, ConstantID superClass, ConstantID superInterfaces);
 

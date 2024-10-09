@@ -224,6 +224,11 @@ namespace Nom.Bytecode
             public Func<TypeChecker.EnsureCheckedMethodInstruction, BytecodeUnit, IInstruction> VisitEnsureCheckedMethodInstruction => (instr, bcu) => new EnsureCheckedMethodInstruction(bcu.GetStringConstant(instr.MethodName), instr.Receiver.Index);
 
             public Func<TypeChecker.EnsureDynamicMethodInstruction, BytecodeUnit, IInstruction> VisitEnsureDynamicMethodInstruction => (instr, bcu) => new EnsureDynamicMethodInstruction(bcu.GetStringConstant(instr.MethodName), instr.Receiver.Index);
+
+            public Func<TypeChecker.CallCFunctionInstruction, BytecodeUnit, IInstruction> VisitCallCFunctionInstruction => (instr, bcu) =>
+            {
+                return new CallCFunctionInstruction(bcu.GetCFunctionConstant(instr.CFunction), bcu.GetTypeListConstant(instr.TypeArguments), instr.Arguments.Select(arg=>arg.Index), instr.Register.Index);
+            };
         }
 
         //private class NamespaceConstantVisitor : ITDNamespaceVisitor<object, INamespaceConstant>

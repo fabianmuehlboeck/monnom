@@ -58,6 +58,7 @@ namespace Nom.Bytecode
             });
             lambdaConstants = new ConstantDict<ITDLambda, LambdaConstant>(index => RegisterConstant(new LambdaConstant(++constantCounter)));
             structConstants = new ConstantDict<ITDStruct, StructConstant>(index => RegisterConstant(new StructConstant(++constantCounter)));
+            cFunctionConstants = new ConstantDict<ITDCFunction, CFunctionConstant>(f => RegisterConstant(new CFunctionConstant(++constantCounter, GetStringConstant(f.LibraryName), GetStringConstant(f.FunctionName), GetTypeParametersConstant(f.AllTypeParameters), GetTypeListConstant(f.Parameters.Entries.Select(tp => tp.Type)), GetTypeConstant(f.ReturnType))));
         }
 
         public void Emit(Func<String, Stream> openStream)
@@ -295,6 +296,12 @@ namespace Nom.Bytecode
                 dynamicTypeConstant = this.RegisterConstant(new DynamicTypeConstant(++constantCounter));
             }
             return new ConstantRef<ITypeConstant>(dynamicTypeConstant);
+        }
+
+        private ConstantDict<ITDCFunction, CFunctionConstant> cFunctionConstants;
+        public IConstantRef<CFunctionConstant> GetCFunctionConstant(ITDCFunction fun)
+        {
+            return cFunctionConstants.GetConstant(fun);
         }
 
         static ITypeConstant zeroTypeConstant = new EmptyTypeConstant();
