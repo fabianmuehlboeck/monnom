@@ -1,0 +1,17 @@
+class Foo
+{
+	public static fun Test(Int a, Int b) : Int
+	{
+		CFUNCTION["foo"::ctestfun<T>(T,T,Int):T]<Int>(a,b,2).ToString().Print();
+		CFUNCTION["foo"::ctestfun<T>(T,T,Int):T]<String>(a.ToString(),b.ToString(),1).Print();
+		return b;
+	}
+}
+class Main
+{	
+	public static fun Main() : Void
+	{
+		Foo.Test(5,3).ToString().Print();
+		"\n".Print();
+	}
+}

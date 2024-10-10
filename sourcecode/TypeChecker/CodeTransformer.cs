@@ -1009,23 +1009,23 @@ namespace Nom.TypeChecker
             var newLookup = env.Context.PushVariables(tdargDecls);
             foreach (TDTypeArgDeclDef arg in tdargDecls)
             {
-                var ub = expr.Name.Arguments.ElementAt(arg.Index).UpperBound.TransformType(env.Context);
-                var lb = expr.Name.Arguments.ElementAt(arg.Index).LowerBound.TransformType(env.Context);
+                var ub = expr.Name.Arguments.ElementAt(arg.Index).UpperBound?.TransformType(env.Context);
+                var lb = expr.Name.Arguments.ElementAt(arg.Index).LowerBound?.TransformType(env.Context);
                 arg.AdjustBounds(ub, lb);
-                if (!typeArgs[arg.Index].IsSubtypeOf(ub))
+                if (ub!=null&&!typeArgs[arg.Index].IsSubtypeOf(ub))
                 {
                     CompilerOutput.RegisterException(new TypeCheckException("Type argument %0 is not a subtype of upper bound %1", typeArgs[arg.Index], ub));
                 }
-                if (!typeArgs[arg.Index].IsSupertypeOf(lb))
+                if (lb!=null&&!typeArgs[arg.Index].IsSupertypeOf(lb))
                 {
                     CompilerOutput.RegisterException(new TypeCheckException("Type argument %0 is not a supertype of lower bound %1", typeArgs[arg.Index], lb));
                 }
             }
 
             List<IExprTransformResult> argResults = new List<IExprTransformResult>();
-            var argTypes = expr.ArgTypes.Select(tp => tp.TransformType(env.Context)).ToList();
+            var argTypes = expr.ArgTypes.Select(tp => tp.TransformType(newLookup)).ToList();
             var origArgTypes = argTypes.ToList();
-            var retType = expr.ReturnType.TransformType(env.Context);
+            var retType = expr.ReturnType.TransformType(newLookup);
             var origRetType = retType.AsType;
             for (int j = 0; j < tdargDecls.Count; j++)
             {
