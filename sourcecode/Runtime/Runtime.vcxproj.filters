@@ -537,6 +537,9 @@
     <ClCompile Include="Instructions\CallCFunction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
+    <ClCompile Include="NomExternalInterface.cpp">
+      <Filter>Runtime</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -1060,6 +1063,9 @@
     </ClInclude>
     <ClInclude Include="instructions\CallCFunction.h">
       <Filter>Instructions</Filter>
+    </ClInclude>
+    <ClInclude Include="NomExternalInterface.h">
+      <Filter>Runtime</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

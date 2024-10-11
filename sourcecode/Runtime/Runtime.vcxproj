@@ -260,6 +260,7 @@
     <ClCompile Include="NomConstants.cpp" />
     <ClCompile Include="NomConstructor.cpp" />
     <ClCompile Include="NomDynamicType.cpp" />
+    <ClCompile Include="NomExternalInterface.cpp" />
     <ClCompile Include="NomField.cpp" />
     <ClCompile Include="NomInstruction.cpp" />
     <ClCompile Include="NomInterface.cpp" />
@@ -375,6 +376,7 @@
     <ClInclude Include="instructions\CallCFunction.h" />
     <ClInclude Include="Metadata.h" />
     <ClInclude Include="NomBuilder.h" />
+    <ClInclude Include="NomExternalInterface.h" />
     <ClInclude Include="NomInterfaceCallTag.h" />
     <ClInclude Include="NomLambdaCallTag.h" />
     <ClInclude Include="NomRecordCallTag.h" />

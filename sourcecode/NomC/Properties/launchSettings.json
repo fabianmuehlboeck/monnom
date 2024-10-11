@@ -6,7 +6,7 @@
     },
     "DEBUG": {
       "commandName": "Project",
-      "commandLineArgs": "-p \"C:\\tmp\\monnom\\experiments\\monnom\\cfunction\" --project cfun"
+      "commandLineArgs": "-p \"C:\\tmp\\monnom\\experiments\\monnom\\cfunction\" --project cfun2"
     }
   }
 }
