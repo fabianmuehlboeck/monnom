@@ -40,7 +40,8 @@ namespace Nom
 			TypeListConstant = 191,
 			CTSuperInterfaceList = 192,
 			CTClassTypeList = 193,
-			CTTypeParameters = 194
+			CTTypeParameters = 194,
+			CFunctionConstant = 250
 		};
 
 		enum class BytecodeInternalElementType : unsigned char
@@ -70,21 +71,21 @@ namespace Nom
 
 			NomInterface *ReadInterface(NomModule * mod, BytecodeTopReadHandler *handler = nullptr);
 
-			NomLambda* ReadLambda(NomClassLoaded* cls);
+			NomLambda* ReadLambda(NomClassLoaded* cls, BytecodeTopReadHandler* handler = nullptr);
 
-			NomRecord* ReadStruct(NomClassLoaded* cls);
+			NomRecord* ReadStruct(NomClassLoaded* cls, BytecodeTopReadHandler* handler = nullptr);
 
-			NomRecordMethod* ReadStructMethod(NomRecord* structure);
+			NomRecordMethod* ReadStructMethod(NomRecord* structure, BytecodeTopReadHandler* handler = nullptr);
 
-			NomMethod *ReadMethod(NomInterfaceLoaded *iface);
+			NomMethod *ReadMethod(NomInterfaceLoaded *iface, BytecodeTopReadHandler* handler = nullptr);
 
-			NomStaticMethod *ReadStaticMethod(NomClassLoaded*cls);
+			NomStaticMethod *ReadStaticMethod(NomClassLoaded*cls, BytecodeTopReadHandler* handler = nullptr);
 
-			NomConstructor * ReadConstructor(NomClassLoaded* cls);
+			NomConstructor * ReadConstructor(NomClassLoaded* cls, BytecodeTopReadHandler* handler = nullptr);
 
-			NomTypedField * ReadField(NomClassLoaded* cls);
+			NomTypedField * ReadField(NomClassLoaded* cls, BytecodeTopReadHandler* handler = nullptr);
 
-			NomInstruction *ReadInstruction();
+			NomInstruction *ReadInstruction(BytecodeTopReadHandler* handler = nullptr);
 
 			BytecodeTopElementType GetNextElementType(bool peek = true);
 
@@ -115,6 +116,7 @@ namespace Nom
 
 			ConstantID ReadTypeVarConstant();
 			ConstantID ReadTypeParametersConstant();
+			ConstantID ReadCFunctionConstant(NomModule *mod, BytecodeTopReadHandler* handler = nullptr);
 		};
 	}
 }

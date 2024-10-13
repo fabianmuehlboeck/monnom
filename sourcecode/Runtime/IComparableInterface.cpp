@@ -42,5 +42,9 @@ namespace Nom
 			}
 			return &ici;
 		}
+		void IComparableInterface::GetClassDependencies(llvm::SmallVector<const NomClassInternal*, 4>& results) const
+		{
+			results.push_back(NomIntClass::GetInstance());
+		}
 	}
 }

@@ -6,6 +6,8 @@ using Nom.Language;
 using System.Linq;
 using System.Xml.Linq;
 using System.Xml;
+using Nom.Project;
+using static Nom.Bytecode.IManifest;
 
 namespace Nom.Bytecode
 {
@@ -38,7 +40,7 @@ namespace Nom.Bytecode
     }
     public class Manifest : IManifest
     {
-        public Manifest(IOptional<String> mainClass, string programName, Version version, IEnumerable<IManifest.LibraryDependency> dependencies, IEnumerable<IManifest.ClassInfo> clses, IEnumerable<IManifest.InterfaceInfo> ifaces)
+        public Manifest(IOptional<String> mainClass, string programName, Version version, IEnumerable<IManifest.LibraryDependency> dependencies, IEnumerable<IManifest.ClassInfo> clses, IEnumerable<IManifest.InterfaceInfo> ifaces, IEnumerable<IManifest.NativeLink> nativeLinks)
         {
             MainClass = mainClass;
             ProgramName = programName;
@@ -46,6 +48,7 @@ namespace Nom.Bytecode
             Dependencies = dependencies;
             Classes = clses;
             Interfaces = ifaces;
+            NativeLinks = nativeLinks;
         }
 
         public Manifest(FileInfo file)
@@ -108,6 +111,23 @@ namespace Nom.Bytecode
                     interfaces.Add(new IManifest.InterfaceInfo() { Name = qname, FileName = filename });
                 }
                 Interfaces = interfaces;
+                var natlinks = nomlib.SelectNodes("./native/library");
+                var nativelinks = new List<IManifest.NativeLink>();
+                foreach (var natlink in natlinks)
+                {
+                    var natlinkelem = (XmlElement)natlink;
+                    var natlinkname = natlinkelem.GetAttribute("name");
+                    var binelems = natlinkelem.SelectNodes("./binary");
+                    var nl = new IManifest.NativeLink() { Name = natlinkname };
+                    foreach(var binelem in binelems)
+                    {
+                        var binaryelem=(XmlElement)binelem;
+                        var binary=new IManifest.BinaryInfo() { Type=binaryelem.GetAttribute("type"), Path=binaryelem.GetAttribute("path"), Platform=binaryelem.GetAttribute("platform"), OS=binaryelem.GetAttribute("os"), Version=binaryelem.GetAttribute("version") };
+                        nl.Binaries.Add(binary);
+                    }
+                    nativelinks.Add(nl);
+                }
+                NativeLinks = nativelinks;
                 Dependencies = new List<IManifest.LibraryDependency>();
             }
         }
@@ -124,6 +144,8 @@ namespace Nom.Bytecode
 
         public IEnumerable<IManifest.ClassInfo> Classes { get; }
         public IEnumerable<IManifest.InterfaceInfo> Interfaces { get; }
+
+        public IEnumerable<IManifest.NativeLink> NativeLinks { get; }
 
         public void Emit(Func<string, Stream> opener)
         {
@@ -155,6 +177,20 @@ namespace Nom.Bytecode
                         sw.WriteLine("<nominterface qname=\"" + iface.Name + "\" file=\"" + iface.FileName + "\"/>");
                     }
                     sw.WriteLine("</interfaces>");
+                    if(NativeLinks.Count()>0)
+                    {
+                        sw.WriteLine("<native>");
+                        foreach (var natlink in NativeLinks)
+                        {
+                            sw.WriteLine("<library name =\"" + natlink.Name + "\">");
+                            foreach(var binary in natlink.Binaries)
+                            {
+                                sw.WriteLine("<binary type=\"" + binary.Type + "\" path=\""+binary.Path+"\" platform=\""+binary.Platform+"\" os=\""+binary.OS+"\" version=\""+binary.Version+"\"/>");
+                            }
+                            sw.WriteLine("</library>");
+                        }
+                        sw.WriteLine("</native>");
+                    }
                     sw.WriteLine("</nomlibrary > ");
                 }
             }

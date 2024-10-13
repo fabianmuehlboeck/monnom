@@ -14,8 +14,9 @@ namespace Nom
 			static NomIntClass *GetInstance();
 			virtual ~NomIntClass() override;
 			virtual llvm::Constant* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
+			virtual void GetClassDependencies(llvm::SmallVector<const NomClassInternal*, 4>& results) const override;
+			virtual void GetInterfaceDependencies(llvm::SmallVector<const NomInterfaceInternal*, 4>& results) const override;
 		};
-
 
 		//class RTIntClass : public RTClass
 		//{

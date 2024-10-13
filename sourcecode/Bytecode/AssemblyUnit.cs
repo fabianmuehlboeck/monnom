@@ -10,141 +10,6 @@ namespace Nom.Bytecode
 {
     public class AssemblyUnit : ILibrary
     {
-        //private Dictionary<TDClassDef, ClassRep> classReps = new Dictionary<TDClassDef, ClassRep>();
-        //private Dictionary<TDInterfaceDef, InterfaceRep> interfaceReps = new Dictionary<TDInterfaceDef, InterfaceRep>();
-        //private Dictionary<TDMethodDecl, MethodDeclRep> methodDeclReps = new Dictionary<TDMethodDecl, MethodDeclRep>();
-        //private Dictionary<ITDMethodDef, MethodDefRep> methodDefReps = new Dictionary<ITDMethodDef, MethodDefRep>();
-        //private Dictionary<TDStaticMethodDef, StaticMethodDefRep> staticMethodDefReps = new Dictionary<TDStaticMethodDef, StaticMethodDefRep>();
-        //private Dictionary<TDConstructorDef, ConstructorDefRep> constructorDefReps = new Dictionary<TDConstructorDef, ConstructorDefRep>();
-        //private Dictionary<TDInstanceDef, InstanceDefRep> instanceDefReps = new Dictionary<TDInstanceDef, InstanceDefRep>();
-        //private Dictionary<TDFieldDecl, FieldRep> fieldDefReps = new Dictionary<TDFieldDecl, FieldRep>();
-
-        //public ClassRep GetClassRep(TDClassDef tdcd)
-        //{
-        //    return classReps[tdcd];
-        //}
-
-        //public void AddClass(TDUserClassDef classDef)
-        //{
-        //    if (classReps.ContainsKey(classDef))
-        //    {
-        //        throw new InternalException("Cannot lock for compilation when already locked!");
-        //    }
-        //    classDef.UpdateRefs();
-
-        //    CreateMethodRepVisitor methodRepVisitor = new CreateMethodRepVisitor(this);
-        //    foreach (TDMethodDecl md in classDef.DeclaredMethods)
-        //    {
-        //        md.VisitInstanceMethod(methodRepVisitor, null);
-        //    }
-        //    foreach(TDStaticMethodDef sd in classDef.StaticMethods)
-        //    {
-        //        staticMethodDefReps.Add(sd, new StaticMethodDefRep());
-        //    }
-        //    foreach(TDConstructorDef cd in classDef.Constructors)
-        //    {
-        //        constructorDefReps.Add(cd, new ConstructorDefRep());
-        //    }
-        //    foreach(TDInstanceDef id in classDef.Instances)
-        //    {
-        //        instanceDefReps.Add(id, new InstanceDefRep());
-        //    }
-        //    foreach(TDFieldDecl fd in classDef.LocalInstanceFields)
-        //    {
-        //        fieldDefReps.Add(fd, new FieldRep());
-        //    }
-        //    ClassRep classRep = ClassRep.Create(classDef.Name, new List<TypeArgRep>(), ClassTypeRep.Create(classDef.Extends.Elem.ClassType, this), classDef.Implements.Select(iref=>ClassTypeRep.Create(iref.Elem.ClassType, this)), classDef.MethodDefs.Select(md => this.methodDefReps[md]), classDef.LocalInstanceFields.Select(f=>fieldDefReps[f]), classDef.StaticMethods.Select(sm=>staticMethodDefReps[sm]));
-        //    classReps.Add(classDef, classRep);
-        //        // classDef.VisitNamed(new CreateClassRepVisitor(), null);
-
-        //    //foreach (TDStaticMethodDef smd in classDef.StaticMethods)
-        //    //{
-        //    //    smd.CompilationLock();
-        //    //}
-
-        //    //foreach (TDConstructorDef cd in classDef.Constructors)
-        //    //{
-        //    //    cd.CompilationLock();
-        //    //}
-
-        //    //foreach (TDInstanceDef id in classDef.Instances)
-        //    //{
-        //    //    id.CompilationLock();
-        //    //}
-        //    //TODO: make sure field duplication checks happen in TypeDefCheck
-        //    //if (classDef.Extends != null)
-        //    //{
-        //    //    foreach (TDFieldDecl fd in instanceFields)
-        //    //    {
-        //    //        if (Extends.Elem.InstanceFields.Any(f => f.FieldName == fd.FieldName))
-        //    //        {
-        //    //            CompilerOutput.RegisterException(new TypeDefCheckException(fd.Locs, "Field " + fd.FieldName + " was already defined in class " + Extends.Elem.InstanceFields.First(f => f.FieldName == fd.FieldName).ContainingClass.Name.ToString()));
-        //    //        }
-        //    //    }
-        //    //}
-        //}
-
-        //public void AddInterface(TDInterfaceDef interfaceDef)
-        //{
-
-        //}
-
-        //private class CreateClassRepVisitor : ITDNamedTypeDefVisitor<object, ClassRep>
-        //{
-        //    public ClassRep VisitBaseClass(TDBaseClassDef cdef, object state)
-        //    {
-        //        return VisitClassDef(cdef, state);
-        //    }
-
-        //    public ClassRep VisitClassDef(TDClassDef cdef, object state)
-        //    {
-        //        return new ClassRep(cdef.Name, new TDRef<TDClassDef>(cdef.Name, cdef));
-        //    }
-
-        //    public ClassRep VisitInterfaceDef(TDInterfaceDef idef, object state)
-        //    {
-        //        throw new InternalException("Class visitor used on interface");
-        //        //return new InterfaceRep(idef.Name, new TDRef<TDInterfaceDef>(idef.Name, idef));
-        //    }
-
-        //    public ClassRep VisitSpecialClass(TDSpecialClassDef cdef, object state)
-        //    {
-        //        throw new InternalException("Cannot compile special classes to Nom Bytecode");
-        //        //return new SpecialClassRep(cdef.Name, new TDRef<TDClassDef>(cdef.Name, cdef), cdef.FieldDecls, cdef.SpecialDecls, cdef.SpecialCode, cdef.SpecialInitCode);
-        //    }
-
-        //    public ClassRep VisitUserClass(TDUserClassDef cdef, object state)
-        //    {
-        //        return VisitClassDef(cdef, state);
-        //    }
-        //}
-
-        //private class CreateMethodRepVisitor : ITDInstanceMethodVisitor<object, IMethodRep>
-        //{
-        //    private readonly AssemblyUnit unit;
-        //    public CreateMethodRepVisitor(AssemblyUnit unit)
-        //    {
-        //        this.unit = unit;
-        //    }
-
-        //    public Func<TDMethodDecl, object, IMethodRep> VisitMethodDecl => (tdmd, cls) =>
-        //    {
-        //        MethodDeclRep mdr = new MethodDeclRep(cls, tdmd.Visibility, tdmd.MethodName, tdmd.ArgTypes, tdmd.ReturnType, tdmd.Offset);
-        //        unit.methodDeclReps.Add(tdmd, mdr);
-        //        return mdr;
-        //    };
-
-        //    public Func<ATDMethodDef, object, IMethodRep> VisitMethodDef => throw new InternalException("Method definition does not have specific visit method.");
-
-        //    public Func<TDMethodDef, object, IMethodRep> VisitMethodDefImpl => (tdmd, cls) =>
-        //    {
-        //        MethodDefRep mdr = new MethodDefRep(cls, tdmd.Visibility, tdmd.MethodName, new ArgumentRep(tdmd.ThisArgument.Type, tdmd.ThisArgument.Register.Variable), tdmd.Arguments.Select(a => new ArgumentRep(a.Type, a.Register.Variable)), tdmd.ReturnType, tdmd.Offset, tdmd);
-        //        unit.methodDefReps.Add(tdmd, mdr);
-        //        return mdr;
-        //    };
-
-        //    public Func<TDMethodRef, object, IMethodRep> VisitMethodRef => throw new NotImplementedException();
-        //}
 
         private NomProject project;
 
@@ -190,7 +55,8 @@ namespace Nom.Bytecode
             Manifest manifest = new Manifest(project.MainClassName.Length == 0 ? Optional<String>.Empty : project.MainClassName.InjectOptional(), Name, Version,
                 project.Dependencies.Select(nd => new IManifest.LibraryDependency() { Name = nd.QName, Version = nd.Version }),
                 classInfos,
-                interfaceInfos);
+                interfaceInfos,
+                project.NativeLinks.Select(nl=> new IManifest.NativeLink() { Name=nl.Name, Binaries=nl.Binaries.Select(b=>new IManifest.BinaryInfo() { Type=b.Type, Path=b.Path, Platform=b.Platform, OS=b.OS, Version=b.Version }).ToList()}));
             manifest.Emit(manifestOpener);
             return manifest;
         }

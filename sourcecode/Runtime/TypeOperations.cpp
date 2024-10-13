@@ -236,7 +236,7 @@ namespace Nom
 				}
 				else if (valType == REFTYPE && type == BOOLTYPE)
 				{
-					return UnpackFloat(builder, NomValue(val, NomBoolClass::GetInstance()->GetType()));
+					return UnpackBool(builder, NomValue(val, NomBoolClass::GetInstance()->GetType()));
 				}
 				else if (valType == INTTYPE && type == REFTYPE)
 				{

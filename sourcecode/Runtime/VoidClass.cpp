@@ -21,7 +21,7 @@ namespace Nom
 			this->SetDirectTypeParameters();
 			//this->SetSuperClass();
 			this->SetSuperInterfaces();
-			//compiled = true;
+			compiled = true;
 			preprocessed = true;
 		}
 

@@ -6,41 +6,63 @@
     xmlns:mstns="http://tempuri.org/NomProject.xsd"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
 >
-  <xs:element name="project">
-    <xs:complexType>
-      <xs:choice>
-        <xs:element name="files" minOccurs="0">
-          <xs:complexType>
-            <xs:choice>
-              <xs:element name="file" maxOccurs="unbounded" minOccurs="0">
-                <xs:complexType>
-                  <xs:attribute name="name" type="xs:string" use="required"/>
-                </xs:complexType>
-              </xs:element>
-            </xs:choice>
-          </xs:complexType>
-        </xs:element>
-        <xs:element name="dependencies" minOccurs="0">
-          <xs:complexType>
-            <xs:choice>
-              <xs:element name="dependency" maxOccurs="unbounded" minOccurs="0">
-                <xs:complexType>
-                  <xs:attribute name="qname" type="xs:string" use="required"/>
-                  <xs:attribute name="version">
-                    <xs:simpleType>
-                      <xs:restriction base="xs:string">
-                        <xs:pattern value="[0-9]+(\.[0-9]+){0,3}"/>
-                      </xs:restriction>
-                    </xs:simpleType>
-                  </xs:attribute>
-                </xs:complexType>
-              </xs:element>
-            </xs:choice>
-          </xs:complexType>
-        </xs:element>
-      </xs:choice>
-      <xs:attribute name="name" type="xs:string" use="required"/>
-      <xs:attribute name="mainclass" type="xs:string"/>
-    </xs:complexType>
-  </xs:element>
+	<xs:element name="project">
+		<xs:complexType>
+			<xs:all>
+				<xs:element name="files" minOccurs="0">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="file" maxOccurs="unbounded" minOccurs="0">
+								<xs:complexType>
+									<xs:attribute name="name" type="xs:string" use="required"/>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="dependencies" minOccurs="0">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="dependency" maxOccurs="unbounded" minOccurs="0">
+								<xs:complexType>
+									<xs:attribute name="qname" type="xs:string" use="required"/>
+									<xs:attribute name="version">
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:pattern value="[0-9]+(\.[0-9]+){0,3}"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:attribute>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="native" minOccurs="0">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="library" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="binary">
+											<xs:complexType>
+												<xs:attribute name="type" type="xs:string" use="required"/>v
+												<xs:attribute name="path" type="xs:string" use="required"/>
+												<xs:attribute name="platform" type="xs:string" use="required"/>
+												<xs:attribute name="os" type="xs:string" use="required"/>
+												<xs:attribute name="version" type="xs:string" use="required"/>
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
+									<xs:attribute name="name" type="xs:string" use="required"></xs:attribute>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:all>
+			<xs:attribute name="name" type="xs:string" use="required"/>
+			<xs:attribute name="mainclass" type="xs:string"/>
+		</xs:complexType>
+	</xs:element>
 </xs:schema>

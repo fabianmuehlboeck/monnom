@@ -567,6 +567,9 @@
     <ClCompile Include="ParsedArgument.cpp">
       <Filter>Library\NomLib\Parser</Filter>
     </ClCompile>
+    <ClCompile Include="Instructions\CallCFunction.cpp">
+      <Filter>Instructions</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -1114,6 +1117,9 @@
     </ClInclude>
     <ClInclude Include="ParsedArgument.h">
       <Filter>Library\NomLib\Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="instructions\CallCFunction.h">
+      <Filter>Instructions</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -87,6 +87,16 @@ namespace Nom
 			return NomClass::createLLVMElement(mod, linkage);
 		}
 
+		void NomIntClass::GetClassDependencies(llvm::SmallVector<const NomClassInternal*, 4>& results) const
+		{
+			results.push_back(NomStringClass::GetInstance());
+		}
+
+		void NomIntClass::GetInterfaceDependencies(llvm::SmallVector<const NomInterfaceInternal*, 4>& results) const
+		{
+			results.push_back(IComparableInterface::GetInstance());
+		}
+
 		//RTIntClass::RTIntClass() : RTClass(0, 0)
 		//{
 		//	SuperTypes.push_back(&_RTObjectClassType);

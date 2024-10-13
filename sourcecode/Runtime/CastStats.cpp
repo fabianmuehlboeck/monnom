@@ -44,6 +44,8 @@ static size_t dynamicMethodCalls = 0;
 
 static size_t dynamicFieldLookups = 0;
 
+static size_t cFunctionCalls = 0;
+
 const std::string** debugFunNames;
 size_t* profileCounterArray;
 vector<size_t>* detailedProfileCounterArray;
@@ -275,6 +277,10 @@ DLLEXPORT void RT_NOM_STATS_IncDynamicMethodCalls()
 DLLEXPORT void RT_NOM_STATS_IncDynamicFieldLookups()
 {
 	dynamicFieldLookups++;
+}
+DLLEXPORT void RT_NOM_STATS_IncCFunctionCalls()
+{
+	cFunctionCalls++;
 }
 
 
@@ -549,6 +555,7 @@ namespace Nom
 			outstream << "\n#Dynamic Invokes: " << std::dec << dynamicInvokes;
 			outstream << "\n#Dynamic Method Calls: " << std::dec << dynamicMethodCalls;
 			outstream << "\n#Dynamic Field Lookups: " << std::dec << dynamicFieldLookups;
+			outstream << "\n#C Function Calls: " << std::dec << cFunctionCalls;
 
 #ifdef _WIN32
 			double castSeconds = timeUnitsInCasts / find_timer_frequency();
@@ -862,6 +869,15 @@ namespace Nom
 			if (fun == nullptr)
 			{
 				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncDynamicFieldLookups", &mod);
+			}
+			return fun;
+		}
+		llvm::Function* GetIncCFunctionCalls(llvm::Module& mod)
+		{
+			auto fun = mod.getFunction("RT_NOM_STATS_IncCFunctionCalls");
+			if (fun == nullptr)
+			{
+				fun = Function::Create(FunctionType::get(Type::getVoidTy(LLVMCONTEXT), false), GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_STATS_IncCFunctionCalls", &mod);
 			}
 			return fun;
 		}

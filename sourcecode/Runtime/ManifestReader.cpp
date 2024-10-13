@@ -15,7 +15,7 @@ namespace Nom
 		{
 		}
 
-		
+
 
 
 		Manifest* ManifestReader::ReadManifest(void* buffer, size_t bufsize)
@@ -24,7 +24,7 @@ namespace Nom
 			xml_parse_result result = doc.load_buffer_inplace_own(buffer, bufsize);
 			return ReadManifest(doc);
 		}
-		Manifest* ManifestReader::ReadManifest(xml_document &doc)
+		Manifest* ManifestReader::ReadManifest(xml_document& doc)
 		{
 			xml_node libnode = doc.child("nomlibrary");
 			auto formatVersion = libnode.attribute("fversion");
@@ -37,7 +37,7 @@ namespace Nom
 			auto classes = libnode.child("classes");
 			auto interfaces = libnode.child("interfaces");
 			auto mainclass = libnode.child("mainclass");
-			
+
 			VersionNumber libVersion = VersionNumber(libnode.attribute("major").as_uint(), libnode.attribute("minor").as_uint(), libnode.attribute("revision").as_uint(), libnode.attribute("build").as_uint());
 			VersionNumber compFromVersion = libVersion;
 			xml_node versionnode = libnode.child("compatiblefrom");
@@ -88,6 +88,25 @@ namespace Nom
 			if (!mainclass.empty())
 			{
 				manifest->SetMainClass(mainclass.attribute("name").as_string());
+			}
+
+			xml_node native = libnode.child("native");
+			if (native)
+			{
+				if (!native.empty()) {
+					for (auto child : native.children()) {
+						if (child.type() == pugi::xml_node_type::node_element && strcmp(child.name(), "library") == 0)
+						{
+							auto &entry = manifest->NativeLibs.emplace_back(child.attribute("name").as_string());
+							for (auto bin : child.children()) {
+								if (bin.type() == pugi::xml_node_type::node_element && strcmp(bin.name(), "binary") == 0)
+								{
+									entry.Binaries.emplace_back(bin.attribute("type").as_string(), bin.attribute("path").as_string(), bin.attribute("platform").as_string(), bin.attribute("os").as_string(), bin.attribute("version").as_string());
+								}
+							}
+						}
+					}
+				}
 			}
 			return manifest;
 		}

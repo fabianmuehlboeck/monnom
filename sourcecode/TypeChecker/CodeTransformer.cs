@@ -998,6 +998,69 @@ namespace Nom.TypeChecker
             return ret;
         };
 
+        public Func<CFunctionCallExpr, ICodeTransformEnvironment, IExprTransformResult> VisitCFunctionCallExpr => (expr, env) =>
+        {
+            List<Language.IType> typeArgs = expr.TypeArgs.Select(targ => targ.TransformType(env.Context)).ToList();
+            List<TDTypeArgDeclDef> tdargDecls = new List<TDTypeArgDeclDef>();
+            for (int i = 0; i < expr.Name.Arguments.Count(); i++)
+            {
+                tdargDecls.Add(new TDTypeArgDeclDef(expr.Name.Arguments.ElementAt(i).Name, i));
+            }
+            var newLookup = env.Context.PushVariables(tdargDecls);
+            foreach (TDTypeArgDeclDef arg in tdargDecls)
+            {
+                var ub = expr.Name.Arguments.ElementAt(arg.Index).UpperBound?.TransformType(env.Context);
+                var lb = expr.Name.Arguments.ElementAt(arg.Index).LowerBound?.TransformType(env.Context);
+                arg.AdjustBounds(ub, lb);
+                if (ub!=null&&!typeArgs[arg.Index].IsSubtypeOf(ub))
+                {
+                    CompilerOutput.RegisterException(new TypeCheckException("Type argument %0 is not a subtype of upper bound %1", typeArgs[arg.Index], ub));
+                }
+                if (lb!=null&&!typeArgs[arg.Index].IsSupertypeOf(lb))
+                {
+                    CompilerOutput.RegisterException(new TypeCheckException("Type argument %0 is not a supertype of lower bound %1", typeArgs[arg.Index], lb));
+                }
+            }
+
+            List<IExprTransformResult> argResults = new List<IExprTransformResult>();
+            var argTypes = expr.ArgTypes.Select(tp => tp.TransformType(newLookup)).ToList();
+            var origArgTypes = argTypes.ToList();
+            var retType = expr.ReturnType.TransformType(newLookup);
+            var origRetType = retType.AsType;
+            for (int j = 0; j < tdargDecls.Count; j++)
+            {
+                for (int i = 0; i < argTypes.Count; i++)
+                {
+                    argTypes[i] = ((ISubstitutable<Language.IType>)argTypes[i]).Substitute(tdargDecls[j], typeArgs[j]);
+                }
+                retType = ((ISubstitutable<Language.IType>)retType).Substitute(tdargDecls[j], typeArgs[j]);
+            }
+
+            int argpos = 0;                                                                                         
+            foreach (IExpr arg in expr.Arguments)
+            {
+                try
+                {
+                    var argres = arg.Visit(this, env);
+                    argResults.Add(argres);
+                    if (!argres.Type.IsSubtypeOf(argTypes[argpos]))
+                    {
+                        CompilerOutput.RegisterException(new TypeCheckException("Expected " + argTypes[argpos].ToString() + ", but found " + argres.Type.ToString() + " at @0", argres));
+                    }
+                    argpos++;
+                }
+                catch (ListableException e)
+                {
+                    CompilerOutput.RegisterException(e);
+                    argResults.Add(new ExprTransformErrorResult());
+                }
+            }
+            expr.TypeAnnotation = expr.ReturnType;
+            expr.ReturnType.Annotation = retType;
+            IRegister reg = env.CreateRegister(); 
+            return new ExprTransformResult(retType, reg, argResults.Flatten().Snoc(new CallCFunctionInstruction(expr.SourceName, expr.Name.Name.Name, tdargDecls, typeArgs, origArgTypes, origRetType, argResults.Select(arg=>arg.Register), reg)));
+        };
+
         private class CallReceiverTransformEnvironment : AUnscopedChildCodeTransformEnvironment
         {
             public IEnumerable<IExprTransformResult> Arguments { get; }
@@ -1164,6 +1227,8 @@ namespace Nom.TypeChecker
             public Func<LetExpr, AccessorTransformEnvironment<T>, T> VisitLetExpr => (expr, env) => env.ValueResultHandler(expr.Visit(CodeTransformer.Instance, env));
 
             public Func<LetVarExpr, AccessorTransformEnvironment<T>, T> VisitLetVarExpr => (expr, env) => env.ValueResultHandler(expr.Visit(CodeTransformer.Instance, env));
+
+            public Func<CFunctionCallExpr, AccessorTransformEnvironment<T>, T> VisitCFunctionCallExpr => (expr, env) => env.ValueResultHandler(expr.Visit(CodeTransformer.Instance, env));
         }
 
         private class CallReceiverVisitor : Parser.IExprVisitor<CallReceiverTransformEnvironment, ICallReceiverTransformResult>
@@ -1301,6 +1366,8 @@ namespace Nom.TypeChecker
             public Func<LetExpr, CallReceiverTransformEnvironment, ICallReceiverTransformResult> VisitLetExpr => VisitValueExpr;
 
             public Func<LetVarExpr, CallReceiverTransformEnvironment, ICallReceiverTransformResult> VisitLetVarExpr => VisitValueExpr;
+
+            public Func<CFunctionCallExpr, CallReceiverTransformEnvironment, ICallReceiverTransformResult> VisitCFunctionCallExpr => VisitValueExpr;
         }
     }
 

@@ -24,6 +24,7 @@
 #include "instructions/ConstructStruct.h"
 #include "instructions/ErrorInstruction.h"
 #include "instructions/RTCmdInstruction.h"
+#include "instructions/CallCFunction.h"
 #include "LoadNullConstantInstruction.h"
 #include "EnsureCheckedMethodInstruction.h"
 #include "EnsureDynamicMethodInstruction.h"
@@ -60,7 +61,7 @@ namespace Nom
 		{
 		}
 
-		NomInstruction* BytecodeReader::ReadInstruction() {
+		NomInstruction* BytecodeReader::ReadInstruction([[maybe_unused]] BytecodeTopReadHandler* handler) {
 			OpCode opcode = stream.read<OpCode>();
 			switch (opcode) {
 			case OpCode::Noop:
@@ -130,6 +131,12 @@ namespace Nom
 				LocalConstantID typeArgs = stream.read <LocalConstantID>();
 				RegIndex reg = stream.read<RegIndex>();
 				return new CallCheckedStaticMethod(context.GetGlobalID(method), context.GetGlobalID(typeArgs), reg);
+			}
+			case OpCode::CallCFun: {
+				RegIndex reg = stream.read<RegIndex>();
+				LocalConstantID method = stream.read <LocalConstantID>();
+				LocalConstantID typeArgs = stream.read <LocalConstantID>();
+				return new CallCFunction(context.GetGlobalID(method), context.GetGlobalID(typeArgs), reg);
 			}
 			case OpCode::CallDispatchBest: {
 				RegIndex reg = stream.read<RegIndex>();
@@ -313,6 +320,9 @@ namespace Nom
 			case BytecodeTopElementType::CTMaybe:
 				ReadMaybeTypeConstant();
 				break;
+			case BytecodeTopElementType::CFunctionConstant:
+				ReadCFunctionConstant(mod, handler);
+				break;
 			default:
 				auto str = std::string("Invalid byte: ");
 				unsigned char c = (unsigned char)stream.read_char();
@@ -344,32 +354,32 @@ namespace Nom
 			NomClassLoaded* cls = mod->AddClass(name, typeArgs, superClass, superInterfaces);
 			uint64_t methodCount = stream.read<uint64_t>();
 			while (methodCount > 0) {
-				ReadMethod(cls);
+				ReadMethod(cls, handler);
 				methodCount--;
 			}
 			uint64_t fieldCount = stream.read<uint64_t>();
 			while (fieldCount > 0) {
-				ReadField(cls);
+				ReadField(cls, handler);
 				fieldCount--;
 			}
 			uint64_t staticMethodCount = stream.read<uint64_t>();
 			while (staticMethodCount > 0) {
-				ReadStaticMethod(cls);
+				ReadStaticMethod(cls, handler);
 				staticMethodCount--;
 			}
 			uint64_t constructorCount = stream.read<uint64_t>();
 			while (constructorCount > 0) {
-				ReadConstructor(cls);
+				ReadConstructor(cls, handler);
 				constructorCount--;
 			}
 			uint64_t lambdaCount = stream.read<uint64_t>();
 			while (lambdaCount > 0) {
-				ReadLambda(cls);
+				ReadLambda(cls, handler);
 				lambdaCount--;
 			}
 			uint64_t structCount = stream.read<uint64_t>();
 			while (structCount > 0) {
-				ReadStruct(cls);
+				ReadStruct(cls, handler);
 				structCount--;
 			}
 			if (handler != nullptr)
@@ -392,7 +402,7 @@ namespace Nom
 			NomInterfaceLoaded* iface = mod->AddInterface(name, typeParameters, superInterfaces);
 			uint64_t methodCount = stream.read<uint64_t>();
 			while (methodCount > 0) {
-				ReadMethod(iface);
+				ReadMethod(iface, handler);
 				methodCount--;
 			}
 			if (handler != nullptr)
@@ -402,7 +412,7 @@ namespace Nom
 			return iface;
 		}
 
-		NomLambda* BytecodeReader::ReadLambda(NomClassLoaded* cls) {
+		NomLambda* BytecodeReader::ReadLambda(NomClassLoaded* cls, [[maybe_unused]] BytecodeTopReadHandler* handler) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Lambda) {
 				throw "Expected lambda, but did not encounter lambda marker";
 			}
@@ -424,7 +434,7 @@ namespace Nom
 			}
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
-				auto instr = ReadInstruction();
+				auto instr = ReadInstruction(handler);
 				if (NomVerbose)
 				{
 					instr->Print(true);
@@ -435,7 +445,7 @@ namespace Nom
 			return lambda;
 		}
 
-		NomRecord* BytecodeReader::ReadStruct(NomClassLoaded* cls) {
+		NomRecord* BytecodeReader::ReadStruct(NomClassLoaded* cls, [[maybe_unused]] BytecodeTopReadHandler* handler) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Record) {
 				throw "Expected struct, but did not encounter struct marker";
 			}
@@ -456,7 +466,7 @@ namespace Nom
 				int32_t instructionCount = stream.read<int32_t>();
 				while (instructionCount > 0)
 				{
-					auto instr = ReadInstruction();
+					auto instr = ReadInstruction(handler);
 					if (NomVerbose)
 					{
 						instr->Print(true);
@@ -469,13 +479,13 @@ namespace Nom
 			}
 			uint64_t methodCount = stream.read<uint64_t>();
 			while (methodCount > 0) {
-				ReadStructMethod(structure);
+				ReadStructMethod(structure, handler);
 				methodCount--;
 			}
 			return structure;
 		}
 
-		NomRecordMethod* BytecodeReader::ReadStructMethod(NomRecord* structure) {
+		NomRecordMethod* BytecodeReader::ReadStructMethod(NomRecord* structure, [[maybe_unused]] BytecodeTopReadHandler* handler) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Method) {
 				throw "Expected method, but did not encounter method marker";
 			}
@@ -490,7 +500,7 @@ namespace Nom
 			NomRecordMethod* meth = structure->AddMethod(namestr, qname, typeParameters, returnType, argTypes, regcount);
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
-				auto instr = ReadInstruction();
+				auto instr = ReadInstruction(handler);
 				if (NomVerbose)
 				{
 					instr->Print(true);
@@ -501,7 +511,7 @@ namespace Nom
 			return meth;
 		}
 
-		NomMethod* BytecodeReader::ReadMethod(NomInterfaceLoaded* iface) {
+		NomMethod* BytecodeReader::ReadMethod(NomInterfaceLoaded* iface, [[maybe_unused]] BytecodeTopReadHandler* handler) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Method) {
 				throw "Expected method, but did not encounter method marker";
 			}
@@ -516,7 +526,7 @@ namespace Nom
 			
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
-				auto instr = ReadInstruction();
+				auto instr = ReadInstruction(handler);
 				if (NomVerbose)
 				{
 					instr->Print(true);
@@ -527,7 +537,7 @@ namespace Nom
 			return meth;
 		}
 
-		NomStaticMethod* BytecodeReader::ReadStaticMethod(NomClassLoaded* cls) {
+		NomStaticMethod* BytecodeReader::ReadStaticMethod(NomClassLoaded* cls, [[maybe_unused]] BytecodeTopReadHandler* handler) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::StaticMethod) {
 				throw "Expected static method, but did not encounter static method marker";
 			}
@@ -548,7 +558,7 @@ namespace Nom
 			//TypeList t = meth->get;
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (instructionCount > 0) {
-				auto instr = ReadInstruction();
+				auto instr = ReadInstruction(handler);
 				if (NomVerbose)
 				{
 					instr->Print(true);
@@ -559,7 +569,7 @@ namespace Nom
 			return meth;
 		}
 
-		NomConstructor* BytecodeReader::ReadConstructor(NomClassLoaded* cls) {
+		NomConstructor* BytecodeReader::ReadConstructor(NomClassLoaded* cls, [[maybe_unused]] BytecodeTopReadHandler* handler) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Constructor) {
 				throw "Expected constructor, but did not encounter constructor marker";
 			}
@@ -570,7 +580,7 @@ namespace Nom
 			uint64_t superargcount = stream.read<uint64_t>();
 			uint64_t instructionCount = stream.read<uint64_t>();
 			while (preinstructionCount > 0) {
-				auto instr = ReadInstruction();
+				auto instr = ReadInstruction(handler);
 				if (NomVerbose)
 				{
 					instr->Print(true);
@@ -583,7 +593,7 @@ namespace Nom
 				superargcount--;
 			}
 			while (instructionCount > 0) {
-				auto instr = ReadInstruction();
+				auto instr = ReadInstruction(handler);
 				if (NomVerbose)
 				{
 					instr->Print(true);
@@ -594,7 +604,7 @@ namespace Nom
 			return cons;
 		}
 
-		NomTypedField* BytecodeReader::ReadField(NomClassLoaded* cls) {
+		NomTypedField* BytecodeReader::ReadField(NomClassLoaded* cls, [[maybe_unused]] BytecodeTopReadHandler* handler) {
 			if (stream.read_char() != (unsigned char)BytecodeInternalElementType::Field) {
 				throw "Expected constructor, but did not encounter constructor marker";
 			}
@@ -802,6 +812,23 @@ namespace Nom
 				types.push_back(stream.read<LocalConstantID>());
 			}
 			return context.AddTypeList(lcid, types);
+		}
+		ConstantID BytecodeReader::ReadCFunctionConstant(NomModule *mod, BytecodeTopReadHandler* handler) {
+			if (GetNextElementType() != BytecodeTopElementType::CFunctionConstant) {
+				throw "Wrong constant type!";
+			}
+			stream.read_char(); //advance past marker
+			LocalConstantID lcid = stream.read<LocalConstantID>();
+			LocalConstantID source = stream.read<LocalConstantID>();
+			LocalConstantID name = stream.read<LocalConstantID>();
+			LocalConstantID typeargs = stream.read<LocalConstantID>();
+			LocalConstantID argTypes = stream.read<LocalConstantID>();
+			LocalConstantID returnType = stream.read<LocalConstantID>();
+			auto ret= context.AddCFunction(lcid, source, name, typeargs, argTypes, returnType);
+			auto binname = NomConstants::GetString(context.GetGlobalID(source))->GetText()->ToStdString();
+			auto binlist = handler->RequireBinary(binname);
+			mod->AddBinaries(std::get<0>(binlist), std::get<1>(binlist));
+			return ret;
 		}
 	}
 }

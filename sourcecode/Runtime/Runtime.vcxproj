@@ -80,6 +80,7 @@
     <IntDir>$(NOMBUILDPATH)\Runtime\Intermediates\$(Platform)\$(Configuration)\</IntDir>
     <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
     <TargetName>nomd</TargetName>
+    <ClangTidyChecks>-clang-diagnostic-c++98-compat</ClangTidyChecks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
@@ -88,6 +89,7 @@
     <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
     <PreLinkEventUseInBuild>true</PreLinkEventUseInBuild>
     <TargetName>nom</TargetName>
+    <ClangTidyChecks>-clang-diagnostic-c++98-compat</ClangTidyChecks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">
     <OutDir>$(NOMBUILDPATH)\Runtime\$(Platform)\$(Configuration)\</OutDir>
@@ -102,8 +104,8 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;UNICODE;_UNICODE;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|Win32'">WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NOMINMAX;NDEBUG;_LIB;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_SECURE_NO_WARNINGS;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);NATIVEPLATFORM="amd64";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NOMINMAX;NDEBUG;_LIB;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_SECURE_NO_WARNINGS;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);NATIVEPLATFORM="amd64";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release-MSVC|x64'">NOMINMAX;NDEBUG;_LIB;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_MSC_PLATFORM_TOOLSET_$(PlatformToolset);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(LLVMDIR)\include;$(BOEHMGCPATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdcpp14</LanguageStandard>
@@ -217,6 +219,7 @@
     <ClCompile Include="instructions\ArgumentInstruction.cpp" />
     <ClCompile Include="instructions\BinOpInstruction.cpp" />
     <ClCompile Include="instructions\BranchInstruction.cpp" />
+    <ClCompile Include="Instructions\CallCFunction.cpp" />
     <ClCompile Include="instructions\CallConstructor.cpp" />
     <ClCompile Include="instructions\CallCheckedInstanceMethod.cpp" />
     <ClCompile Include="instructions\CallCheckedStaticMethod.cpp" />
@@ -383,6 +386,7 @@
     <ClInclude Include="GloballyNamed.h" />
     <ClInclude Include="GlobalNameAddressLookupList.h" />
     <ClInclude Include="NomCLib.h" />
+    <ClInclude Include="instructions\CallCFunction.h" />
     <ClInclude Include="Metadata.h" />
     <ClInclude Include="NomBuilder.h" />
     <ClInclude Include="NomInterfaceCallTag.h" />

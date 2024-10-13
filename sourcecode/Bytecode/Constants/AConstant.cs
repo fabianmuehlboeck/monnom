@@ -79,6 +79,8 @@ namespace Nom.Bytecode
                     return TypeVariableConstant.Read(s, id, rcs);
                 case ConstantType.CTMaybeType:
                     return MaybeTypeConstant.Read(s, id, rcs);
+                case ConstantType.CFunctionConstant:
+                    return CFunctionConstant.Read(s, id, rcs);
                 default:
                     throw new InvalidDataException();
             }

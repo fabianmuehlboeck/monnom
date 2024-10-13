@@ -1,0 +1,1 @@
+﻿<?xml version="1.0" encoding="utf-8"?><project name="CFun" mainclass="Main" major="1" minor="0" revision="0" build="0"><files><file name="main.mn" /></files><native><library name="foo"><binary type="IRFile" path="test.bc" platform="amd64" os="Windows" version="1.0"/></library></native></project>

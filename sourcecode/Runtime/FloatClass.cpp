@@ -94,6 +94,16 @@ namespace Nom
 
 		}
 
+		void NomFloatClass::GetClassDependencies(llvm::SmallVector<const NomClassInternal*, 4>& results) const
+		{
+			results.push_back(NomStringClass::GetInstance());
+			results.push_back(NomIntClass::GetInstance());
+		}
+
+		void NomFloatClass::GetInterfaceDependencies(llvm::SmallVector<const NomInterfaceInternal*, 4>& results) const
+		{
+			results.push_back(IComparableInterface::GetInstance());
+		}
 		NomFloatClass::~NomFloatClass()
 		{
 		}

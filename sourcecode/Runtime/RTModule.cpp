@@ -60,6 +60,21 @@ namespace Nom
 		}
 		RTModule::RTModule(NomModule* mod) : theModule(std::make_unique<llvm::Module>("module", LLVMCONTEXT))
 		{
+			for (auto ne : mod->NativeEntries) {
+				if (ne.Type == "ObjectFile") {
+					auto err = NomJIT::Instance().addObjectFile(ne.Path);
+					if (err) {
+						throw err;
+					}
+				}
+				else if(ne.Type == "IRFile")
+				{
+					auto err = NomJIT::Instance().addIRFile(ne.Path);
+					if (err) {
+						throw err;
+					}
+				}
+			}
 			theModule->setDataLayout(NomJIT::Instance().getDataLayout());
 			llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { {POINTERTYPE, POINTERTYPE} }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_PRINT_STORE", theModule.get());
 			llvm::Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(LLVMCONTEXT), { {POINTERTYPE, POINTERTYPE} }, false), llvm::GlobalValue::LinkageTypes::ExternalLinkage, "RT_NOM_PRINT_LOAD", theModule.get());
