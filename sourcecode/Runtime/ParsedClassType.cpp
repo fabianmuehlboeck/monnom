@@ -2,6 +2,9 @@
 
 namespace Nom {
 	namespace Runtime {
+		/*
+		Parses the calling class from an input string
+		*/
 		ParsedClassType::ParsedClassType(std::string inputString, std::vector<ParsedTP*> substitutionParams) {
 			int i = 0;
 			int firstPos = -1, secondPos = -1;

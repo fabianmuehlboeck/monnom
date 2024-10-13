@@ -24,7 +24,7 @@ namespace Nom
 
 			virtual ~CallCheckedInstanceMethod();
 			virtual void Compile(NomBuilder &builder, CompileEnv* env, int lineno) override;
-			void CompileDirectly(NomInstantiationRef<const NomMethod> method, TypeList argTypes, NomBuilder& builder, CompileEnv* env, int lineno);
+			void CompileActual(NomInstantiationRef<const NomMethod> method, NomBuilder& builder, CompileEnv* env, int lineno);
 
 			// Inherited via NomValueInstruction
 			virtual void Print(bool resolve = false) override;

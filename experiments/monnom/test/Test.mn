@@ -1,3 +1,29 @@
+interface RawInvokeTest<T>
+{
+    public fun this() : T;
+}
+interface RawInvokeTest2<T,X>
+{
+    public fun this(String arg1) : T;
+}
+
+class RawInvokeClass implements RawInvokeTest<Int>{ 
+
+public constructor(){}
+
+public fun this() : Int {return 1;}
+
+}
+
+class RawInvokeClass2 implements RawInvokeTest2<String, Int>{ 
+
+public constructor(){}
+
+public fun this(String arg1) : String {return arg1;}
+
+}
+
+
 class NoTP
 {
 	public constructor()
@@ -72,6 +98,8 @@ class Main
 	public static fun Main() : Void
 	{
 		new NoTP();
+		new RawInvokeClass();
+		new RawInvokeClass2();
 		new OneTP<Int>();
 		new TwoTP<Int,Int>();
 	}

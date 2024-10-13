@@ -6,10 +6,15 @@ namespace Nom {
 	namespace Runtime {
 		class CallParser
 		{
-		public:
+		private:
 			std::string callType;
 			std::vector<ParsedTP*> typeParams;
 			std::vector<NomTypeParameterRef> nomTypeParams;
+		public:
+			/*
+			Parses the function call, which consists of the type of method being called, 
+			e.g. static, instance, constructor as well as the type parameters. 
+			*/
 			CallParser(char inputString[]) {
 				int i = 0;
 				int firstPos = -1, secondPos = -1;
@@ -55,6 +60,10 @@ namespace Nom {
 				}
 				return llvm::ArrayRef<NomTypeParameterRef>(nomTypeParams);
 			}
+			std::vector<ParsedTP*> getSubstitutionTypeArgs() {
+				return typeParams;
+			}
+			std::string getCallType() { return callType; }
 		};
 	}
 }

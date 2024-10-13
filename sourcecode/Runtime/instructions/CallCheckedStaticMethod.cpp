@@ -27,9 +27,6 @@ namespace Nom
 			{	
 				builder->CreateCall(GetIncStaticMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
 			}
-
-			env->basicBlockTerminated = false;
-
 			/*
 			Substitutes generic types for the actual types based on the context of the function call
 			and the context of the generic types.
@@ -58,28 +55,10 @@ namespace Nom
 			result.push_back(TypeArgs);
 		}
 
-
-
-		void CallCheckedStaticMethod::CompileDirectly(NomString* className, NomString* methodName, llvm::ArrayRef<NomTypeRef> typeArgs, 
-			llvm::ArrayRef<NomTypeRef> argTypes, NomBuilder& builder, CompileEnv* env, int lineno)
-		{
-			if (NomCastStats)
-			{
-				builder->CreateCall(GetIncStaticMethodCalls(*builder->GetInsertBlock()->getParent()->getParent()), {});
-			}
-
-			env->basicBlockTerminated = false;
-
-			NomClass* c = NomClass::getClass(className);
-			NomInstantiationRef<const NomStaticMethod> method = c->GetStaticMethod(methodName, typeArgs, argTypes);
-			CompileActual(method, typeArgs, builder, env, lineno);
-
-		}
-
-		void CallCheckedStaticMethod::CompileActual(NomInstantiationRef<const NomStaticMethod> method, llvm::ArrayRef<NomTypeRef> typeArgs, 
+		void CallCheckedStaticMethod::CompileActual(NomInstantiationRef<const NomStaticMethod> method, TypeList typeArgs, 
 			NomBuilder& builder, CompileEnv* env, int lineno) 
 		{
-			//NomSubstitutionContextMemberContext nscmc(env->Context);
+			env->basicBlockTerminated = false;
 			NomSubstitutionContextList substC = NomSubstitutionContextList(typeArgs);
 
 			/*

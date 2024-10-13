@@ -5,23 +5,30 @@
 
 namespace Nom {
 	namespace Runtime {
+		/*
+		The superclass of ParsedClassType and Parsed argument, has a single virtual method
+		that gets the NomTypeRef corresponding to that class. 
+		*/
 		class ParsedType {
 		public:
-			virtual NomTypeRef getType(){}
+			virtual NomTypeRef getType() { return nullptr; }
 		};
+
 		class ParsedArgument;
 		class ParsedClassType : public ParsedType
 		{
-		public:
+		private:
 			std::string className;
 			std::vector<ParsedType*> typeArguments;
 			std::vector<NomTypeRef> nomTypeArguments;
+		public:
 			ParsedClassType(std::string inputString, std::vector<ParsedTP*> substitutionParams);
 			NomTypeRef getType() override {
 				const NomString cName = NomString(className);
-				return (NomTypeRef)NomClass::getClass(&cName)->GetType(getTypeArguments());
+				return (NomTypeRef)NomClass::getClass(&cName)->GetType(getTypeArgs());
 			}
-			TypeList getTypeArguments() {
+			std::string getClassName() { return className; }
+			TypeList getTypeArgs() {
 				if (nomTypeArguments.size() == 0) {
 					for (ParsedType* pa : typeArguments) {
 						nomTypeArguments.push_back(pa->getType());
@@ -29,12 +36,8 @@ namespace Nom {
 				}
 				return TypeList(nomTypeArguments);
 			}
-			NomClassTypeRef getClassType() {
-				const NomString cName = NomString(className);
-				return NomClass::getClass(&cName)->GetType(getTypeArguments());
-			}
-			void pushRuntimeTypeArgs(std::vector<NomTypeRef> paramsVector) {
-				
+			std::vector<ParsedType*> getTypeArgsVector() {
+				return typeArguments;
 			}
 			bool isTypeParameter(std::string inputString, std::vector<ParsedTP*> substitutionParams) {
 				for (ParsedTP* tp : substitutionParams) {
@@ -47,10 +50,14 @@ namespace Nom {
 		};
 		class ParsedArgument : public ParsedType
 		{
-		public:
+		private:
 			ParsedTP* typeParam = nullptr;
 			ParsedClassType* classArg = nullptr;
-
+		public:
+			/*
+			The parsed argument can either be a type parameter, or a class, which can either be a
+			Nom Internal Type (e.g. Int), a Nom Loaded class, which can itself include type arguments. 
+			*/
 			ParsedArgument(std::string argString, std::vector<ParsedTP*> substitutionParams) {
 				for (ParsedTP* tp : substitutionParams) {
 					if (tp->ParamName == argString) {

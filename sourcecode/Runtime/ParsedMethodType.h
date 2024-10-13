@@ -1,4 +1,3 @@
-#pragma once
 #include <iostream>
 #include "ParsedArgument.h"
 
@@ -6,25 +5,20 @@ namespace Nom {
 	namespace Runtime {
 		class ParsedMethodType
 		{
-		public:
+		private:
 			std::string methodName;
 			std::vector<ParsedArgument*> typeArguments;
 			std::vector<ParsedArgument*> arguments;
 			std::vector<NomTypeRef> nomTypeArguments;
 			std::vector<NomTypeRef> nomArgumentTypes;
-
-			std::string getConstructorClassName() {
+		public:
+			std::string getClassName() {
 				return methodName + "_" + std::to_string(typeArguments.size());
 			}
-			NomClassTypeRef getConstructorClassType() {
-				const NomString cName = NomString(getConstructorClassName());
-				return NomClass::getClass(&cName)->GetType(getTypeArguments());
+			std::string getMethodName() {
+				return methodName;
 			}
-			NomInstantiationRef<NomClass> getConstructorClassInstantiation() {
-				const NomString cName = NomString(getConstructorClassName());
-				NomInstantiationRef<NomClass> nir = NomInstantiationRef(NomClass::getClass(&cName), getTypeArguments());
-				return nir;
-			}
+
 			TypeList getArgTypes() {
 				if (nomArgumentTypes.size() == 0) {
 					for (ParsedArgument* pa : arguments) {
@@ -33,8 +27,7 @@ namespace Nom {
 				}
 				return TypeList(nomArgumentTypes);
 			}
-
-			 TypeList getTypeArguments() {
+			 TypeList getTypeArgs() {
 				 if (nomTypeArguments.size() == 0) {
 					for (ParsedArgument* pa : typeArguments) {
 						nomTypeArguments.push_back(pa->getType());
@@ -42,7 +35,15 @@ namespace Nom {
 				 }
 				 return TypeList(nomTypeArguments);
 			 }
+			 std::vector<ParsedArgument*> getTypeArgsVector() {
+				 return typeArguments;
+			 }
 
+			 /*
+			 Parses the method from the method input string. Initializes the method name,
+			 argument types and type arguments list. Performs necessary subtitution for env
+			 type arguments.
+			 */
 			ParsedMethodType(std::string inputString, std::vector<ParsedTP*> substitutionParams) {
 				int i = 0;
 				int firstSquarePos = -1, secondSquarePos = -1;

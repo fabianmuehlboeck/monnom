@@ -9,49 +9,25 @@ namespace Nom {
 	namespace Runtime {
 		class GeneratedFunction
 		{
-		public:
-			std::string CMethodName;
-			std::string className;
-			std::string callMethodName;
+		private:
 			NomCLib* generatedLibrary;
-
+		public:
 			GeneratedFunction(std::string name, CallParser* callParser, ClassMethodParser* cmParser, ParsedArgument* returnArg) {
-				CMethodName = name;
-				if (callParser->callType == "construct") {
-					generatedLibrary = new NomCLibConstructor(name, cmParser->methodType->getConstructorClassInstantiation(), cmParser->methodType->getArgTypes(), callParser->getTypeArgs(), cmParser->methodType->getConstructorClassType());
+				if (callParser->getCallType() == "construct") {
+					generatedLibrary = new NomCLibConstructor(name, cmParser->getConstructorClassInstantiation(), cmParser->getArgTypes(), callParser->getTypeArgs(), cmParser->getClassType());
 				}
-				else if (callParser->callType == "call_static") {
-					generatedLibrary = new NomCLibStatic(name, cmParser->getStaticMethodInstantiation(), cmParser->methodType->getArgTypes(), callParser->getTypeArgs(), returnArg->getType());
+				else if (callParser->getCallType() == "call_static") {
+					generatedLibrary = new NomCLibStatic(name, cmParser->getStaticMethodInstantiation(), cmParser->getArgTypes(), callParser->getTypeArgs(), returnArg->getType());
 				}
-				else if (callParser->callType == "call_instance") {
-					generatedLibrary = new NomCLibInstance(name, cmParser->getInstanceMethodInstantiation(), cmParser->classType->getClassType(), cmParser->methodType->getArgTypes(), callParser->getTypeArgs(), returnArg->getType());
+				else if (callParser->getCallType() == "call_instance") {
+					generatedLibrary = new NomCLibInstance(name, cmParser->getInstanceMethodInstantiation(), cmParser->getClassType(), cmParser->getArgTypes(), callParser->getTypeArgs(), returnArg->getType());
 				}
+			}	
+			~GeneratedFunction() {
 			}
-			GeneratedFunction(std::string name) {
-				CMethodName = name;
+			void generateLLVMFunction(llvm::Module& mod) {
+				generatedLibrary->GetLLVMElement(mod);
 			}
-
-			llvm::ArrayRef<NomTypeRef> argTypes;
-			llvm::ArrayRef<NomTypeParameterRef> typeArgs;
-			NomTypeRef returnType;
-
-			
-		};
-
-		class GeneratedConstructorCall : public GeneratedFunction
-		{
-		public:
-			GeneratedConstructorCall(std::string name): GeneratedFunction(name){}
-		};
-		class GeneratedStaticCall : public GeneratedFunction
-		{
-		public:
-			GeneratedStaticCall(std::string name) : GeneratedFunction(name) {}
-		};
-		class GeneratedInstanceCall : public GeneratedFunction
-		{
-		public:
-			GeneratedInstanceCall(std::string name) : GeneratedFunction(name) {}
 		};
 	}
 }

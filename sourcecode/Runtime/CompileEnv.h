@@ -171,7 +171,7 @@ namespace Nom
 		{
 		public:
 			const NomStaticMethod* const Method;
-			CLibStaticCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomClassTypeRef thisType, NomBuilder& builder);
+			CLibStaticCompileEnv(RegIndex regcount, const llvm::Twine contextName, llvm::Function* function, const std::vector<PhiNode*>* phiNodes, const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomBuilder& builder);
 			virtual NomTypeVarValue GetTypeArgument(NomBuilder& builder, int i) override;
 			virtual size_t GetEnvTypeArgumentCount() override;
 			virtual llvm::Value* GetEnvTypeArgumentArray(NomBuilder& builder) override;

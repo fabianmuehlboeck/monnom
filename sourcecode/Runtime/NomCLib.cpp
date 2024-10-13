@@ -7,31 +7,32 @@
 #include "NomTypeParameter.h"
 #include "instructions/ArgumentInstruction.h"
 #include "instructions/CastInstruction.h"
-#include "TypeOperations.h"
+
 
 
 namespace Nom {
 	namespace Runtime {
 		
 		llvm::Function* NomCLibStatic::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const {
+		
 			/*
-			Creates an LLVM function and links it to an exisiting definition.
-			Symbol name is the name of the function (create foo function) (based on c++ code, can link against and call this foo)
-			Mod is the LLVM, module -> Drop everything into. (Code is meant so that you can make multiple modules)
-			Environment is the book-keeping data to compile things.
-
-			Calling convention -> the C calling convention.
+			Creates an LLVM function with the same function type as the given C++ function.
 			*/
-
-			linkage = llvm::GlobalValue::LinkageTypes::ExternalLinkage;
-			auto fun = llvm::Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
+			auto fun = llvm::Function::Create(GetLLVMFunctionType(), llvm::GlobalValue::LinkageTypes::ExternalLinkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(llvm::CallingConv::C);
 
+			/*
+			Instantiates the IR builder and starts the basic block
+			*/
 			NomBuilder builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, *GetSymbolName() + "$start", fun);
 			builder->SetInsertPoint(startBlock);
 
-			CLibStaticCompileEnv smenv = CLibStaticCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), typeArgs, argTypes, nullptr, builder);
+			/*
+			Creates a compile environment unique to this type of function generation. The compile environment is responsible
+			for storing the environment type arguments as well as reading and casting the LLVM argument values of the function call. 
+			*/
+			CLibStaticCompileEnv smenv = CLibStaticCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), typeArgs, argTypes, builder);
 			CompileEnv* env = &smenv;
 
 			InitializePhis(builder, fun, env);
@@ -39,40 +40,38 @@ namespace Nom {
 #ifdef INSTRUCTIONMESSAGES
 			auto dbgfun = GetDebugPrint(&mod);
 #endif	
-			llvm::ArrayRef<NomTypeRef> functionTypes = ArrayRef<NomTypeRef>(argTypes);
 
+			/*
+			The argument instructions specify which arguments should be used for the next instruction.
+			In this case, all environment arguments should be used. 
+			*/
 			for (int i = 0; i < GetArgumentCount(); i++) {
 				ArgumentInstruction argInst = ArgumentInstruction(i);
 				argInst.Compile(builder, env, 0);
 			}
 
-
-			std::vector<NomTypeRef> typeArgValuesArray = {};
-			for (int i = 0; i < env->GetLocalTypeArgumentCount(); i++) {
-				typeArgValuesArray.push_back((NomTypeRef)(env->GetTypeArgument(builder, i).GetVariable()));
-			}
-			const TypeList typeArgValues = ArrayRef<NomTypeRef>(typeArgValuesArray);
-
-			
+			/*
+			Creates an instruction to call a static method (the method specified in the specification)
+			and JIT compiles it to LLVM IR. "CompileActual" skips processing parser inputs, and directly
+			compiles it with the instantiation given by the Specification File Parser. 
+			*/
 			CallCheckedStaticMethod callInst = CallCheckedStaticMethod(NULL, NULL, 0);
 			callInst.CompileActual(method, method.TypeArgs, builder, env, 0);
+
 #ifdef INSTRUCTIONMESSAGES
 			if (!env->basicBlockTerminated)
 			{
 				builder->CreateCall(dbgfun, { { GetLLVMPointer(this->GetSymbolName()->data()), MakeInt<int64_t>(i)} });
 			}
 #endif
-			if (GetReturnType(nullptr)->GetLLVMType() == REFTYPE) {
-				llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-				llvm::Type* i8Ptr = i8Type->getPointerTo();
-				builder->CreateRet(builder->CreateBitCast(*((*env)[0]), i8Ptr));
-			}
-			else if (GetReturnType(nullptr)->GetLLVMType() == FLOATTYPE) {
-				builder->CreateRet(EnsurePackedUnpacked(builder, *((*env)[0]), FLOATTYPE));
-			}
-			else {
-				builder->CreateRet(EnsurePackedUnpacked(builder, *((*env)[0]), INTTYPE));
-			}
+			/*
+			Creates the return for the generated function
+			*/
+			createCastedReturn(builder, env);
+
+			/*
+			Verifies the function to make sure the structure and types are correct for this function.
+			*/
 			llvm::raw_os_ostream out(std::cout);
 			//For some reason, verifyFunction is supposed to return false if there are no problems
 			if (verifyFunction(*fun, &out))
@@ -82,29 +81,31 @@ namespace Nom {
 				fun->print(out);
 				out.flush();
 				std::cout.flush();
-				//throw name;
+				throw GetSymbolName();
 			}
 			return fun;
 		}
+
 		llvm::Function* NomCLibConstructor::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const {
+
 			/*
-			Creates an LLVM function and links it to an exisiting definition.
-			Symbol name is the name of the function (create foo function) (based on c++ code, can link against and call this foo)
-			Mod is the LLVM, module -> Drop everything into. (Code is meant so that you can make multiple modules)
-			Environment is the book-keeping data to compile things.
-
-			Calling convention -> the C calling convention.
+			Creates an LLVM function with the same function type as the given C++ function.
 			*/
-
-			linkage = llvm::GlobalValue::LinkageTypes::ExternalLinkage;
-			auto fun = llvm::Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
+			auto fun = llvm::Function::Create(GetLLVMFunctionType(), llvm::GlobalValue::LinkageTypes::ExternalLinkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(llvm::CallingConv::C);
 
+			/*
+			Instantiates the IR builder and starts the basic block
+			*/
 			NomBuilder builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, *GetSymbolName() + "$start", fun);
 			builder->SetInsertPoint(startBlock);
 
-			CLibStaticCompileEnv smenv = CLibStaticCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), typeArgs, argTypes, nullptr, builder);
+			/*
+			Creates a compile environment unique to this type of function generation. The compile environment is responsible
+			for storing the environment type arguments as well as reading and casting the LLVM argument values of the function call.
+			*/
+			CLibStaticCompileEnv smenv = CLibStaticCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), typeArgs, argTypes, builder);
 			CompileEnv* env = &smenv;
 
 			InitializePhis(builder, fun, env);
@@ -112,32 +113,37 @@ namespace Nom {
 #ifdef INSTRUCTIONMESSAGES
 			auto dbgfun = GetDebugPrint(&mod);
 #endif	
-			llvm::ArrayRef<NomTypeRef> functionTypes = ArrayRef<NomTypeRef>(argTypes);
-
+			/*
+			The argument instructions specify which arguments should be used for the next instruction.
+			In this case, all environment arguments should be used.
+			*/
 			for (int i = 0; i < GetArgumentCount(); i++) {
 				ArgumentInstruction argInst = ArgumentInstruction(i);
 				argInst.Compile(builder, env, 0);
 			}
 
 			/*
-			std::vector<NomTypeRef> typeArgValuesArray = {};
-			for (int i = 0; i < env->GetLocalTypeArgumentCount(); i++) {
-				typeArgValuesArray.push_back((NomTypeRef)(env->GetTypeArgument(builder, i).GetVariable()));
-			}
-			const TypeList typeArgValues = ArrayRef<NomTypeRef>(typeArgValuesArray);
+			Creates an instruction to call a constructor (the constructor in the specification)
+			and JIT compiles it to LLVM IR. "CompileActual" skips processing parser inputs, and directly
+			compiles it with the instantiation given by the Specification File Parser.
 			*/
-
 			CallConstructor callInst = CallConstructor(NULL, NULL, 0);
-			callInst.CompileDirectly(classRef, argTypes, builder, env, 0);
+			callInst.CompileActual(classRef, builder, env, 0);
+
 #ifdef INSTRUCTIONMESSAGES
 			if (!env->basicBlockTerminated)
 			{
 				builder->CreateCall(dbgfun, { { GetLLVMPointer(this->GetSymbolName()->data()), MakeInt<int64_t>(i)} });
 			}
 #endif
-			llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-			llvm::Type* i8Ptr = i8Type->getPointerTo();
-			builder->CreateRet(builder->CreateBitCast(*((*env)[0]), i8Ptr));
+			/*
+			Creates the return for the generated function
+			*/
+			createCastedReturn(builder, env);
+
+			/*
+			Verifies the function to make sure the structure and types are correct for this function.
+			*/
 			llvm::raw_os_ostream out(std::cout);
 			//For some reason, verifyFunction is supposed to return false if there are no problems
 			if (verifyFunction(*fun, &out))
@@ -153,30 +159,27 @@ namespace Nom {
 		}
 
 		llvm::Function* NomCLibInstance::createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const {
+		
 			/*
-			Creates an LLVM function and links it to an exisiting definition.
-			Symbol name is the name of the function (create foo function) (based on c++ code, can link against and call this foo)
-			Mod is the LLVM, module -> Drop everything into. (Code is meant so that you can make multiple modules)
-			Environment is the book-keeping data to compile things.
-
-			Calling convention -> the C calling convention.
+			Creates an LLVM function with the same function type as the given C++ function.
 			*/
-
-			linkage = llvm::GlobalValue::LinkageTypes::ExternalLinkage;
-			auto fun = llvm::Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
+			auto fun = llvm::Function::Create(GetLLVMFunctionType(), llvm::GlobalValue::LinkageTypes::ExternalLinkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(llvm::CallingConv::C);
 
+			/*
+			Instantiates the IR builder and starts the basic block
+			*/
 			NomBuilder builder;
 			BasicBlock* startBlock = BasicBlock::Create(LLVMCONTEXT, *GetSymbolName() + "$start", fun);
 			builder->SetInsertPoint(startBlock);
 
-
-
+			/*
+			Creates a compile environment unique to this type of function generation. The compile environment is responsible
+			for storing the environment type arguments as well as reading and casting the LLVM argument values of the function call.
+			In this case, the compiler also includes a receiver argument, the type of the receiver (the *this*) of a function
+			*/
 			CLibInstanceCompileEnv smenv = CLibInstanceCompileEnv(regcount, *GetSymbolName(), fun, &(this->phiNodes), typeArgs, argTypes, receiver, builder);
 			std::vector<NomTypeRef> recTypeArgValuesArray = {};
-			
-			const TypeList recTypeArgValues = ArrayRef<NomTypeRef>(recTypeArgValuesArray);
-
 			CompileEnv* env = &smenv;
 
 			InitializePhis(builder, fun, env);
@@ -184,38 +187,36 @@ namespace Nom {
 #ifdef INSTRUCTIONMESSAGES
 			auto dbgfun = GetDebugPrint(&mod);
 #endif	
-			llvm::ArrayRef<NomTypeRef> functionTypes = ArrayRef<NomTypeRef>(argTypes);
-
+			/*
+			The argument instructions specify which arguments should be used for the next instruction.
+			In this case, all environment arguments should be used.
+			*/
 			for (int i = 0; i < GetArgumentCount(); i++) {
 				ArgumentInstruction argInst = ArgumentInstruction(i+1);
 				argInst.Compile(builder, env, 0);
 			}
 
-			std::vector<NomTypeRef> typeArgValuesArray = {};
-			for (int i = 0; i < env->GetLocalTypeArgumentCount(); i++) {
-				typeArgValuesArray.push_back((NomTypeRef)(env->GetTypeArgument(builder, i).GetVariable()));
-			}
-			const TypeList typeArgValues = ArrayRef<NomTypeRef>(typeArgValuesArray);
-
+			/*
+			Creates an instruction to call an instance method (the method in the specification)
+			and JIT compiles it to LLVM IR. "CompileActual" skips processing parser inputs, and directly
+			compiles it with the instantiation given by the Specification File Parser.
+			*/
 			CallCheckedInstanceMethod callInst = CallCheckedInstanceMethod(0, NULL, NULL, 0);
-			callInst.CompileDirectly(method, functionTypes, builder, env, 0);
+			callInst.CompileActual(method, builder, env, 0);
 #ifdef INSTRUCTIONMESSAGES
 			if (!env->basicBlockTerminated)
 			{
 				builder->CreateCall(dbgfun, { { GetLLVMPointer(this->GetSymbolName()->data()), MakeInt<int64_t>(i)} });
 			}
 #endif
-			if (GetReturnType(nullptr)->GetLLVMType() == REFTYPE) {
-				llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-				llvm::Type* i8Ptr = i8Type->getPointerTo();
-				builder->CreateRet(builder->CreateBitCast(*((*env)[0]), i8Ptr));
-			}
-			else if (GetReturnType(nullptr)->GetLLVMType() == FLOATTYPE){
-				builder->CreateRet(EnsurePackedUnpacked(builder, *((*env)[0]), FLOATTYPE));
-			}
-			else {
-				builder->CreateRet(EnsurePackedUnpacked(builder, *((*env)[0]), INTTYPE));
-			}
+			/*
+			Creates the return for the generated function
+			*/
+			createCastedReturn(builder, env);
+
+			/*
+			Verifies the function to make sure the structure and types are correct for this function.
+			*/
 			llvm::raw_os_ostream out(std::cout);
 			//For some reason, verifyFunction is supposed to return false if there are no problems
 			if (verifyFunction(*fun, &out))
@@ -232,76 +233,56 @@ namespace Nom {
 
 		llvm::FunctionType* NomCLib::GetLLVMFunctionType(const NomSubstitutionContext* context) const
 		{
-			
+			/*
+			Gets the llvm Function Type, used for the static method and constructor calls.
+			Casts the arguments to what C++ uses for the function declaration, as this function
+			declaration must match the C++ declaration perfectly, therefore pointer types are casted
+			to i8* types. Adds all arguments and type arguments into the definition.
+			*/
 			std::vector<llvm::Type* > args(GetArgumentCount() + typeArgs.size());
 			auto argtypes = (GetArgumentTypes(context));
 
 			for (int i = 0; i < typeArgs.size(); i++) {
-				llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-				llvm::Type* i8Ptr = i8Type->getPointerTo();
-				args[i] = i8Ptr;
+				args[i] = GetCPointerType();
 			}
 			
 			for (int i = 0; i < GetArgumentCount(); i++)
 			{  
-				if (argtypes[i]->GetLLVMType() == REFTYPE) {
-					llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-					llvm::Type* i8Ptr = i8Type->getPointerTo();
-					args[i+typeArgs.size()] = i8Ptr;
-				}
-				else {
-					args[i + typeArgs.size()] = argtypes[i]->GetLLVMType();
-				}
+				args[i+typeArgs.size()] = GetLLVMCastedType(argtypes[i]);
 			}
-
-			if (GetReturnType(context)->GetLLVMType() == REFTYPE) {
-				llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-				llvm::Type* i8Ptr = i8Type->getPointerTo();
-				return llvm::FunctionType::get(i8Ptr, args, false);
-			}
-			return llvm::FunctionType::get(GetReturnType(context)->GetLLVMType(), args, false);
+			/*
+			Specifies the return type of the function
+			*/
+			return llvm::FunctionType::get(GetLLVMCastedType(GetReturnType(context)), args, false);
 			
 		}
 
 		llvm::FunctionType* NomCLibInstance::GetLLVMFunctionType(const NomSubstitutionContext* context) const
 		{
-
+			/*
+			Gets the llvm Function Type, used for the static method and constructor calls.
+			Casts the arguments to what C++ uses for the function declaration, as this function
+			declaration must match the C++ declaration perfectly, therefore pointer types are casted
+			to i8* types. Adds all arguments and type arguments into the definition. Additionally,
+			the receiver of the call is added for instance methods and once again casted to a 
+			C++ compatible type.
+			*/
 			std::vector<llvm::Type* > args(GetArgumentCount() + typeArgs.size() +1);
 			auto argtypes = (GetArgumentTypes(context));
-
-			if (receiver->GetLLVMType() == REFTYPE) {
-				llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-				llvm::Type* i8Ptr = i8Type->getPointerTo();
-				args[0] = i8Ptr;
-			}
-			else {
-				args[0] = receiver->GetLLVMType();
-			}
+			args[0] = GetLLVMCastedType(receiver);
 
 			for (int i = 0; i < typeArgs.size(); i++) {
-				llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-				llvm::Type* i8Ptr = i8Type->getPointerTo();
-				args[i+1] = i8Ptr;
+				args[i+1] = GetCPointerType();
 			}
 
 			for (int i = 0; i < GetArgumentCount(); i++)
 			{
-				if (argtypes[i]->GetLLVMType() == REFTYPE) {
-					llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-					llvm::Type* i8Ptr = i8Type->getPointerTo();
-					args[i + typeArgs.size()+1] = i8Ptr;
-				}
-				else {
-					args[i + typeArgs.size() +1] = argtypes[i]->GetLLVMType();
-				}
+				args[i + typeArgs.size()+1] = GetLLVMCastedType(argtypes[i]);
 			}
-
-			if (GetReturnType(context)->GetLLVMType() == REFTYPE) {
-				llvm::Type* i8Type = llvm::Type::getInt8Ty(LLVMCONTEXT);
-				llvm::Type* i8Ptr = i8Type->getPointerTo();
-				return llvm::FunctionType::get(i8Ptr, args, false);
-			}
-			return llvm::FunctionType::get(GetReturnType(context)->GetLLVMType(), args, false);
+			/*
+			Specifies the return type of the function
+			*/
+			return llvm::FunctionType::get(GetLLVMCastedType(GetReturnType(context)), args, false);
 
 		}
 
@@ -312,6 +293,13 @@ namespace Nom {
 
 		NomTypeRef NomCLib::GetReturnType(const NomSubstitutionContext* context) const
 		{
+			/*
+			Substitutes the type arguments with those known in the container. In this case, since this
+			generated function is identical to a static method, there are no environment type arguments,
+			and therefore within this context, it will always return the normal return type. 
+
+			Potential TODO: Find a way to read C++ code environment type arguments and perform the substitution 
+			*/
 			if (context != nullptr && context->GetTypeArgumentCount() && returnType->ContainsVariables())
 			{
 				return returnType->SubstituteSubtyping(context);
@@ -321,6 +309,13 @@ namespace Nom {
 
 		TypeList NomCLib::GetArgumentTypes(const NomSubstitutionContext* context) const
 		{
+			/*
+			Substitutes the type arguments with those known in the container. In this case, since this
+			generated function is identical to a static method, there are no environment type arguments,
+			and therefore within this context, it will always return the normal argument types.
+
+			Potential TODO: Find a way to read C++ code environment type arguments and perform the substitution
+			*/
 			if (context == nullptr || context->GetTypeArgumentCount() == 0 || argTypes.size() == 0)
 			{
 				return argTypes;
@@ -348,7 +343,9 @@ namespace Nom {
 
 		int NomCLib::GetArgumentCount() const
 		{
-			
+			/*
+			Gets the number of arguments
+			*/
 			if (argTypes.data() != nullptr)
 			{
 				return argTypes.size();

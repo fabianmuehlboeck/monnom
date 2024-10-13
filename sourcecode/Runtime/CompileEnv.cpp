@@ -168,24 +168,38 @@ namespace Nom
 				}
 				if (argcount == 0 && thisType != nullptr)
 				{
-					llvm::Value* val = builder->CreateBitCast(&Arg, REFTYPE, "rA");
+					/*
+					Since with C++, this value has the type i8*, casting it the the pointer type
+					that MonNom uses is necessary to avoid typing issues.
+					*/
+					llvm::Value* val = builder->CreateBitCast(&Arg, REFTYPE, "recArg");
 					registers[argindex] = NomValue(val, thisType);
 					argindex++;
 				}
 				else if (argcount + (thisType != nullptr ? 0 : 1) <= typeArgCount)
 				{
-					llvm::Value* val = builder->CreateBitCast(&Arg, TYPETYPE, "cTA");
+					/*
+					Since with C++, this value has the type i8*, casting it the the pointer type
+					that MonNom uses for type arguments is necessary to avoid typing issues.
+					*/
+					llvm::Value* val = builder->CreateBitCast(&Arg, TYPETYPE, "castedTypeArg");
 					TypeArguments.push_back(NomTypeVarValue(val, directTypeArgs[argcount - (thisType != nullptr ? 1 : 0)]->GetVariable()));
 				}
 				else
 				{
 					if (Arg.getType()->isPointerTy()) {
-						llvm::Value* val = builder->CreateBitCast(&Arg, REFTYPE, "cA");
-						int k = argindex - (thisType == nullptr ? 0 : 1);
+						/*
+						Since with C++, this value has the type i8*, casting it the the pointer type
+						that MonNom uses is necessary to avoid typing issues.
+						*/
+						llvm::Value* val = builder->CreateBitCast(&Arg, REFTYPE, "castedArg");
 						registers[argindex] = NomValue(val, argtypes[argindex - (thisType == nullptr ? 0 : 1)]);
 						argindex++;
 					}
 					else {
+						/*
+						Integers and float types are allowed to be typed as is, as they are the same between C++ and Nom
+						*/
 						registers[argindex] = NomValue(&Arg, argtypes[argindex - (thisType == nullptr ? 0 : 1)]);
 						argindex++;
 					}
@@ -295,9 +309,8 @@ namespace Nom
 #pragma region CLibStaticCompileEnv
 		CLibStaticCompileEnv::CLibStaticCompileEnv(RegIndex regcount, const llvm::Twine contextName, 
 			llvm::Function* function, const std::vector<PhiNode*>* phiNodes, 
-			const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, 
-			NomClassTypeRef thisType, NomBuilder& builder) 
-			: AFullArityCompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, NULL, argtypes, thisType, builder), Method(NULL)
+			const llvm::ArrayRef<NomTypeParameterRef> directTypeArgs, const TypeList argtypes, NomBuilder& builder) 
+			: AFullArityCompileEnv(regcount, contextName, function, 0, phiNodes, directTypeArgs, NULL, argtypes, nullptr, builder), Method(NULL)
 		{
 		}
 

@@ -15,20 +15,15 @@
 #include "ObjectClass.h"
 #include "IComparableInterface.h"
 #include "NomTypeParameter.h"
+#include "TypeOperations.h"
 #include <algorithm>
 
 namespace Nom {
 	namespace Runtime {
 		class NomCLib : public AvailableExternally<llvm::Function>
 		{ 
-		public:
-			NomTypeRef GetReturnType(const NomSubstitutionContext* context) const;
-			TypeList GetArgumentTypes(const NomSubstitutionContext* context) const;
-			int GetArgumentCount() const;
-			
-			NomString* methodName;
-			NomString* className;
-			llvm::ArrayRef<NomTypeRef> argTypes; 
+		protected:
+			llvm::ArrayRef<NomTypeRef> argTypes;
 			llvm::ArrayRef<NomTypeParameterRef> typeArgs;
 			NomTypeRef returnType;
 			RegIndex regcount;
@@ -41,70 +36,91 @@ namespace Nom {
 					phi->Initialize(builder, fun, env);
 				}
 			}
+		public:
+			NomTypeRef GetReturnType(const NomSubstitutionContext* context) const;
+			TypeList GetArgumentTypes(const NomSubstitutionContext* context) const;
+			int GetArgumentCount() const;
+
 			const std::string* GetSymbolName() const
 			{
 				return &CMethodName;
 			}
+			static llvm::Type* GetCPointerType() 
+			{
+				return llvm::Type::getInt8Ty(LLVMCONTEXT)->getPointerTo();
+			}
+			static llvm::Type* GetLLVMCastedType(NomTypeRef type)
+			{
+				if (type->GetLLVMType() == REFTYPE) {
+					return GetCPointerType();
+				}
+				else {
+					return type->GetLLVMType();
+				}
+			}
+			void createCastedReturn(NomBuilder &builder, CompileEnv* env) const
+			{
+				/*
+				Uses the builder to create a return, based on the type of the return argument.
+				Does any casting as necessary.
+				*/
+				if (GetReturnType(nullptr)->GetLLVMType() == REFTYPE) {
+					builder->CreateRet(builder->CreateBitCast(*((*env)[0]), GetCPointerType()));
+				}
+				else if (GetReturnType(nullptr)->GetLLVMType() == FLOATTYPE) {
+					builder->CreateRet(EnsurePackedUnpacked(builder, *((*env)[0]), FLOATTYPE));
+				}
+				else {
+					builder->CreateRet(EnsurePackedUnpacked(builder, *((*env)[0]), INTTYPE));
+				}
+			}
 
-			NomCLib(std::string CMethodName, std::string className, std::string callMethodName, 
-				llvm::ArrayRef<NomTypeRef> argTypes, const llvm::ArrayRef<NomTypeParameterRef> typeArgs, NomTypeRef returnType) 
+			NomCLib(std::string CMethodName, llvm::ArrayRef<NomTypeRef> argTypes, const llvm::ArrayRef<NomTypeParameterRef> typeArgs, NomTypeRef returnType) 
 			{
 				this->CMethodName = CMethodName;
-				this->className = new NomString(className);
-				this->methodName = new NomString(callMethodName);
 				this->argTypes = argTypes;
 				this->typeArgs = typeArgs;
 				this->returnType = returnType;
 				regcount = std::max((int)(argTypes.size()), 1);
 			}
 			~NomCLib() {
-				delete methodName;
-				delete className;
-				delete& argTypes;
-				delete& typeArgs;
 			}		
 
 			llvm::Function* findLLVMElement(llvm::Module& mod) const override;
-			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) {};
+			virtual llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override { return nullptr; };
 			llvm::FunctionType* GetLLVMFunctionType(const NomSubstitutionContext* context = nullptr) const;
 		};
 		class NomCLibStatic : public NomCLib
 		{
-		public:
+		private:
 			NomInstantiationRef<const NomStaticMethod> method;
+		public:
 			NomCLibStatic(std::string CMethodName, NomInstantiationRef<const NomStaticMethod> method,
 				llvm::ArrayRef<NomTypeRef> argTypes, const llvm::ArrayRef<NomTypeParameterRef> typeArgs, NomTypeRef returnType) 
-				: NomCLib(CMethodName, "", "", argTypes, typeArgs, returnType)
+				: NomCLib(CMethodName, argTypes, typeArgs, returnType)
 			{
 				this->method = method;
 			}
 			~NomCLibStatic() {
-				delete methodName;
-				delete className;
-				delete& argTypes;
-				delete& typeArgs;
 			}
 			llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 		};
 		class NomCLibInstance : public NomCLib
 		{
-		public:
+		private:
 			NomClassTypeRef receiver;
 			NomInstantiationRef<const NomMethod> method;
+		public:
 			NomCLibInstance(std::string CMethodName, NomInstantiationRef<const NomMethod> method, NomClassTypeRef receiver
 				, llvm::ArrayRef<NomTypeRef> argTypes, 
 				const llvm::ArrayRef<NomTypeParameterRef> typeArgs, NomTypeRef returnType)
-				: NomCLib(CMethodName, "", "", argTypes, typeArgs, returnType)
+				: NomCLib(CMethodName, argTypes, typeArgs, returnType)
 			{
 				this->receiver = receiver;
 				this->method = method;
 				regcount = argTypes.size()+1;
 			}
 			~NomCLibInstance() {
-				delete& methodName;
-				delete className;
-				delete& argTypes;
-				delete& typeArgs;
 			}
 
 			llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
@@ -112,32 +128,19 @@ namespace Nom {
 		};
 		class NomCLibConstructor : public NomCLib
 		{
-		public:
+		private:
 			NomInstantiationRef<NomClass> classRef;
+		public:
 			NomCLibConstructor(std::string CMethodName, NomInstantiationRef<NomClass> classRef,
 				llvm::ArrayRef<NomTypeRef> argTypes, const llvm::ArrayRef<NomTypeParameterRef> typeArgs, NomTypeRef returnType)
-				: NomCLib(CMethodName, "", "", argTypes, typeArgs, returnType)
+				: NomCLib(CMethodName, argTypes, typeArgs, returnType)
 			{
 				this->classRef = classRef;
 			}
 			~NomCLibConstructor() {
-				delete methodName;
-				delete className;
-				delete& argTypes;
-				delete& typeArgs;
 			}
 			llvm::Function* createLLVMElement(llvm::Module& mod, llvm::GlobalValue::LinkageTypes linkage) const override;
 		};
-
-		/*
-		Spec file:
-
-		foSimple calls for static, instance, constructor
-
-
-		*/
-		//SPec file:
-	
 	}
 }
 

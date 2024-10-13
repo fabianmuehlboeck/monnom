@@ -49,3 +49,7 @@ foo23: call_instance OneTP<Int>.InstanceTest2(Int) : Int
 foo24: call_instance OneTP<Float>.InstanceTest2(Float) : Float
 
 foo25: call_instance<T,S> TwoTP<S,T>.InstanceTest1(T,S) : Int
+
+foo26: call_instance RawInvokeClass() : Int
+
+foo27: call_instance RawInvokeClass2(String) : String
