@@ -4,7 +4,13 @@ class Foo
 	{
 		return CFUNCTION["foo"::ctestfun(Int,Int):Int](a,b);
 	}
+	public static fun Test2(Int a, Int b): Int
+	{
+		Int i = a * b + b;
+		return i;
+	}
 }
+
 class Main
 {	
 	public static fun Main() : Void

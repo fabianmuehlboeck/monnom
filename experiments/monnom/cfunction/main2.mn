@@ -6,6 +6,14 @@ class Foo
 		CFUNCTION["foo"::ctestfun<T>(T,T,Int):T]<String>(a.ToString(),b.ToString(),1).Print();
 		return b;
 	}
+	public static fun Test2<T>(T arg1, T arg2, Int arg3) : T {
+		if(arg3 > 1){
+			return arg1;
+		}
+		else{
+			return arg2;
+		}
+	}
 }
 class Main
 {	

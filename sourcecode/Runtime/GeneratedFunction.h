@@ -25,6 +25,10 @@ namespace Nom {
 			}	
 			~GeneratedFunction() {
 			}
+			/*
+			Uses the Available Externally Interface to get the llvm function of the generated library.
+			In this case, since this function does not exist in the module already, it creates it
+			*/
 			void generateLLVMFunction(llvm::Module& mod) {
 				generatedLibrary->GetLLVMElement(mod);
 			}

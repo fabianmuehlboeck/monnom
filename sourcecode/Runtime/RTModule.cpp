@@ -82,7 +82,6 @@ namespace Nom
 			NomMaybeType::GetInitializerFunction(*(theModule.get()));
 			RTClassType::Instance().GetLLVMElement(*(theModule.get()));
 
-			
 
 			auto& ifaces = mod->GetInterfaces();
 			auto& clses = mod->GetClasses();
@@ -108,6 +107,9 @@ namespace Nom
 			}
 			ObjectHeader::EnsureExternalReadWriteFieldFunctions(theModule.get());
 
+			/*
+			Generates the definition from the declared C++ functions
+			*/
 			SpecParser spec = SpecParser();
 			spec.generateLLVMFunctions(*theModule.get());
 
@@ -197,7 +199,7 @@ namespace Nom
 				}
 				if (NomVerbose)
 				{
-					std::cout << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getAddress()) << std::dec;
+					std::cout << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getAddress()) << std::dec;	
 					pobof << "\n" << glbl << " : " << std::hex << std::move(evalSymbol->getAddress()) << std::dec;
 				}
 			}

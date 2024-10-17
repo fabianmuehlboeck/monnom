@@ -18,7 +18,9 @@ namespace Nom {
 			/*
 			Creates an LLVM function with the same function type as the given C++ function.
 			*/
-			auto fun = llvm::Function::Create(GetLLVMFunctionType(), llvm::GlobalValue::LinkageTypes::ExternalLinkage, *GetSymbolName(), &mod);
+
+			auto fun = llvm::Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
+
 			fun->setCallingConv(llvm::CallingConv::C);
 
 			/*
@@ -163,7 +165,7 @@ namespace Nom {
 			/*
 			Creates an LLVM function with the same function type as the given C++ function.
 			*/
-			auto fun = llvm::Function::Create(GetLLVMFunctionType(), llvm::GlobalValue::LinkageTypes::ExternalLinkage, *GetSymbolName(), &mod);
+			auto fun = llvm::Function::Create(GetLLVMFunctionType(), linkage, *GetSymbolName(), &mod);
 			fun->setCallingConv(llvm::CallingConv::C);
 
 			/*
