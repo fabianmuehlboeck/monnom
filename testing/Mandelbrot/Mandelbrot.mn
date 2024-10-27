@@ -1,0 +1,51 @@
+
+
+class Mandelbrot
+{
+
+	public static fun PlotPoint(x0,y0) : String {
+		dyn iterations = 0;
+		dyn max_iterations = 100000;
+		dyn x = 0.0;
+		dyn y = 0.0;
+		while (x * x + y * y <= 4 && iterations < max_iterations) {
+			dyn xtemp = x * x - y * y + x0;
+			y = 2 * x * y + y0;
+			x = xtemp;
+			iterations = iterations + 1;
+		}
+
+		if (iterations < max_iterations / 4) {
+			return "#";
+		} else {
+			if (iterations < max_iterations - 2) {
+				return ".";
+			} else {
+				return " ";
+			}
+		}
+		
+	}
+
+	public static fun PlotMandelbrot(width, height) : Void{
+		dyn ypixel = 0;
+		while (ypixel < height) {
+			dyn xpixel = 0;
+			while (xpixel < width) {
+
+				PlotPoint((0.0 + xpixel) / width * 3 - 2, (0.0 + ypixel) / height * 3 - 1.5).Print();
+				
+				xpixel = xpixel + 1;
+			}
+			"\n".Print();
+			ypixel = ypixel + 1;
+		}	
+	}
+
+	public static fun Main() : Void
+	{
+		Timer t = new Timer();
+		PlotMandelbrot(250, 200);
+		t.PrintDifference();
+	}
+}
