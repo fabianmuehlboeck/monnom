@@ -36,6 +36,8 @@ namespace Nom
 		}
 		void UnaryOpInstruction::Compile(NomBuilder& builder, CompileEnv* env, int lineno)
 		{
+			Function* fun = builder->GetInsertBlock()->getParent();
+
 			switch (this->Operation)
 			{
 			case UnaryOperation::Negate: {
@@ -171,6 +173,27 @@ namespace Nom
 				//return;
 			}
 			case UnaryOperation::Not: {
+				// llvm::Value *tag;
+				// Runtime::NomTypeRef type;
+				// auto input = env->LookupUnwrapped(Arg, &tag, &type);
+
+				// BasicBlock* failBlock = 
+				// RTOutput_Fail::GenerateFailOutputBlock(builder, "Tried to Boolean negate a non-Boolean value!");
+				// SwitchInst* switchInst = builder->CreateSwitch(tag, failBlock, 2);
+				// BasicBlock* boolBlock = BasicBlock::Create(LLVMCONTEXT, "boolBlock", fun);
+				// switchInst->addCase(MakeUInt(2, 2), boolBlock);
+
+				// builder->SetInsertPoint(boolBlock);				
+				// BasicBlock* packBlock = BasicBlock::Create(LLVMCONTEXT, "packBlock", fun);
+				// builder->SetInsertPoint(boolBlock);
+				// builder->CreateBr(packBlock);
+
+				// BasicBlock* continueBlock = BasicBlock::Create(LLVMCONTEXT, "afterBinOp", fun);
+				// builder->SetInsertPoint(packBlock);
+				// builder->CreateBr(continueBlock);
+
+				// auto outVal = NomValue(outValue, MakeUInt(2, 2), packBlock, NomReturnType(leftType, rightType));
+
 				RegisterValue(env, NomValue(PackBool(builder, builder->CreateNot(EnsureUnpackedBool(builder, env, (*env)[Arg]))), NomBoolClass::GetInstance()->GetType(), false));
 				return;
 			}

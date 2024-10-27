@@ -978,15 +978,15 @@ namespace Nom
 			switch (Operation)
 			{
 			case BinaryOperation::And:
-				return EnsurePacked(builder, builder->CreateAnd(left, right));
+				return builder->CreateAnd(left, right);
 			case BinaryOperation::Or:
-				return EnsurePacked(builder, builder->CreateOr(left, right));
+				return builder->CreateOr(left, right);
 			case BinaryOperation::BitXOR:
-				return EnsurePacked(builder, builder->CreateXor(left, right));
+				return builder->CreateXor(left, right);
 			case BinaryOperation::Equals:
-				return EnsurePacked(builder, builder->CreateICmpEQ(left, right));
+				return builder->CreateICmpEQ(left, right);
 			case BinaryOperation::RefEquals:
-				return EnsurePacked(builder, builder->CreateICmpEQ(left, right));
+				return builder->CreateICmpEQ(left, right);
 			default:
 			{
 				*resultTag = nullptr;

@@ -87,18 +87,60 @@ namespace Nom
 				*outTag = tag;
 				return tagVal;
 			}
+			#define BUILDER ((*builder))
+
+			auto oldInsertPoint = BUILDER->GetInsertBlock();
+			llvm::Function* fun = BUILDER->GetInsertBlock()->getParent();
+			
+
+			llvm::BasicBlock::iterator splitPoint;
+			BasicBlock* splitBlock;
+
+			const char * splitBlockName;
+			if (auto *inst = dyn_cast<llvm::Instruction>(*value) ) {
+				splitBlock = inst->getParent();
+				do {inst = inst->getNextNode();} while (inst && isa<llvm::PHINode>(inst));
+				if (inst) {
+					splitPoint = inst->getIterator();
+					splitBlockName = "unwrapOutBlockAfterInst";
+				} else {
+					splitPoint = splitBlock->end();
+					splitBlockName = "unwrapOutBlockEndofBlock";
+				}
+			} else if (isa<llvm::Argument>(*value) || isa<llvm::Constant>(*value)) {
+				splitBlock = &fun->getEntryBlock();
+				splitPoint = splitBlock->getFirstInsertionPt();
+				splitBlockName = "unwrapOutBlockArgumentOrConstant";
+			} else {
+				throw "Invalid value type!";
+			}
+
+
+			// We need to split the basic block by splicing everything after the current insert point into the new block
+			BasicBlock* outBlock;
+			if (splitBlock->getTerminator()) {
+				outBlock = splitBlock->splitBasicBlock(splitPoint, splitBlockName);
+				auto addedBr = splitBlock->getTerminator();
+				addedBr->dropAllReferences();
+				addedBr->removeFromParent();
+			} else {
+				outBlock = BasicBlock::Create(LLVMCONTEXT, splitBlockName, fun);
+				outBlock->getInstList().splice(outBlock->begin(), splitBlock->getInstList(), splitPoint, splitBlock->end());
+			}
+
+			BUILDER->SetInsertPoint(splitBlock);
+
 
 			BasicBlock* refValueBlock = nullptr, * primitiveIntBlock = nullptr, * 
 				primitiveFloatBlock = nullptr, * primitiveBoolBlock = nullptr;
 			Value* intValue = nullptr, * floatValue = nullptr, * boolValue = nullptr;
-			#define BUILDER ((*builder))
+
 			auto cases = RefValueHeader::GenerateRefOrPrimitiveValueSwitch(BUILDER, value, 
 				&refValueBlock, nullptr, nullptr, true, &primitiveIntBlock, &intValue, 
 				&primitiveFloatBlock, &floatValue, &primitiveBoolBlock, &boolValue);
 
 
-			llvm::Function* fun = BUILDER->GetInsertBlock()->getParent();
-			BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "unpackOut", fun);
+			// BasicBlock* outBlock = BasicBlock::Create(LLVMCONTEXT, "unpackOut", fun);
 			PHINode* outValuePHI = nullptr;
 			llvm::Value* outValue = nullptr;
 			PHINode* outTagPHI = nullptr;
@@ -106,7 +148,7 @@ namespace Nom
 
 			if (cases > 1)
 			{
-				BUILDER->SetInsertPoint(outBlock);
+				BUILDER->SetInsertPoint(outBlock, outBlock->begin());
 
 				outValuePHI = BUILDER->CreatePHI(unpackedTy, cases, "unpackedValue");
 				outTagPHI = BUILDER->CreatePHI(llvm::Type::getIntNTy(LLVMCONTEXT, 2), cases, "unpackedTag");
@@ -177,7 +219,11 @@ namespace Nom
 				BUILDER->CreateBr(outBlock);
 			}
 
-			BUILDER->SetInsertPoint(outBlock);
+			if (outBlock->getTerminator()) {
+				BUILDER->SetInsertPoint(oldInsertPoint);
+			} else {
+				BUILDER->SetInsertPoint(outBlock);
+			}
 			if (outValuePHI != nullptr) {
 				*outTag = outTagPHI;
 			}
