@@ -1,1 +1,4 @@
-ctestfun2: call_static<T> Foo.Test2<T>(T,T,Int) : T
+ctestfun2: call_static Foo.Test2(Int,Int) : Int
+makeBar: construct Bar(Int)
+compare: call_instance<T> IComparable<T>.Compare(T) : Int
+getBarA: call_instance Bar.getA() : Int

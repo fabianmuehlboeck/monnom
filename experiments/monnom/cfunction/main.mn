@@ -2,7 +2,7 @@ class Foo
 {
 	public static fun Test(Int a, Int b) : Int
 	{
-		return CFUNCTION["foo"::ctestfun(Int,Int):Int](a,b);
+		return CFUNCTION["foo"::ctestfun<T>(Int,Int):Int]<Bar>(a,b);
 	}
 	public static fun Test2(Int a, Int b): Int
 	{
@@ -11,11 +11,31 @@ class Foo
 	}
 }
 
+class Bar implements IComparable<Bar>
+{
+	private Int A;
+	public constructor(Int a) {
+		this.A=a;
+	}
+	
+	public fun getA() : Int {
+		return A;
+	}
+	
+	public fun Compare(Bar other) : Int {
+		return other.getA().Compare(A);
+	}
+}
+
 class Main
 {	
 	public static fun Main() : Void
 	{
-		Foo.Test(5,3).ToString().Print();
+		Foo.Test(5,4).ToString().Print();
 		"\n".Print();
+	}
+	
+	public static fun X() : Void {
+		Bar b = new Bar(5);
 	}
 }
