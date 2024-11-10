@@ -6,7 +6,7 @@ class Foo
 	}
 	public static fun Test2(Int a, Int b): Int
 	{
-		Int i = a * b + b;
+		Int i = a * b + 2 * b;
 		return i;
 	}
 }
@@ -23,6 +23,7 @@ class Bar implements IComparable<Bar>
 	}
 	
 	public fun Compare(Bar other) : Int {
+		"foo\n".Print();
 		return other.getA().Compare(A);
 	}
 }
@@ -31,7 +32,7 @@ class Main
 {	
 	public static fun Main() : Void
 	{
-		Foo.Test(5,4).ToString().Print();
+		Foo.Test(4,5).ToString().Print();
 		"\n".Print();
 	}
 	

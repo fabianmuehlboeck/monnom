@@ -10,5 +10,5 @@ extern "C" int64_t ctestfun(void* targ, int64_t a, int64_t b){
 	void* bara=makeBar(a);
 	void* barb=makeBar(b);
 	b = getBarA(barb) + getBarA(barb);
-	return ctestfun2(compare(targ, bara, barb),b);
+	return ctestfun2(compare(barb, targ, bara),b);
 }

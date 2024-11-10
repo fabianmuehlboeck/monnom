@@ -101,11 +101,22 @@ namespace Nom {
 			NomClassTypeRef getClassType() {
 				if (classType != nullptr) {
 					const NomString cName = NomString(classType->getClassName());
-					return NomClass::getClass(&cName)->GetType(classType->getTypeArgs());
+					try {
+						return NomClass::getClass(&cName)->GetType(classType->getTypeArgs());
+					}
+					catch (NomStringRef name){
+						return NomClass::GetInterface(&cName)->GetType(classType->getTypeArgs());
+					}
+					
 				}
 				else {
 					const NomString cName = NomString(methodType->getClassName());
-					return NomClass::getClass(&cName)->GetType(methodType->getTypeArgs());
+					try {
+						return NomClass::getClass(&cName)->GetType(methodType->getTypeArgs());
+					}
+					catch (NomStringRef name) {
+						return NomClass::GetInterface(&cName)->GetType(methodType->getTypeArgs());
+					}
 				}
 			}
 		};
