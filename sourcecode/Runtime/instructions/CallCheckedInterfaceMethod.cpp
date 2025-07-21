@@ -1,9 +1,9 @@
 //#include "CallCheckedInterfaceMethod.h"
-//#include "../NomConstants.h"
-//#include "../ObjectHeader.h"
-//#include "../NomAlloc.h"
-//#include "../NomMethod.h"
-//#include "../CompileHelpers.h"
+//#include "../Intermediate_Representation/NomConstants.h"
+//#include "../Runtime_Data/Headers/ObjectHeader.h"
+//#include "../Runtime/Memory/NomAlloc.h"
+//#include "../Intermediate_Representation/Callables/NomMethod.h"
+//#include "../Common/CompileHelpers.h"
 //#include <iostream>
 //
 //using namespace std;

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../NomValueInstruction.h"
-#include "../Context.h"
-#include "../NomConstants.h"
-#include "../NomVMInterface.h"
+#include "../instructions/NomValueInstruction.h"
+#include "../Common/Context.h"
+#include "../Intermediate_Representation/NomConstants.h"
+#include "../Runtime/NomVMInterface.h"
 #include "llvm/IR/Function.h"
 #include <iostream>
 

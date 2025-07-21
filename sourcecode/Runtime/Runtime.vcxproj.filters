@@ -90,46 +90,46 @@
     <ClCompile Include="instructions\ReturnInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="NomInstruction.cpp">
+    <ClCompile Include="instructions\NomInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="NomValueInstruction.cpp">
+    <ClCompile Include="instructions\NomValueInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="NomVMInterface.cpp">
+    <ClCompile Include="Runtime\NomVMInterface.cpp">
       <Filter>Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="NomRuntime.cpp">
+    <ClCompile Include="Runtime\NomRuntime.cpp">
       <Filter>Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="Runtime.cpp">
+    <ClCompile Include="Runtime\Runtime.cpp">
       <Filter>Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="NomJIT.cpp">
+    <ClCompile Include="Runtime\NomJIT.cpp">
       <Filter>Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="ClassTypeList.cpp">
+    <ClCompile Include="Common\ClassTypeList.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="CompileEnv.cpp">
+    <ClCompile Include="Common\CompileEnv.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="TypeList.cpp">
+    <ClCompile Include="Common\TypeList.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Util.cpp">
+    <ClCompile Include="Common\Util.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="ObjectClass.cpp">
+    <ClCompile Include="Library\ObjectClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="NullClass.cpp">
+    <ClCompile Include="Library\NullClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="StringClass.cpp">
+    <ClCompile Include="Library\StringClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="NomConstants.cpp">
+    <ClCompile Include="Intermediate_Representation\NomConstants.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
     <ClCompile Include="instructions\CallDispatchBestMethod.cpp">
@@ -138,46 +138,46 @@
     <ClCompile Include="instructions\CallCheckedInstanceMethod.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="BytecodeReader.cpp">
+    <ClCompile Include="Parse\BytecodeReader.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="CharStream.cpp">
+    <ClCompile Include="Common\CharStream.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="ManifestReader.cpp">
+    <ClCompile Include="Parse\ManifestReader.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="AssemblyUnit.cpp">
+    <ClCompile Include="Intermediate_Representation\AssemblyUnit.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="Loader.cpp">
+    <ClCompile Include="Parse\Loader.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="LibraryVersion.cpp">
+    <ClCompile Include="Parse\LibraryVersion.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="Library.cpp">
+    <ClCompile Include="Parse\Library.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="LibraryDependency.cpp">
+    <ClCompile Include="Parse\LibraryDependency.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="Context.cpp">
+    <ClCompile Include="Common\Context.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="LibrarySource.cpp">
+    <ClCompile Include="Parse\LibrarySource.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="ComponentSource.cpp">
+    <ClCompile Include="Parse\ComponentSource.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="Directory.cpp">
+    <ClCompile Include="FileSystem\Directory.cpp">
       <Filter>FileSystem</Filter>
     </ClCompile>
-    <ClCompile Include="File.cpp">
+    <ClCompile Include="FileSystem\File.cpp">
       <Filter>FileSystem</Filter>
     </ClCompile>
-    <ClCompile Include="Path.cpp">
+    <ClCompile Include="FileSystem\Path.cpp">
       <Filter>FileSystem</Filter>
     </ClCompile>
     <ClCompile Include="instructions\DebugInstruction.cpp">
@@ -186,7 +186,7 @@
     <ClCompile Include="instructions\ReturnVoidInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="VoidClass.cpp">
+    <ClCompile Include="Library\VoidClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
     <ClCompile Include="instructions\LoadIntConstantInstruction.cpp">
@@ -195,40 +195,40 @@
     <ClCompile Include="instructions\BinOpInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="BoolClass.cpp">
+    <ClCompile Include="Library\BoolClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="FloatClass.cpp">
+    <ClCompile Include="Library\FloatClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="IntClass.cpp">
+    <ClCompile Include="Library\IntClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="RTModule.cpp">
+    <ClCompile Include="Runtime_Data\RTModule.cpp">
       <Filter>Runtime Data</Filter>
     </ClCompile>
-    <ClCompile Include="RTInterfaceTableEntry.cpp">
+    <ClCompile Include="Runtime_Data\RTInterfaceTableEntry.cpp">
       <Filter>Runtime Data</Filter>
     </ClCompile>
-    <ClCompile Include="ARTRep.cpp">
+    <ClCompile Include="Runtime_Data\ARTRep.cpp">
       <Filter>Runtime Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomTypeRegistry.cpp">
+    <ClCompile Include="Runtime\NomTypeRegistry.cpp">
       <Filter>Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="AvailableExternally.cpp">
+    <ClCompile Include="Intermediate_Representation\AvailableExternally.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="NomMemberContext.cpp">
+    <ClCompile Include="Intermediate_Representation\NomMemberContext.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="GloballyNamed.cpp">
+    <ClCompile Include="Intermediate_Representation\GloballyNamed.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="Defs.cpp">
+    <ClCompile Include="Common\Defs.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="NomValue.cpp">
+    <ClCompile Include="Intermediate_Representation\NomValue.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
     <ClCompile Include="instructions\CallConstructor.cpp">
@@ -240,7 +240,7 @@
     <ClCompile Include="instructions\ReadFieldInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="NomField.cpp">
+    <ClCompile Include="Intermediate_Representation\NomField.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
     <ClCompile Include="instructions\CastInstruction.cpp">
@@ -252,49 +252,49 @@
     <ClCompile Include="instructions\CondBranchInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="TypeOperations.cpp">
+    <ClCompile Include="Common\TypeOperations.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="FunInterface.cpp">
+    <ClCompile Include="Library\FunInterface.cpp">
       <Filter>Library</Filter>
     </ClCompile>
     <ClCompile Include="instructions\BranchInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="BytecodeTopReadHandler.cpp">
+    <ClCompile Include="Parse\BytecodeTopReadHandler.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="NomString.cpp">
+    <ClCompile Include="Intermediate_Representation\NomString.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="TimerClass.cpp">
+    <ClCompile Include="Library\TimerClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="NomNameRepository.cpp">
+    <ClCompile Include="Intermediate_Representation\NomNameRepository.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="CompileHelpers.cpp">
+    <ClCompile Include="Common\CompileHelpers.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="RTOutput.cpp">
+    <ClCompile Include="Runtime\RTOutput.cpp">
       <Filter>Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="ExpandoObjectClass.cpp">
+    <ClCompile Include="Library\ExpandoObjectClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="RTDictionary.cpp">
+    <ClCompile Include="Runtime\RTDictionary.cpp">
       <Filter>Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="RTDescriptor.cpp">
+    <ClCompile Include="Runtime_Data\RTDescriptor.cpp">
       <Filter>Runtime Data</Filter>
     </ClCompile>
     <ClCompile Include="instructions\CreateClosure.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="NomMethodTableEntry.cpp">
+    <ClCompile Include="Intermediate_Representation\NomMethodTableEntry.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="RTSignature.cpp">
+    <ClCompile Include="Runtime_Data\RTSignature.cpp">
       <Filter>Runtime Data</Filter>
     </ClCompile>
     <ClCompile Include="instructions\ConstructStruct.cpp">
@@ -309,229 +309,229 @@
     <ClCompile Include="instructions\RTCmdInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="NomSubstitutionContext.cpp">
+    <ClCompile Include="Intermediate_Representation\NomSubstitutionContext.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="IComparableInterface.cpp">
+    <ClCompile Include="Library\IComparableInterface.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="NomTypeParameter.cpp">
+    <ClCompile Include="Intermediate_Representation\NomTypeParameter.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="IPairInterface.cpp">
+    <ClCompile Include="Library\IPairInterface.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="NomValuePrimitiveCases.cpp">
+    <ClCompile Include="Intermediate_Representation\NomValuePrimitiveCases.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="LoadFloatConstantInstruction.cpp">
+    <ClCompile Include="instructions\LoadFloatConstantInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="IMT.cpp">
+    <ClCompile Include="Runtime_Data\IMT.cpp">
       <Filter>Runtime Data</Filter>
     </ClCompile>
-    <ClCompile Include="ArrayListClass.cpp">
+    <ClCompile Include="Library\ArrayListClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="IEnumeratorInterface.cpp">
+    <ClCompile Include="Library\IEnumeratorInterface.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="IEnumerableInterface.cpp">
+    <ClCompile Include="Library\IEnumerableInterface.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="MathClass.cpp">
+    <ClCompile Include="Library\MathClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="RangeClass.cpp">
+    <ClCompile Include="Library\RangeClass.cpp">
       <Filter>Library</Filter>
     </ClCompile>
-    <ClCompile Include="Manifest.cpp">
+    <ClCompile Include="Parse\Manifest.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
-    <ClCompile Include="LoadNullConstantInstruction.cpp">
+    <ClCompile Include="instructions\LoadNullConstantInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="UnaryOpInstruction.cpp">
+    <ClCompile Include="instructions\UnaryOpInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="EnsureCheckedMethodInstruction.cpp">
+    <ClCompile Include="instructions\EnsureCheckedMethodInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="EnsureDynamicMethodInstruction.cpp">
+    <ClCompile Include="instructions\EnsureDynamicMethodInstruction.cpp">
       <Filter>Instructions</Filter>
     </ClCompile>
-    <ClCompile Include="Metadata.cpp">
+    <ClCompile Include="Common\Metadata.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="LambdaHeader.cpp">
+    <ClCompile Include="Runtime_Data\Headers\LambdaHeader.cpp">
       <Filter>Runtime Data\Headers</Filter>
     </ClCompile>
-    <ClCompile Include="ObjectHeader.cpp">
+    <ClCompile Include="Runtime_Data\Headers\ObjectHeader.cpp">
       <Filter>Runtime Data\Headers</Filter>
     </ClCompile>
-    <ClCompile Include="PartialAppHeader.cpp">
+    <ClCompile Include="Runtime_Data\Headers\PartialAppHeader.cpp">
       <Filter>Runtime Data\Headers</Filter>
     </ClCompile>
-    <ClCompile Include="RefValueHeader.cpp">
+    <ClCompile Include="Runtime_Data\Headers\RefValueHeader.cpp">
       <Filter>Runtime Data\Headers</Filter>
     </ClCompile>
-    <ClCompile Include="RecordHeader.cpp">
+    <ClCompile Include="Runtime_Data\Headers\RecordHeader.cpp">
       <Filter>Runtime Data\Headers</Filter>
     </ClCompile>
-    <ClCompile Include="RTVTable.cpp">
+    <ClCompile Include="Runtime_Data\VTables\RTVTable.cpp">
       <Filter>Runtime Data\VTables</Filter>
     </ClCompile>
-    <ClCompile Include="RTClassType.cpp">
+    <ClCompile Include="Runtime_Data\Types\RTClassType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTTypeHead.cpp">
+    <ClCompile Include="Runtime_Data\Types\RTTypeHead.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTDynamicType.cpp">
+    <ClCompile Include="Runtime_Data\Types\RTDynamicType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTInstanceType.cpp">
+    <ClCompile Include="Runtime_Data\Types\RTInstanceType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTMaybeType.cpp">
+    <ClCompile Include="Runtime_Data\Types\RTMaybeType.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="RTTypeVar.cpp">
+    <ClCompile Include="Runtime_Data\Types\RTTypeVar.cpp">
       <Filter>Runtime Data\Types</Filter>
     </ClCompile>
-    <ClCompile Include="StructuralValueHeader.cpp">
+    <ClCompile Include="Runtime_Data\Headers\StructuralValueHeader.cpp">
       <Filter>Runtime Data\Headers</Filter>
     </ClCompile>
-    <ClCompile Include="RTRecord.cpp">
+    <ClCompile Include="Runtime_Data\VTables\RTRecord.cpp">
       <Filter>Runtime Data\VTables</Filter>
     </ClCompile>
-    <ClCompile Include="RTPartialApp.cpp">
+    <ClCompile Include="Runtime_Data\VTables\RTPartialApp.cpp">
       <Filter>Runtime Data\VTables</Filter>
     </ClCompile>
-    <ClCompile Include="RTLambda.cpp">
+    <ClCompile Include="Runtime_Data\VTables\RTLambda.cpp">
       <Filter>Runtime Data\VTables</Filter>
     </ClCompile>
-    <ClCompile Include="RTInterface.cpp">
+    <ClCompile Include="Runtime_Data\VTables\RTInterface.cpp">
       <Filter>Runtime Data\VTables</Filter>
     </ClCompile>
-    <ClCompile Include="RTClass.cpp">
+    <ClCompile Include="Runtime_Data\VTables\RTClass.cpp">
       <Filter>Runtime Data\VTables</Filter>
     </ClCompile>
-    <ClCompile Include="NomBottomType.cpp">
+    <ClCompile Include="Intermediate_Representation\Types\NomBottomType.cpp">
       <Filter>Intermediate Representation\Types</Filter>
     </ClCompile>
-    <ClCompile Include="NomClassType.cpp">
+    <ClCompile Include="Intermediate_Representation\Types\NomClassType.cpp">
       <Filter>Intermediate Representation\Types</Filter>
     </ClCompile>
-    <ClCompile Include="NomDynamicType.cpp">
+    <ClCompile Include="Intermediate_Representation\Types\NomDynamicType.cpp">
       <Filter>Intermediate Representation\Types</Filter>
     </ClCompile>
-    <ClCompile Include="NomMaybeType.cpp">
+    <ClCompile Include="Intermediate_Representation\Types\NomMaybeType.cpp">
       <Filter>Intermediate Representation\Types</Filter>
     </ClCompile>
-    <ClCompile Include="NomTopType.cpp">
+    <ClCompile Include="Intermediate_Representation\Types\NomTopType.cpp">
       <Filter>Intermediate Representation\Types</Filter>
     </ClCompile>
-    <ClCompile Include="NomTypeVar.cpp">
+    <ClCompile Include="Intermediate_Representation\Types\NomTypeVar.cpp">
       <Filter>Intermediate Representation\Types</Filter>
     </ClCompile>
-    <ClCompile Include="NomType.cpp">
+    <ClCompile Include="Intermediate_Representation\Types\NomType.cpp">
       <Filter>Intermediate Representation\Types</Filter>
     </ClCompile>
-    <ClCompile Include="NomCallable.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomCallable.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomCallableVersion.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomCallableVersion.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomMethod.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomMethod.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomRecordMethod.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomRecordMethod.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomStaticMethod.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomStaticMethod.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomPartialApplication.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomPartialApplication.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomClass.cpp">
+    <ClCompile Include="Intermediate_Representation\Data\NomClass.cpp">
       <Filter>Intermediate Representation\Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomInterface.cpp">
+    <ClCompile Include="Intermediate_Representation\Data\NomInterface.cpp">
       <Filter>Intermediate Representation\Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomLambda.cpp">
+    <ClCompile Include="Intermediate_Representation\Data\NomLambda.cpp">
       <Filter>Intermediate Representation\Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomNamed.cpp">
+    <ClCompile Include="Intermediate_Representation\Data\NomNamed.cpp">
       <Filter>Intermediate Representation\Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomRecord.cpp">
+    <ClCompile Include="Intermediate_Representation\Data\NomRecord.cpp">
       <Filter>Intermediate Representation\Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomModule.cpp">
+    <ClCompile Include="Intermediate_Representation\Data\NomModule.cpp">
       <Filter>Intermediate Representation\Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomSignature.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomSignature.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomInterfaceCallTag.cpp">
+    <ClCompile Include="Intermediate_Representation\CallTags\NomInterfaceCallTag.cpp">
       <Filter>Intermediate Representation\CallTags</Filter>
     </ClCompile>
-    <ClCompile Include="NomProgram.cpp">
+    <ClCompile Include="Intermediate_Representation\Data\NomProgram.cpp">
       <Filter>Intermediate Representation\Data</Filter>
     </ClCompile>
-    <ClCompile Include="NomLambdaCallTag.cpp">
+    <ClCompile Include="Intermediate_Representation\CallTags\NomLambdaCallTag.cpp">
       <Filter>Intermediate Representation\CallTags</Filter>
     </ClCompile>
-    <ClCompile Include="NomRecordCallTag.cpp">
+    <ClCompile Include="Intermediate_Representation\CallTags\NomRecordCallTag.cpp">
       <Filter>Intermediate Representation\CallTags</Filter>
     </ClCompile>
-    <ClCompile Include="NomConstructor.cpp">
+    <ClCompile Include="Intermediate_Representation\Callables\NomConstructor.cpp">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClCompile>
-    <ClCompile Include="NomBuilder.cpp">
+    <ClCompile Include="Common\NomBuilder.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="SourcePos.cpp">
+    <ClCompile Include="Common\SourcePos.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="NomTypeVarValue.cpp">
+    <ClCompile Include="Intermediate_Representation\NomTypeVarValue.cpp">
       <Filter>Intermediate Representation</Filter>
     </ClCompile>
-    <ClCompile Include="RTTypeEq.cpp">
+    <ClCompile Include="Runtime\Typing\RTTypeEq.cpp">
       <Filter>Runtime\Typing</Filter>
     </ClCompile>
-    <ClCompile Include="RTSubtyping.cpp">
+    <ClCompile Include="Runtime\Typing\RTSubtyping.cpp">
       <Filter>Runtime\Typing</Filter>
     </ClCompile>
-    <ClCompile Include="RTSubstStack.cpp">
+    <ClCompile Include="Runtime\Typing\RTSubstStack.cpp">
       <Filter>Runtime\Typing</Filter>
     </ClCompile>
-    <ClCompile Include="RTDisjointness.cpp">
+    <ClCompile Include="Runtime\Typing\RTDisjointness.cpp">
       <Filter>Runtime\Typing</Filter>
     </ClCompile>
-    <ClCompile Include="RTCast.cpp">
+    <ClCompile Include="Runtime\Typing\RTCast.cpp">
       <Filter>Runtime\Typing</Filter>
     </ClCompile>
-    <ClCompile Include="CastStats.cpp">
+    <ClCompile Include="Runtime\Statistics\CastStats.cpp">
       <Filter>Runtime\Statistics</Filter>
     </ClCompile>
-    <ClCompile Include="FunctionTimings.cpp">
+    <ClCompile Include="Runtime\Statistics\FunctionTimings.cpp">
       <Filter>Runtime\Statistics</Filter>
     </ClCompile>
-    <ClCompile Include="BoehmContainers.cpp">
+    <ClCompile Include="Runtime\Memory\BoehmContainers.cpp">
       <Filter>Runtime\Memory</Filter>
     </ClCompile>
-    <ClCompile Include="boehmgcinterface.cpp">
+    <ClCompile Include="Runtime\Memory\boehmgcinterface.cpp">
       <Filter>Runtime\Memory</Filter>
     </ClCompile>
-    <ClCompile Include="NomAlloc.cpp">
+    <ClCompile Include="Runtime\Memory\NomAlloc.cpp">
       <Filter>Runtime\Memory</Filter>
     </ClCompile>
-    <ClCompile Include="RTConfig.cpp">
+    <ClCompile Include="Runtime\Config\RTConfig.cpp">
       <Filter>Runtime\Config</Filter>
     </ClCompile>
   </ItemGroup>
@@ -554,112 +554,112 @@
     <ClInclude Include="instructions\PhiNode.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="NomValueInstruction.h">
+    <ClInclude Include="instructions\NomValueInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
     <ClInclude Include="instructions\NoopInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="NomInstruction.h">
+    <ClInclude Include="instructions\NomInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
     <ClInclude Include="instructions\CallCheckedStaticMethod.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="Util.h">
+    <ClInclude Include="Common\Util.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="TypeList.h">
+    <ClInclude Include="Common\TypeList.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="StringClass.h">
+    <ClInclude Include="Library\StringClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="Runtime.h">
+    <ClInclude Include="Runtime\Runtime.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="ObjectClass.h">
+    <ClInclude Include="Library\ObjectClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="NullClass.h">
+    <ClInclude Include="Library\NullClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="NomVMInterface.h">
+    <ClInclude Include="Runtime\NomVMInterface.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="NomRuntime.h">
+    <ClInclude Include="Runtime\NomRuntime.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="NomJIT.h">
+    <ClInclude Include="Runtime\NomJIT.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="NomInstantiationRef.h">
+    <ClInclude Include="Intermediate_Representation\NomInstantiationRef.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="NomString.h">
+    <ClInclude Include="Intermediate_Representation\NomString.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="NomConstants.h">
+    <ClInclude Include="Intermediate_Representation\NomConstants.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="CompileEnv.h">
+    <ClInclude Include="Common\CompileEnv.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="ClassTypeList.h">
+    <ClInclude Include="Common\ClassTypeList.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Context.h">
+    <ClInclude Include="Common\Context.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Defs.h">
+    <ClInclude Include="Common\Defs.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="instructions\CallDispatchBestMethod.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="BytecodeReader.h">
+    <ClInclude Include="Parse\BytecodeReader.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="CharStream.h">
+    <ClInclude Include="Common\CharStream.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="ManifestReader.h">
+    <ClInclude Include="Parse\ManifestReader.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="AssemblyUnit.h">
+    <ClInclude Include="Intermediate_Representation\AssemblyUnit.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="Loader.h">
+    <ClInclude Include="Parse\Loader.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="LibraryVersion.h">
+    <ClInclude Include="Parse\LibraryVersion.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="Library.h">
+    <ClInclude Include="Parse\Library.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="LibraryDependency.h">
+    <ClInclude Include="Parse\LibraryDependency.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="VersionNumber.h">
+    <ClInclude Include="Parse\VersionNumber.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="LibrarySource.h">
+    <ClInclude Include="Parse\LibrarySource.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="ComponentSource.h">
+    <ClInclude Include="Parse\ComponentSource.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="StringDict.h">
+    <ClInclude Include="Common\StringDict.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Directory.h">
+    <ClInclude Include="FileSystem\Directory.h">
       <Filter>FileSystem</Filter>
     </ClInclude>
-    <ClInclude Include="File.h">
+    <ClInclude Include="FileSystem\File.h">
       <Filter>FileSystem</Filter>
     </ClInclude>
-    <ClInclude Include="Path.h">
+    <ClInclude Include="FileSystem\Path.h">
       <Filter>FileSystem</Filter>
     </ClInclude>
     <ClInclude Include="instructions\DebugInstruction.h">
@@ -668,7 +668,7 @@
     <ClInclude Include="instructions\ReturnVoidInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="VoidClass.h">
+    <ClInclude Include="Library\VoidClass.h">
       <Filter>Library</Filter>
     </ClInclude>
     <ClInclude Include="instructions\LoadIntConstantInstruction.h">
@@ -677,40 +677,40 @@
     <ClInclude Include="instructions\BinOpInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="BoolClass.h">
+    <ClInclude Include="Library\BoolClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="FloatClass.h">
+    <ClInclude Include="Library\FloatClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="IntClass.h">
+    <ClInclude Include="Library\IntClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="RTModule.h">
+    <ClInclude Include="Runtime_Data\RTModule.h">
       <Filter>Runtime Data</Filter>
     </ClInclude>
-    <ClInclude Include="RTInterfaceTableEntry.h">
+    <ClInclude Include="Runtime_Data\RTInterfaceTableEntry.h">
       <Filter>Runtime Data</Filter>
     </ClInclude>
-    <ClInclude Include="ARTRep.h">
+    <ClInclude Include="Runtime_Data\ARTRep.h">
       <Filter>Runtime Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomTypeRegistry.h">
+    <ClInclude Include="Runtime\NomTypeRegistry.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="AvailableExternally.h">
+    <ClInclude Include="Intermediate_Representation\AvailableExternally.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="NomMemberContext.h">
+    <ClInclude Include="Intermediate_Representation\NomMemberContext.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="GloballyNamed.h">
+    <ClInclude Include="Intermediate_Representation\GloballyNamed.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="NomValue.h">
+    <ClInclude Include="Intermediate_Representation\NomValue.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="NomTypeVarValue.h">
+    <ClInclude Include="Intermediate_Representation\NomTypeVarValue.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
     <ClInclude Include="instructions\CallConstructor.h">
@@ -722,7 +722,7 @@
     <ClInclude Include="instructions\ReadFieldInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="NomField.h">
+    <ClInclude Include="Intermediate_Representation\NomField.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
     <ClInclude Include="instructions\CastInstruction.h">
@@ -734,64 +734,64 @@
     <ClInclude Include="pugixml\pugixml.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileSysDefs.h">
+    <ClInclude Include="FileSystem\FileSysDefs.h">
       <Filter>FileSystem</Filter>
     </ClInclude>
-    <ClInclude Include="NomJITLight.h">
+    <ClInclude Include="Runtime\NomJITLight.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="GlobalNameAddressLookupList.h">
+    <ClInclude Include="Common\GlobalNameAddressLookupList.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="instructions\CondBranchInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="TypeOperations.h">
+    <ClInclude Include="Common\TypeOperations.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="FunInterface.h">
+    <ClInclude Include="Library\FunInterface.h">
       <Filter>Library</Filter>
     </ClInclude>
     <ClInclude Include="instructions\BranchInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="BytecodeTopReadHandler.h">
+    <ClInclude Include="Parse\BytecodeTopReadHandler.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="TimerClass.h">
+    <ClInclude Include="Library\TimerClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="NomNameRepository.h">
+    <ClInclude Include="Intermediate_Representation\NomNameRepository.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="CompileHelpers.h">
+    <ClInclude Include="Common\CompileHelpers.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="RTOutput.h">
+    <ClInclude Include="Runtime\RTOutput.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="Singleton.h">
+    <ClInclude Include="Common\Singleton.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="ExpandoObjectClass.h">
+    <ClInclude Include="Library\ExpandoObjectClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="RTDictionary.h">
+    <ClInclude Include="Runtime\RTDictionary.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="RTDescriptor.h">
+    <ClInclude Include="Runtime_Data\RTDescriptor.h">
       <Filter>Runtime Data</Filter>
     </ClInclude>
     <ClInclude Include="instructions\CreateClosure.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="NomMethodTableEntry.h">
+    <ClInclude Include="Intermediate_Representation\NomMethodTableEntry.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="RTSignature.h">
+    <ClInclude Include="Runtime_Data\RTSignature.h">
       <Filter>Runtime Data</Filter>
     </ClInclude>
-    <ClInclude Include="ConfigurationConstants.h">
+    <ClInclude Include="Common\ConfigurationConstants.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="instructions\ConstructStruct.h">
@@ -806,253 +806,253 @@
     <ClInclude Include="instructions\RTCmdInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="DLLExport.h">
+    <ClInclude Include="Common\DLLExport.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="NomSubstitutionContext.h">
+    <ClInclude Include="Intermediate_Representation\NomSubstitutionContext.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="IComparableInterface.h">
+    <ClInclude Include="Library\IComparableInterface.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="NomTypeParameter.h">
+    <ClInclude Include="Intermediate_Representation\NomTypeParameter.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="IPairInterface.h">
+    <ClInclude Include="Library\IPairInterface.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="NomValuePrimitiveCases.h">
+    <ClInclude Include="Intermediate_Representation\NomValuePrimitiveCases.h">
       <Filter>Intermediate Representation</Filter>
     </ClInclude>
-    <ClInclude Include="LoadFloatConstantInstruction.h">
+    <ClInclude Include="instructions\LoadFloatConstantInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="CallingConvConf.h">
+    <ClInclude Include="Common\CallingConvConf.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="IMT.h">
+    <ClInclude Include="Runtime_Data\IMT.h">
       <Filter>Runtime Data</Filter>
     </ClInclude>
-    <ClInclude Include="ArrayListClass.h">
+    <ClInclude Include="Library\ArrayListClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="IEnumerableInterface.h">
+    <ClInclude Include="Library\IEnumerableInterface.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="IEnumeratorInterface.h">
+    <ClInclude Include="Library\IEnumeratorInterface.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="MathClass.h">
+    <ClInclude Include="Library\MathClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="RangeClass.h">
+    <ClInclude Include="Library\RangeClass.h">
       <Filter>Library</Filter>
     </ClInclude>
-    <ClInclude Include="Manifest.h">
+    <ClInclude Include="Parse\Manifest.h">
       <Filter>Parse</Filter>
     </ClInclude>
-    <ClInclude Include="LoadNullConstantInstruction.h">
+    <ClInclude Include="instructions\LoadNullConstantInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="UnaryOpInstruction.h">
+    <ClInclude Include="instructions\UnaryOpInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="RTCompileConfig.h">
+    <ClInclude Include="Runtime\RTCompileConfig.h">
       <Filter>Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="EnsureCheckedMethodInstruction.h">
+    <ClInclude Include="instructions\EnsureCheckedMethodInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="EnsureDynamicMethodInstruction.h">
+    <ClInclude Include="instructions\EnsureDynamicMethodInstruction.h">
       <Filter>Instructions</Filter>
     </ClInclude>
-    <ClInclude Include="Metadata.h">
+    <ClInclude Include="Common\Metadata.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="ObjectHeader.h">
+    <ClInclude Include="Runtime_Data\Headers\ObjectHeader.h">
       <Filter>Runtime Data\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="LambdaHeader.h">
+    <ClInclude Include="Runtime_Data\Headers\LambdaHeader.h">
       <Filter>Runtime Data\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="PartialAppHeader.h">
+    <ClInclude Include="Runtime_Data\Headers\PartialAppHeader.h">
       <Filter>Runtime Data\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="RefValueHeader.h">
+    <ClInclude Include="Runtime_Data\Headers\RefValueHeader.h">
       <Filter>Runtime Data\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="RecordHeader.h">
+    <ClInclude Include="Runtime_Data\Headers\RecordHeader.h">
       <Filter>Runtime Data\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="RTVTable.h">
+    <ClInclude Include="Runtime_Data\VTables\RTVTable.h">
       <Filter>Runtime Data\VTables</Filter>
     </ClInclude>
-    <ClInclude Include="RTClassType.h">
+    <ClInclude Include="Runtime_Data\Types\RTClassType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTTypeHead.h">
+    <ClInclude Include="Runtime_Data\Types\RTTypeHead.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTDynamicType.h">
+    <ClInclude Include="Runtime_Data\Types\RTDynamicType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTInstanceType.h">
+    <ClInclude Include="Runtime_Data\Types\RTInstanceType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTMaybeType.h">
+    <ClInclude Include="Runtime_Data\Types\RTMaybeType.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="RTTypeVar.h">
+    <ClInclude Include="Runtime_Data\Types\RTTypeVar.h">
       <Filter>Runtime Data\Types</Filter>
     </ClInclude>
-    <ClInclude Include="StructuralValueHeader.h">
+    <ClInclude Include="Runtime_Data\Headers\StructuralValueHeader.h">
       <Filter>Runtime Data\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="RTRecord.h">
+    <ClInclude Include="Runtime_Data\VTables\RTRecord.h">
       <Filter>Runtime Data\VTables</Filter>
     </ClInclude>
-    <ClInclude Include="RTPartialApp.h">
+    <ClInclude Include="Runtime_Data\VTables\RTPartialApp.h">
       <Filter>Runtime Data\VTables</Filter>
     </ClInclude>
-    <ClInclude Include="RTLambda.h">
+    <ClInclude Include="Runtime_Data\VTables\RTLambda.h">
       <Filter>Runtime Data\VTables</Filter>
     </ClInclude>
-    <ClInclude Include="RTInterface.h">
+    <ClInclude Include="Runtime_Data\VTables\RTInterface.h">
       <Filter>Runtime Data\VTables</Filter>
     </ClInclude>
-    <ClInclude Include="RTClass.h">
+    <ClInclude Include="Runtime_Data\VTables\RTClass.h">
       <Filter>Runtime Data\VTables</Filter>
     </ClInclude>
-    <ClInclude Include="NomBottomType.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomBottomType.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomClassType.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomClassType.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomDynamicType.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomDynamicType.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomMaybeType.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomMaybeType.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomTopType.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomTopType.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomTypeVar.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomTypeVar.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomType.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomType.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomTypeDecls.h">
+    <ClInclude Include="Intermediate_Representation\Types\NomTypeDecls.h">
       <Filter>Intermediate Representation\Types</Filter>
     </ClInclude>
-    <ClInclude Include="NomCallable.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomCallable.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomCallableVersion.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomCallableVersion.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomMethod.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomMethod.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomRecordMethod.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomRecordMethod.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomStaticMethod.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomStaticMethod.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomPartialApplication.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomPartialApplication.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomClass.h">
+    <ClInclude Include="Intermediate_Representation\Data\NomClass.h">
       <Filter>Intermediate Representation\Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomInterface.h">
+    <ClInclude Include="Intermediate_Representation\Data\NomInterface.h">
       <Filter>Intermediate Representation\Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomLambda.h">
+    <ClInclude Include="Intermediate_Representation\Data\NomLambda.h">
       <Filter>Intermediate Representation\Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomNamed.h">
+    <ClInclude Include="Intermediate_Representation\Data\NomNamed.h">
       <Filter>Intermediate Representation\Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomRecord.h">
+    <ClInclude Include="Intermediate_Representation\Data\NomRecord.h">
       <Filter>Intermediate Representation\Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomModule.h">
+    <ClInclude Include="Intermediate_Representation\Data\NomModule.h">
       <Filter>Intermediate Representation\Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomSignature.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomSignature.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomInterfaceCallTag.h">
+    <ClInclude Include="Intermediate_Representation\CallTags\NomInterfaceCallTag.h">
       <Filter>Intermediate Representation\CallTags</Filter>
     </ClInclude>
-    <ClInclude Include="NomProgram.h">
+    <ClInclude Include="Intermediate_Representation\Data\NomProgram.h">
       <Filter>Intermediate Representation\Data</Filter>
     </ClInclude>
-    <ClInclude Include="NomLambdaCallTag.h">
+    <ClInclude Include="Intermediate_Representation\CallTags\NomLambdaCallTag.h">
       <Filter>Intermediate Representation\CallTags</Filter>
     </ClInclude>
-    <ClInclude Include="NomRecordCallTag.h">
+    <ClInclude Include="Intermediate_Representation\CallTags\NomRecordCallTag.h">
       <Filter>Intermediate Representation\CallTags</Filter>
     </ClInclude>
-    <ClInclude Include="NomConstructor.h">
+    <ClInclude Include="Intermediate_Representation\Callables\NomConstructor.h">
       <Filter>Intermediate Representation\Callables</Filter>
     </ClInclude>
-    <ClInclude Include="NomBuilder.h">
+    <ClInclude Include="Common\NomBuilder.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="SourcePos.h">
+    <ClInclude Include="Common\SourcePos.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="RTTypeEq.h">
+    <ClInclude Include="Runtime\Typing\RTTypeEq.h">
       <Filter>Runtime\Typing</Filter>
     </ClInclude>
-    <ClInclude Include="RTSubtyping.h">
+    <ClInclude Include="Runtime\Typing\RTSubtyping.h">
       <Filter>Runtime\Typing</Filter>
     </ClInclude>
-    <ClInclude Include="RTSubstStack.h">
+    <ClInclude Include="Runtime\Typing\RTSubstStack.h">
       <Filter>Runtime\Typing</Filter>
     </ClInclude>
-    <ClInclude Include="RTDisjointness.h">
+    <ClInclude Include="Runtime\Typing\RTDisjointness.h">
       <Filter>Runtime\Typing</Filter>
     </ClInclude>
-    <ClInclude Include="RTCast.h">
+    <ClInclude Include="Runtime\Typing\RTCast.h">
       <Filter>Runtime\Typing</Filter>
     </ClInclude>
-    <ClInclude Include="CastStats.h">
+    <ClInclude Include="Runtime\Statistics\CastStats.h">
       <Filter>Runtime\Statistics</Filter>
     </ClInclude>
-    <ClInclude Include="FunctionTimings.h">
+    <ClInclude Include="Runtime\Statistics\FunctionTimings.h">
       <Filter>Runtime\Statistics</Filter>
     </ClInclude>
-    <ClInclude Include="BoehmAllocator.h">
+    <ClInclude Include="Runtime\Memory\BoehmAllocator.h">
       <Filter>Runtime\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="BoehmAtomicAllocator.h">
+    <ClInclude Include="Runtime\Memory\BoehmAtomicAllocator.h">
       <Filter>Runtime\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="BoehmContainers.h">
+    <ClInclude Include="Runtime\Memory\BoehmContainers.h">
       <Filter>Runtime\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="boehmgcinterface.h">
+    <ClInclude Include="Runtime\Memory\boehmgcinterface.h">
       <Filter>Runtime\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="BoehmUncollectableAllocator.h">
+    <ClInclude Include="Runtime\Memory\BoehmUncollectableAllocator.h">
       <Filter>Runtime\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="gcinclude_config.h">
+    <ClInclude Include="Runtime\Memory\gcinclude_config.h">
       <Filter>Runtime\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="NomAlloc.h">
+    <ClInclude Include="Runtime\Memory\NomAlloc.h">
       <Filter>Runtime\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="RTConfig.h">
+    <ClInclude Include="Runtime\Config\RTConfig.h">
       <Filter>Runtime\Config</Filter>
     </ClInclude>
-    <ClInclude Include="RTConfig_LambdaOpt.h">
+    <ClInclude Include="Runtime\Config\RTConfig_LambdaOpt.h">
       <Filter>Runtime\Config</Filter>
     </ClInclude>
   </ItemGroup>

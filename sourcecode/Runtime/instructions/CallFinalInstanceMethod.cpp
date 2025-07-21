@@ -1,10 +1,10 @@
 //#include "CallFinalInstanceMethod.h"
-//#include "../NomConstants.h"
-//#include "../NomInstantiationRef.h"
+//#include "../Intermediate_Representation/NomConstants.h"
+//#include "../Intermediate_Representation/NomInstantiationRef.h"
 //#include "llvm/IR/Value.h"
 //#include "llvm/IR/IRBuilder.h"
-//#include "../NomAlloc.h"
-//#include "../NomMethod.h"
+//#include "../Runtime/Memory/NomAlloc.h"
+//#include "../Intermediate_Representation/Callables/NomMethod.h"
 //#include <iostream>
 //
 //using namespace std;

@@ -12,6 +12,7 @@ namespace Nom.TypeChecker.StdLib
         {
             List<IMethodSpec> methods = new List<IMethodSpec>();
             methods.Add(new MethodSpec("PrintDifference", this, new TypeParametersSpec(new List<ITypeParameterSpec>()), new ParametersSpec(new List<IParameterSpec>()), StdLib.VoidType));
+            methods.Add(new MethodSpec("GetDifference", this, new TypeParametersSpec(new List<ITypeParameterSpec>()), new ParametersSpec(new List<IParameterSpec>()), StdLib.FloatType));
             Methods = methods;
             List<IConstructorSpec> constructors = new List<IConstructorSpec>();
             constructors.Add(new ConstructorSpec(this, new TypeParametersSpec(new List<ITypeParameterSpec>()), new ParametersSpec(new List<IParameterSpec>())));

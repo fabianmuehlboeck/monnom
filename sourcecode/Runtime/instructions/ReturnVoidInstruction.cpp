@@ -1,6 +1,6 @@
 #include "ReturnVoidInstruction.h"
-#include "../VoidClass.h"
-#include "../Defs.h"
+#include "../Library/VoidClass.h"
+#include "../Common/Defs.h"
 #include <iostream>
 
 using namespace std;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Context.h"
-#include "../NomInstruction.h"
+#include "../Common/Context.h"
+#include "../instructions/NomInstruction.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/BasicBlock.h"

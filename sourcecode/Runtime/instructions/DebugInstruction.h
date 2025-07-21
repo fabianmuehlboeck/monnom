@@ -1,6 +1,6 @@
 #pragma once
-#include "../Defs.h"
-#include "../NomInstruction.h"
+#include "../Common/Defs.h"
+#include "../instructions/NomInstruction.h"
 
 namespace Nom
 {

@@ -1,0 +1,54 @@
+
+class Main
+{
+    public static fun SumFloat(Float x, Float y, Float z) : Float
+    {
+        return x + y + z;
+    }
+    public static fun SumDyn(x, y, z)
+    {
+        return x + y + z;
+    }
+    public static fun Sum1Dyn(x)
+    {
+        return x + x + x;
+    }
+    public static fun SumMix(x, Float y, z)
+    {
+        return x + y + z;
+    }
+
+    public static fun Sum2Dyn(x,y)
+    {
+        return x + y;
+    }
+
+    public static fun Sum2Error(x,y)
+    {
+	dyn total = 0;
+	if ( y < 0 ) {
+		total = x + y;
+	} 
+	total = total + x;
+        return total;
+    }
+
+    public static fun Main() : Void
+    {
+
+	Int i = 0;
+	Timer t = new Timer();
+	Float sum = 0.0;
+	# dyn x = t.GetDifference() + 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0;
+	dyn x = t.GetDifference() + 6.4;
+	while (i < 1000000000) {
+        	# sum = sum + Sum(x, x, x) / 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0;
+        	sum = sum + Sum2Dyn(x,x);
+		i = i + 1;
+	}
+	sum.ToString().Print(); "\n".Print();
+	t.PrintDifference();
+
+    }
+}
+

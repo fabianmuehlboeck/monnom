@@ -1,5 +1,5 @@
 #pragma once
-#include "../NomValueInstruction.h"
+#include "../instructions/NomValueInstruction.h"
 
 namespace Nom
 {

@@ -1,13 +1,13 @@
 #include "CastInstruction.h"
-#include "../NomType.h"
-#include "../IntClass.h"
-#include "../FloatClass.h"
-#include "../BoolClass.h"
-#include "../RTOutput.h"
-#include "../CompileHelpers.h"
-#include "../RTCast.h"
+#include "../Intermediate_Representation/Types/NomType.h"
+#include "../Library/IntClass.h"
+#include "../Library/FloatClass.h"
+#include "../Library/BoolClass.h"
+#include "../Runtime/RTOutput.h"
+#include "../Common/CompileHelpers.h"
+#include "../Runtime/Typing/RTCast.h"
 #include <iostream>
-#include "../Metadata.h"
+#include "../Common/Metadata.h"
 
 using namespace llvm;
 using namespace std;

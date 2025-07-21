@@ -1,2 +1,2 @@
 #!/bin/bash
-dotnet "$MONNOMBASE/monnombuild/BenchmarkGenerator/bin/Release/netcoreapp3.1/BenchmarkGenerator.dll" $@
+dotnet "$MONNOMBASE/monnombuild/BenchmarkGenerator/bin/Release/netcoreapp8.0/BenchmarkGenerator.dll" $@

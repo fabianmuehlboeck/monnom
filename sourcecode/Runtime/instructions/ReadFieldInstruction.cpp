@@ -1,11 +1,11 @@
 #include "ReadFieldInstruction.h"
-#include "../CompileEnv.h"
-#include "../NomType.h"
-#include "../NomConstants.h"
-#include "../NomClass.h"
-#include "../NomClassType.h"
-#include "../NomLambda.h"
-#include "../NomRecord.h"
+#include "../Common/CompileEnv.h"
+#include "../Intermediate_Representation/Types/NomType.h"
+#include "../Intermediate_Representation/NomConstants.h"
+#include "../Intermediate_Representation/Data/NomClass.h"
+#include "../Intermediate_Representation/Types/NomClassType.h"
+#include "../Intermediate_Representation/Data/NomLambda.h"
+#include "../Intermediate_Representation/Data/NomRecord.h"
 #include <iostream>
 
 using namespace std;

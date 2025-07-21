@@ -1,6 +1,6 @@
 #include "BranchInstruction.h"
 #include "PhiNode.h"
-#include "../TypeOperations.h"
+#include "../Common/TypeOperations.h"
 #include <iostream>
 
 using namespace std;

@@ -1,7 +1,7 @@
 #pragma once
-#include "../NomValueInstruction.h"
-#include "../NomValue.h"
-#include "../NomTypeDecls.h"
+#include "../instructions/NomValueInstruction.h"
+#include "../Intermediate_Representation/NomValue.h"
+#include "../Intermediate_Representation/Types/NomTypeDecls.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace Nom

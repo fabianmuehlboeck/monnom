@@ -1,8 +1,8 @@
 #include "ErrorInstruction.h"
 #include <iostream>
-#include "../RTOutput.h"
-#include "../CompileHelpers.h"
-#include "../CompileEnv.h"
+#include "../Runtime/RTOutput.h"
+#include "../Common/CompileHelpers.h"
+#include "../Common/CompileEnv.h"
 
 using namespace std;
 using namespace llvm;

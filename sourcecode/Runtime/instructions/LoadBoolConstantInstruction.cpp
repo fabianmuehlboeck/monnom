@@ -1,8 +1,8 @@
 #include "LoadBoolConstantInstruction.h"
 #include <iostream>
-#include "../BoolClass.h"
-#include "../NomValue.h"
-#include "../NomClassType.h"
+#include "../Library/BoolClass.h"
+#include "../Intermediate_Representation/NomValue.h"
+#include "../Intermediate_Representation/Types/NomClassType.h"
 
 using namespace llvm;
 using namespace std;

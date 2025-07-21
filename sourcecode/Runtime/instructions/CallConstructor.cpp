@@ -1,17 +1,17 @@
  #include "CallConstructor.h"
-#include "../NomAlloc.h"
-#include "../NomConstructor.h"
-#include "../NomInstantiationRef.h"
-#include "../NomClass.h"
-#include "../NomVMInterface.h"
-#include "../NomClassType.h"
-#include "../CompileHelpers.h"
+#include "../Runtime/Memory/NomAlloc.h"
+#include "../Intermediate_Representation/Callables/NomConstructor.h"
+#include "../Intermediate_Representation/NomInstantiationRef.h"
+#include "../Intermediate_Representation/Data/NomClass.h"
+#include "../Runtime/NomVMInterface.h"
+#include "../Intermediate_Representation/Types/NomClassType.h"
+#include "../Common/CompileHelpers.h"
 #include <iostream>
 #include "llvm/Support/raw_os_ostream.h"
-#include "../CallingConvConf.h"
+#include "../Common/CallingConvConf.h"
 #include "llvm/IR/Verifier.h"
-#include "../RTCompileConfig.h"
-#include "../RefValueHeader.h"
+#include "../Runtime/RTCompileConfig.h"
+#include "../Runtime_Data/Headers/RefValueHeader.h"
 
 using namespace llvm;
 using namespace std;
