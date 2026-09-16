@@ -21,6 +21,9 @@ namespace Nom
 			static llvm::StructType* GetLLVMType(size_t fieldCount);
 
 			static llvm::Value* GenerateReadStructDictionary(NomBuilder& builder, llvm::Value* objPointer);
+			static llvm::Value* GenerateGetStructDictionary(NomBuilder& builder, llvm::Value* objPointer);
+			static llvm::Value* GenerateWriteDictField(NomBuilder& builder, llvm::Value* thisObj, llvm::Value* fieldName, llvm::Value* value);
+			static llvm::Value* GenerateReadDictField(NomBuilder& builder, llvm::Value* thisObj, llvm::Value* fieldName);
 			static llvm::Value* GenerateWriteField(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldindex, llvm::Value* value, size_t fieldCount);
 			static llvm::Value* GenerateWriteWrittenTag(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldindex, size_t fieldCount);
 			static llvm::Value* GenerateReadField(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldindex, size_t fieldCount);

@@ -161,8 +161,10 @@ namespace Nom
 					builder->CreateRet(field->GenerateRead(builder, &scce, NomValue(thisarg, thisType)));//removed EnsurePacked from here, because struct values are always supposed to be packed
 				}
 				builder->SetInsertPoint(notfound);
-				static const char* lookupfailstr = "Could not find any fields with matching name!";
-				CreateDummyReturn(builder, fun);
+				auto returnVal = RecordHeader::GenerateReadDictField(builder, thisarg, namearg);
+				builder->CreateRet(returnVal);
+				//static const char* lookupfailstr = "Could not find any fields with matching name!";
+				//CreateDummyReturn(builder, fun);
 				llvm::raw_os_ostream out(std::cout);
 				if (verifyFunction(*fun, &out))
 				{
@@ -226,8 +228,10 @@ namespace Nom
 					builder->CreateRetVoid();
 				}
 				builder->SetInsertPoint(notfound);
-				static const char* lookupfailstr = "Could not find any fields with matching name!";
-				CreateDummyReturn(builder, fun);
+				RecordHeader::GenerateWriteDictField(builder, thisarg, namearg, newValue);
+				builder->CreateRetVoid();
+				//static const char* lookupfailstr = "Could not find any fields with matching name!";
+				//CreateDummyReturn(builder, fun);
 
 				builder->SetInsertPoint(errorBlock);
 				static const char* generic_errorMessage = "Trying to write invalid value!";

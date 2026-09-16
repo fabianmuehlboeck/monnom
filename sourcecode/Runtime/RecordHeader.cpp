@@ -42,7 +42,55 @@ namespace Nom
 
 		llvm::Value* RecordHeader::GenerateReadStructDictionary(NomBuilder& builder, llvm::Value* objPointer)
 		{
-			return builder->CreateGEP(builder->CreatePointerCast(objPointer, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(StructHeaderFields::InstanceDictionary), MakeInt32(0) });
+			return MakeLoad(builder, builder->CreateGEP(builder->CreatePointerCast(objPointer, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(StructHeaderFields::InstanceDictionary) }));
+		}
+
+		llvm::Value* RecordHeader::GenerateGetStructDictionary(NomBuilder& builder, llvm::Value* objPointer) {
+			auto dictAddr = builder->CreateGEP(builder->CreatePointerCast(objPointer, GetLLVMType()->getPointerTo()), { MakeInt32(0), MakeInt32(StructHeaderFields::InstanceDictionary) });
+			auto dict = MakeLoad(builder, dictAddr);
+			auto isNull = builder->CreateIsNull(dict, "dictIsNull");
+			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { isNull, MakeUInt(1,0) });
+			BasicBlock* createDictBlock = BasicBlock::Create(builder->getContext(), "createDictionary", builder->GetInsertBlock()->getParent());
+			BasicBlock* concurrentBlock = BasicBlock::Create(builder->getContext(), "concurrentlyCreatedDictionary", builder->GetInsertBlock()->getParent());
+			BasicBlock* continueBlock = BasicBlock::Create(builder->getContext(), "hasDictionary", builder->GetInsertBlock()->getParent());
+			BasicBlock* origin = builder->GetInsertBlock();
+			builder->CreateCondBr(isNull, createDictBlock, continueBlock);
+
+			builder->SetInsertPoint(createDictBlock);
+			auto dictCreate = RTDictionaryCreate::Instance().GetLLVMElement(*builder->GetInsertBlock()->getModule());
+			auto newDict = builder->CreateCall(dictCreate);
+			newDict->setCallingConv(CallingConv::C);
+			auto cmpx = builder->CreateAtomicCmpXchg(dictAddr, ConstantPointerNull::get(POINTERTYPE), newDict, llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Monotonic);
+			auto success = builder->CreateExtractValue(cmpx, { 1 }, "cmpxSuccess");
+			builder->CreateIntrinsic(Intrinsic::expect, { inttype(1) }, { success, MakeUInt(1,1) });
+			builder->CreateCondBr(success, continueBlock, concurrentBlock);
+
+			builder->SetInsertPoint(concurrentBlock);
+			auto oldDict = builder->CreateExtractValue(cmpx, { 0 }, "oldDictionary");
+			builder->CreateBr(continueBlock);
+
+			builder->SetInsertPoint(continueBlock);
+			auto merge = builder->CreatePHI(POINTERTYPE, 3, "dict");
+			merge->addIncoming(dict, origin);
+			merge->addIncoming(newDict, createDictBlock);
+			merge->addIncoming(oldDict, concurrentBlock);
+			return merge;
+		}
+
+		llvm::Value* RecordHeader::GenerateWriteDictField(NomBuilder& builder, llvm::Value* thisObj, llvm::Value* fieldName, llvm::Value* value) {
+			auto dict = GenerateGetStructDictionary(builder, thisObj);
+			auto setFun = RTDictionarySet::Instance().GetLLVMElement(*builder->GetInsertBlock()->getModule());
+			auto call = builder->CreateCall(setFun, { dict, fieldName, builder->CreatePointerCast(value, POINTERTYPE) });
+			call->setCallingConv(CallingConv::C);
+			return call;
+		}
+
+		llvm::Value* RecordHeader::GenerateReadDictField(NomBuilder& builder, llvm::Value* thisObj, llvm::Value* fieldName) {
+			auto dict = GenerateGetStructDictionary(builder, thisObj);
+			auto getFun = RTDictionaryLookup::Instance().GetLLVMElement(*builder->GetInsertBlock()->getModule());
+			auto call = builder->CreateCall(getFun, { dict, fieldName });
+			call->setCallingConv(CallingConv::C);
+			return builder->CreatePointerCast(call, REFTYPE);
 		}
 
 		llvm::Value* RecordHeader::GenerateWriteField(NomBuilder& builder, llvm::Value* thisObj, int32_t fieldindex, llvm::Value* value, size_t fieldCount)
